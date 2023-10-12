@@ -1,0 +1,1 @@
+export LD_LIBRARY_PATH=~/gcc_install/usr/local/lib64/
