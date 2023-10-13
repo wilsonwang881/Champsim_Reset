@@ -23,7 +23,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 {
   auto &pref = ::SPP[{this, cpu}];
 
-  pref.update_demand(base_addr, this->get_set(base_addr));
+  pref.update_demand(base_addr,get_set_index(base_addr));
   pref.initiate_lookahead(base_addr);
 
   return metadata_in;
@@ -85,7 +85,7 @@ void CACHE::prefetcher_final_stats()
 
 void CACHE::reset_spp_camera_prefetcher()
 {
-  std::cout << "Reset spp camera prefetcher at CACHE " << NAME << endl;
+  std::cout << "Reset spp camera prefetcher at CACHE " << NAME << std::endl;
   auto &pref = ::SPP[{this, cpu}];
   pref.clear_states();
 }

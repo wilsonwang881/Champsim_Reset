@@ -48,7 +48,7 @@ void spp::prefetcher::issue(CACHE* cache)
     // If this fails, the queue was full.
     bool prefetched = cache->prefetch_line(addr, priority, 0);
     if (prefetched) {
-      filter.update_issue(addr, cache->get_set_index(addr));
+      filter.update_issue(addr, cache->get_set(addr));
       issue_queue.pop_front();
     }
   }

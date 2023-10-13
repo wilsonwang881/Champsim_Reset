@@ -237,8 +237,10 @@ public:
                                                uint32_t type, uint8_t hit) = 0;
     virtual void impl_replacement_final_stats() = 0;
 
-    virtual void reset_spp_camera_prefetcher() = 0; // WL
+    //virtual void reset_spp_camera_prefetcher() = 0; // WL
   };
+
+  void reset_spp_camera_prefetcher(); // WL
 
   template <unsigned long long P_FLAG, unsigned long long R_FLAG>
   struct module_model final : module_concept {
@@ -258,7 +260,7 @@ public:
     void impl_update_replacement_state(uint32_t triggering_cpu, uint32_t set, uint32_t way, uint64_t full_addr, uint64_t ip, uint64_t victim_addr,
                                        uint32_t type, uint8_t hit);
     void impl_replacement_final_stats();
-    void reset_spp_camera_prefetcher(); // WL
+    //void reset_spp_camera_prefetcher(); // WL
   };
 
   std::unique_ptr<module_concept> module_pimpl;

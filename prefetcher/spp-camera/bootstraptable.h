@@ -15,7 +15,7 @@ namespace spp
       bool     valid = false;
       uint32_t sig = 0;
       int      confidence = 0;
-      uint32_t offset = 0;
+      uint64_t offset = 0; // WL: changed uint32_t to uint64_t
       int      delta = 0;
       uint64_t last_accessed_address = 0; // WL
     };

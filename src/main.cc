@@ -35,8 +35,24 @@ namespace champsim
 std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases, std::vector<tracereader>& traces);
 }
 
+// WL
+#define DUMP_INS_NUMBER_EVERY_4M_CYCLES 1
+
+bool champsim::operable::context_switch_mode = false;
+
+uint64_t next_reset_moment = 0; // can be cycle or ins. count
+
+// WL
+
 int main(int argc, char** argv)
 {
+  // WL
+  if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
+    FILE* ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "wb");
+  else
+    FILE* ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "rb");
+  // WL
+
   champsim::configured::generated_environment gen_environment{};
 
   CLI::App app{"A microarchitecture simulator for research and education"};
