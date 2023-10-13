@@ -1,15 +1,15 @@
 #include "spp.h"
-#include "util.h"
+#include "msl/bits.h"
 
 #include <algorithm>
 
 std::optional<std::pair<uint32_t, int32_t>> spp::SIGNATURE_TABLE::read(uint64_t addr)
 {
   uint64_t page = addr >> LOG2_PAGE_SIZE;
-  uint32_t page_offset = (addr & bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
+  uint32_t page_offset = (addr & champsim::bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
 
   auto set_idx = page % SET;
-  auto tag = (page / SET) & bitmask(TAG_BIT);
+  auto tag = (page / SET) & champsim::bitmask(TAG_BIT);
 
   auto set_begin = std::next(std::begin(sigtable), WAY * set_idx);
   auto set_end   = std::next(set_begin, WAY);
@@ -28,10 +28,10 @@ std::optional<std::pair<uint32_t, int32_t>> spp::SIGNATURE_TABLE::read(uint64_t 
 void spp::SIGNATURE_TABLE::update(uint64_t addr, uint32_t sig)
 {
   uint64_t page = addr >> LOG2_PAGE_SIZE;
-  uint32_t page_offset = (addr & bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
+  uint32_t page_offset = (addr & champsim::bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
 
   auto set_idx = page % SET;
-  auto tag = (page / SET) & bitmask(TAG_BIT);
+  auto tag = (page / SET) & champsim::bitmask(TAG_BIT);
 
   auto set_begin = std::next(std::begin(sigtable), WAY * set_idx);
   auto set_end   = std::next(set_begin, WAY);
@@ -95,7 +95,7 @@ bool spp::SIGNATURE_TABLE::get_st_entry(int index, uint32_t &el_last_offset, uin
   el_last_offset = sigtable[index].last_offset;
   el_sig = sigtable[index].sig;
   el_last_accessed_page_num = sigtable[index].last_accessed_page_num;
-  el_page_offset_diff = sigtable[index].page_offset_diff;
+  //el_page_offset_diff = sigtable[index].page_offset_diff;
 
   return sigtable[index].valid;
 }

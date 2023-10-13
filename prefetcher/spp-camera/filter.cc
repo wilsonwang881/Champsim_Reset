@@ -3,12 +3,12 @@
 #include <algorithm>
 #include <cassert>
 
-#include "util.h"
+#include "msl/bits.h"
 
 auto spp::SPP_PREFETCH_FILTER::check(uint64_t check_addr, int confidence) const -> confidence_t
 {
   uint64_t page_no = check_addr >> LOG2_PAGE_SIZE;
-  uint64_t line_no = (check_addr & bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
+  uint64_t line_no = (check_addr & champsim::bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
 
   auto set_begin = std::next(std::begin(prefetch_table), WAY * (page_no % SET));
   auto set_end   = std::next(set_begin, WAY);
@@ -23,7 +23,7 @@ auto spp::SPP_PREFETCH_FILTER::check(uint64_t check_addr, int confidence) const 
 void spp::SPP_PREFETCH_FILTER::update_demand(uint64_t check_addr, std::size_t)
 {
   uint64_t page_no = check_addr >> LOG2_PAGE_SIZE;
-  uint64_t line_no = (check_addr & bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
+  uint64_t line_no = (check_addr & champsim::bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
 
   auto set_begin = std::next(std::begin(prefetch_table), WAY * (page_no % SET));
   auto set_end   = std::next(set_begin, WAY);
@@ -49,7 +49,7 @@ void spp::SPP_PREFETCH_FILTER::update_demand(uint64_t check_addr, std::size_t)
 void spp::SPP_PREFETCH_FILTER::update_issue(uint64_t check_addr, std::size_t)
 {
   uint64_t page_no = check_addr >> LOG2_PAGE_SIZE;
-  uint64_t line_no = (check_addr & bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
+  uint64_t line_no = (check_addr & champsim::bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
 
   auto set_begin = std::next(std::begin(prefetch_table), WAY * (page_no % SET));
   auto set_end   = std::next(set_begin, WAY);

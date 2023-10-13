@@ -13,7 +13,7 @@
 #include <algorithm> // WL: fixing error while compiling related to any_of
 
 #include "champsim_constants.h"
-#include "util.h"
+#include "msl/bits.h"
 
 // WL
 #include <iostream>

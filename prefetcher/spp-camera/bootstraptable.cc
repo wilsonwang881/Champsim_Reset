@@ -7,7 +7,7 @@
 
 std::optional<std::tuple<uint32_t, int, int>> spp::BOOTSTRAP_TABLE::check(uint64_t addr)
 {
-  uint32_t page_offset = (addr & bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
+  uint32_t page_offset = (addr & champsim::bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
 
   // Bootstrap the new page
   auto bst_item = std::find_if(std::begin(page_bootstrap_table), std::end(page_bootstrap_table), [page_offset](const auto& x){ return x.valid && x.offset == page_offset; });
@@ -24,7 +24,7 @@ void spp::BOOTSTRAP_TABLE::update(uint64_t addr, uint32_t sig, int confidence, i
   // Find the item in the bootstrap table
   auto begin = std::begin(page_bootstrap_table);
   auto end = std::end(page_bootstrap_table);
-  auto pf_offset = (addr & bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
+  auto pf_offset = (addr & champsim::bitmask(LOG2_PAGE_SIZE)) >> LOG2_BLOCK_SIZE;
   auto bst_item = std::find_if(begin, end, [pf_offset](const auto& x){ return x.valid && x.offset == pf_offset; });
 
   // If not found, find an invalid or lowest-confidence way to replace

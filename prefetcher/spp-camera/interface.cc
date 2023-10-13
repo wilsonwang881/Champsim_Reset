@@ -19,7 +19,7 @@ void CACHE::prefetcher_initialize()
   std::cout << std::endl;
 }
 
-uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_t cache_hit, uint8_t type, uint32_t metadata_in)
+uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
 {
   auto &pref = ::SPP[{this, cpu}];
 
@@ -37,8 +37,8 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 void CACHE::prefetcher_cycle_operate()
 {
   auto &pref = ::SPP[{this, cpu}];
-  // pref.warmup = warmup; 
-  pref.warmup = warmup_complete[cpu];
+  pref.warmup = warmup; 
+  // pref.warmup = warmup_complete[cpu];
   // TODO: should this be pref.warmup = warmup_complete[cpu]; instead of pref.warmup = warmup; ?
 
   // Gather and issue prefetches after a context switch.
@@ -61,7 +61,7 @@ void CACHE::prefetcher_cycle_operate()
     {
       champsim::operable::context_switch_mode = false;
       pref.context_switch_prefetch_gathered = false;
-      cout << NAME << " stalled " << context_switch_cycles_stalled << " cycles" << " done at cycle " << current_cycle << endl;
+      std::cout << NAME << " stalled " << context_switch_cycles_stalled << " cycles" << " done at cycle " << current_cycle << std::endl;
       context_switch_cycles_stalled = 0;
       //this->reset_spp_camera_prefetcher();
     }
@@ -85,7 +85,7 @@ void CACHE::prefetcher_final_stats()
 
 void CACHE::reset_spp_camera_prefetcher()
 {
-  cout << "Reset spp camera prefetcher at CACHE " << NAME << endl;
+  std::cout << "Reset spp camera prefetcher at CACHE " << NAME << endl;
   auto &pref = ::SPP[{this, cpu}];
   pref.clear_states();
 }

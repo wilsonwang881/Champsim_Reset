@@ -15,7 +15,7 @@
  */
 
 #ifdef CHAMPSIM_MODULE
-#error "Modules should include msl/bits.h"
+//#error "Modules should include msl/bits.h"
 #endif
 
 #ifndef UTIL_BITS_H

@@ -24,8 +24,8 @@ namespace spp
         unsigned int c_delta;
 
         pattable_entry_t()          : valid(false), delta(0),     c_delta(1) {}
-        explicit pattable_entry_t(int delta) : valid(true),  delta(delta), c_delta(1) {}
-      };
+        explicit pattable_entry_t(int _delta) : valid(true),  delta(_delta), c_delta(1) {}
+      }; // WL: changed delta to _delta on the input side.
 
       struct pattable_set_t
       {

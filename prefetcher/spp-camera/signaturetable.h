@@ -20,7 +20,7 @@ namespace spp
         uint32_t last_offset = 0;
         uint32_t sig = 0;
         uint64_t last_used = 0;
-	uint_64_t last_accessed_page_num = 0; // WL: added the page number
+	uint64_t last_accessed_page_num = 0; // WL: added the page number
       };
 
       std::array<sigtable_entry_t, WAY * SET> sigtable;

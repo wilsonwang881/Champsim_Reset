@@ -33,9 +33,9 @@ namespace {
 
     // Sign-magnitude representation
     int32_t pos_delta = (delta < 0) ? -1*delta : delta;
-    int32_t sig_delta = ((pos_delta << 1) & ~bitmask(SIG_DELTA_BIT+1)) | (pos_delta & bitmask(SIG_DELTA_BIT)) | (((delta < 0) ? 1 : 0) << SIG_DELTA_BIT);
+    int32_t sig_delta = ((pos_delta << 1) & ~champsim::bitmask(SIG_DELTA_BIT+1)) | (pos_delta & champsim::bitmask(SIG_DELTA_BIT)) | (((delta < 0) ? 1 : 0) << SIG_DELTA_BIT);
 
-    return ((last_sig << SIG_SHIFT) ^ sig_delta) & bitmask(SIG_BIT);
+    return ((last_sig << SIG_SHIFT) ^ sig_delta) & champsim::bitmask(SIG_BIT);
   }
 }
 
@@ -148,7 +148,7 @@ void spp::prefetcher::initiate_lookahead(uint64_t base_addr)
       }
     }
 
-    active_lookahead = {curr_sig, delta, 0, confidence, base_addr & ~bitmask(LOG2_BLOCK_SIZE)};
+    active_lookahead = {curr_sig, delta, 0, confidence, base_addr & ~champsim::bitmask(LOG2_BLOCK_SIZE)};
   }
 }
 
@@ -250,7 +250,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
       int prefetch_range = pattern_table.get_prefetch_range(el_sig);
       int max_page_limit = std::min(4096 - 64, (signed)el_last_offset + prefetch_range);
       int min_page_limit = std::max(0, (signed)el_last_offset - prefetch_range);
-      cout << "Page coverage: " << 1.0 * (max_page_limit - min_page_limit) / 4096 << endl;
+      //cout << "Page coverage: " << 1.0 * (max_page_limit - min_page_limit) / 4096 << endl;
 
       for (int i = min_page_limit; i <= max_page_limit; i += BLOCK_SIZE)
       {
