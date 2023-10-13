@@ -33,7 +33,7 @@ namespace spp
       std::array<filter_entry_t, WAY * SET> prefetch_table;
 
     public:
-      friend class is_valid<filter_entry_t>;
+      // friend class is_valid<filter_entry_t>; // WL: commented out
 
       // Global counters to calculate global prefetching accuracy
       bool tagless = false;

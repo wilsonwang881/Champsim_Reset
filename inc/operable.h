@@ -25,6 +25,11 @@ class operable
 public:
   const double CLOCK_SCALE;
 
+  // WL
+  static bool context_switch_mode;
+  int context_switch_cycles_stalled = 0;
+  // WL
+
   double leap_operation = 0;
   uint64_t current_cycle = 0;
   bool warmup = true;
