@@ -41,16 +41,34 @@ std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases,
 bool champsim::operable::context_switch_mode = false;
 
 uint64_t next_reset_moment = 0; // can be cycle or ins. count
-
 // WL
 
 int main(int argc, char** argv)
 {
   // WL
+  FILE* ins_number_every_4M_cycles_file;
+  vector<uint64_t> reset_ins_count;
+  int reset_ins_count_readin_index = 0;
+
   if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
-    FILE* ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "wb");
+    ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "wb");
   else
-    FILE* ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "rb");
+  {
+    ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "rb");
+    uint64_t reset_ins_count_readin;
+    cout << "Reset at instruction:" << endl;
+
+    while(fread(&reset_ins_count_readin, sizeof(uint64_t), 1, ins_number_every_4M_cycles_file) == 1)
+    {
+       reset_ins_count.push_back(reset_ins_count_readin);
+       cout << (unsigned)reset_ins_count_readin << endl;
+    }
+ 
+   cout << "Number of resets: " << reset_ins_count.size() << endl;
+ 
+   int num_resets = reset_ins_count.size();
+  }
+
   // WL
 
   champsim::configured::generated_environment gen_environment{};
@@ -96,6 +114,16 @@ int main(int argc, char** argv)
 
   if (simulation_given && !warmup_given)
     warmup_instructions = simulation_instructions * 2 / 10;
+
+  // WL
+  if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
+    next_reset_moment = warmup_instructions + 4000000; // dummy value, will be overwritten after warmup is completed
+  else 
+  {
+    next_reset_moment = reset_ins_count[0];
+    reset_ins_count_readin_index++;
+  }
+  // WL
 
   std::vector<champsim::tracereader> traces;
   std::transform(
