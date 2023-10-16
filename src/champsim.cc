@@ -29,9 +29,15 @@
 #include <fmt/chrono.h>
 #include <fmt/core.h>
 
+// WL
+#include <iostream>
+
 constexpr int DEADLOCK_CYCLE{500};
 
 auto start_time = std::chrono::steady_clock::now();
+
+// WL
+uint64_t next_reset_moment = 0;
 
 std::chrono::seconds elapsed_time() { return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time); }
 
@@ -74,16 +80,30 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
     std::sort(std::begin(operables), std::end(operables),
               [](const champsim::operable& lhs, const champsim::operable& rhs) { return lhs.leap_operation < rhs.leap_operation; });
 
-    // Read from trace
-    for (O3_CPU& cpu : env.cpu_view()) {
-      auto& trace = traces.at(trace_index.at(cpu.cpu));
-      for (auto pkt_count = cpu.IN_QUEUE_SIZE - static_cast<long>(std::size(cpu.input_queue)); !trace.eof() && pkt_count > 0; --pkt_count)
-        cpu.input_queue.push_back(trace());
+    //WL
+    if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
+      next_reset_moment = env.cpu_view()[0].current_cycle + 4000000;
 
-      // If any trace reaches EOF, terminate all phases
-      if (trace.eof())
-        std::fill(std::begin(next_phase_complete), std::end(next_phase_complete), true);
+    std::cout << "Resetting starts at cycle " << next_reset_moment << std::endl;
+    // WL
+
+    // Read from trace
+    // WL: added condition to check if the simulator is in context switch mode
+    if (!champsim::operable::context_switch_mode)
+    {
+	    // WL: original code
+	    for (O3_CPU& cpu : env.cpu_view()) {
+	      auto& trace = traces.at(trace_index.at(cpu.cpu));
+	      for (auto pkt_count = cpu.IN_QUEUE_SIZE - static_cast<long>(std::size(cpu.input_queue)); !trace.eof() && pkt_count > 0; --pkt_count)
+		cpu.input_queue.push_back(trace());
+
+	      // If any trace reaches EOF, terminate all phases
+	      if (trace.eof())
+		std::fill(std::begin(next_phase_complete), std::end(next_phase_complete), true);
+	    }
+	    // WL: end of original code
     }
+    // WL
 
     // Check for phase finish
     for (O3_CPU& cpu : env.cpu_view()) {

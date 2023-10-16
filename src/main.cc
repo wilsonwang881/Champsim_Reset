@@ -35,19 +35,16 @@ namespace champsim
 std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases, std::vector<tracereader>& traces);
 }
 
-// WL
-#define DUMP_INS_NUMBER_EVERY_4M_CYCLES 1
 
 bool champsim::operable::context_switch_mode = false;
 
 uint64_t next_reset_moment = 0; // can be cycle or ins. count
-// WL
 
 int main(int argc, char** argv)
 {
   // WL
   FILE* ins_number_every_4M_cycles_file;
-  vector<uint64_t> reset_ins_count;
+  std::vector<uint64_t> reset_ins_count;
   int reset_ins_count_readin_index = 0;
 
   if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
@@ -56,15 +53,15 @@ int main(int argc, char** argv)
   {
     ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "rb");
     uint64_t reset_ins_count_readin;
-    cout << "Reset at instruction:" << endl;
+    std::cout << "Reset at instruction:" << std::endl;
 
     while(fread(&reset_ins_count_readin, sizeof(uint64_t), 1, ins_number_every_4M_cycles_file) == 1)
     {
        reset_ins_count.push_back(reset_ins_count_readin);
-       cout << (unsigned)reset_ins_count_readin << endl;
+       std::cout << (unsigned)reset_ins_count_readin << std::endl;
     }
  
-   cout << "Number of resets: " << reset_ins_count.size() << endl;
+    std::cout << "Number of resets: " << reset_ins_count.size() << std::endl;
  
    int num_resets = reset_ins_count.size();
   }
