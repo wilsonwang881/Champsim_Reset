@@ -38,8 +38,6 @@ std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases,
 
 bool champsim::operable::context_switch_mode = false;
 
-uint64_t next_reset_moment = 0; // can be cycle or ins. count
-
 int main(int argc, char** argv)
 {
   // WL
