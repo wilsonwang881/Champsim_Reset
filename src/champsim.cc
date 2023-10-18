@@ -43,8 +43,21 @@ std::chrono::seconds elapsed_time() { return std::chrono::duration_cast<std::chr
 
 namespace champsim
 {
-phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader>& traces)
+phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader>& traces, std::vector<uint64_t>& reset_ins_count)
 {
+  // WL
+  int reset_ins_count_readin_index = 0;
+  int num_resets = reset_ins_count.size();
+
+  if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
+    next_reset_moment = 4000000; // dummy value, will be overwritten after warmup is completed
+  else 
+  {
+    next_reset_moment = reset_ins_count[0];
+    reset_ins_count_readin_index++; 
+  }
+  // WL
+
   auto [phase_name, is_warmup, length, trace_index, trace_names] = phase;
   auto operables = env.operable_view();
 
@@ -53,6 +66,16 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
     op.warmup = is_warmup;
     op.begin_phase();
   }
+
+  //WL
+  if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
+  {
+    for (O3_CPU& cpu : env.cpu_view()) 
+      next_reset_moment = cpu.current_cycle + 4000000;
+  }
+
+  std::cout << "Resetting start at cycle " << next_reset_moment << std::endl;
+  // WL
 
   // Perform phase
   int stalled_cycle{0};
@@ -80,15 +103,46 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
     std::sort(std::begin(operables), std::end(operables),
               [](const champsim::operable& lhs, const champsim::operable& rhs) { return lhs.leap_operation < rhs.leap_operation; });
 
-    //WL
+    // WL
     if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
     {
-      for (O3_CPU& cpu : env.cpu_view()) 
-        next_reset_moment = cpu.current_cycle + 4000000;
-    }
+    if (ooo_cpu[0]->current_cycle >= next_reset_moment && 
+        all_warmup_complete > NUM_CPUS) {
+      fwrite(&(ooo_cpu[0]->num_retired), sizeof(uint64_t), 1, ins_number_every_4M_cycles_file); // int fwrite_size = 
+      next_reset_moment += RESET_INTERVAL;
 
-    std::cout << "Resetting starts at cycle " << next_reset_moment << std::endl;
+      cout << "Recording @ins. count = " << ooo_cpu[0]->num_retired << " at cycle " << ooo_cpu[0]->current_cycle << endl;
+    }
+    }
+    else
+    {
+    if (ooo_cpu[0]->num_retired >= next_reset_moment && 
+        all_warmup_complete > NUM_CPUS &&
+        reset_ins_count_readin_index <= num_resets) {
+
+      for (auto op: operables)
+      {
+        op->reset_this_cycle = true;        
+      }      
+
+      // Assume the overhead is 1 microscrond.
+      // During the overhead, CPU does not take in instructions.
+      //ooo_cpu[0]->context_switch_stall = CONTEXT_SWITCH_OVERHEAD_CYCLES;
+
+      cout << "Resetting @ins. count = " << ooo_cpu[0]->num_retired << " at cycle " << ooo_cpu[0]->current_cycle << endl;
+
+      champsim::operable::context_switch_mode = true;
+
+      // prevent out of range index
+      if (reset_ins_count_readin_index < num_resets)
+      {
+        next_reset_moment = reset_ins_count[reset_ins_count_readin_index];
+      }
+            
+      reset_ins_count_readin_index++;
+    }    
     // WL
+   }
 
     // Read from trace
     // WL: added condition to check if the simulator is in context switch mode
@@ -156,14 +210,14 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
 }
 
 // simulation entry point
-std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases, std::vector<tracereader>& traces)
+std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases, std::vector<tracereader>& traces, std::vector<uint64_t>& reset_ins_count)
 {
   for (champsim::operable& op : env.operable_view())
     op.initialize();
 
   std::vector<phase_stats> results;
   for (auto phase : phases) {
-    auto stats = do_phase(phase, env, traces);
+    auto stats = do_phase(phase, env, traces, reset_ins_count);
     if (!phase.is_warmup)
       results.push_back(stats);
   }

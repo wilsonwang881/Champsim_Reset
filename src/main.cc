@@ -32,7 +32,7 @@
 
 namespace champsim
 {
-std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases, std::vector<tracereader>& traces);
+std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases, std::vector<tracereader>& traces, std::vector<uint64_t>& reset_ins_count);
 }
 
 
@@ -43,7 +43,6 @@ int main(int argc, char** argv)
   // WL
   FILE* ins_number_every_4M_cycles_file;
   std::vector<uint64_t> reset_ins_count;
-  int reset_ins_count_readin_index = 0;
 
   if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
     ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "wb");
@@ -60,10 +59,7 @@ int main(int argc, char** argv)
     }
  
     std::cout << "Number of resets: " << reset_ins_count.size() << std::endl;
- 
-   int num_resets = reset_ins_count.size();
   }
-
   // WL
 
   champsim::configured::generated_environment gen_environment{};
@@ -110,16 +106,6 @@ int main(int argc, char** argv)
   if (simulation_given && !warmup_given)
     warmup_instructions = simulation_instructions * 2 / 10;
 
-  // WL
-  if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
-    next_reset_moment = warmup_instructions + 4000000; // dummy value, will be overwritten after warmup is completed
-  else 
-  {
-    next_reset_moment = reset_ins_count[0];
-    reset_ins_count_readin_index++;
-  }
-  // WL
-
   std::vector<champsim::tracereader> traces;
   std::transform(
       std::begin(trace_names), std::end(trace_names), std::back_inserter(traces),
@@ -135,7 +121,7 @@ int main(int argc, char** argv)
   fmt::print("\n*** ChampSim Multicore Out-of-Order Simulator ***\nWarmup Instructions: {}\nSimulation Instructions: {}\nNumber of CPUs: {}\nPage size: {}\n\n",
              phases.at(0).length, phases.at(1).length, std::size(gen_environment.cpu_view()), PAGE_SIZE);
 
-  auto phase_stats = champsim::main(gen_environment, phases, traces);
+  auto phase_stats = champsim::main(gen_environment, phases, traces, reset_ins_count);
 
   fmt::print("\nChampSim completed all CPUs\n\n");
 
