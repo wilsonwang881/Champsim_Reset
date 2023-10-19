@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Setup the compiler path
+source server_env.sh
 # Arrays that store the reset configurations.
 bin_names=()
 cache_setting=()
@@ -54,12 +56,3 @@ do
  	sed -i "s/#define dump_ins_number_every_4m_cycles ${dump_setting[i]}/#define dump_ins_number_every_4m_cycles 1/g" src/main.cc
 done
 
-#for ((i=0;i<${#bin_names[@]} - 17;i++)); do
-#
-#	#
-#	#
-#	# Update the Makefile with gcc/g++ path
-#	sed -i 's/CC := gcc/CC := ~\/gcc_install\/usr\/local\/bin\/gcc/g' Makefile
-#	sed -i 's/CXX := g++/CXX := ~\/gcc_install\/usr\/local\/bin\/g++/g' Makefile
-#
-#done
