@@ -70,13 +70,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
 
   //WL
   O3_CPU& cpu_0 = env.cpu_view()[0];
-/*
-  for (O3_CPU& cpu : env.cpu_view()) 
-  {
-    cpu_0 = cpu;
-    break;
-  }
-*/
+
   if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
   {
     next_reset_moment = cpu_0.current_cycle + 4000000;
