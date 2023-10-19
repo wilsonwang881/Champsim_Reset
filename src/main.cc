@@ -123,6 +123,15 @@ int main(int argc, char** argv)
 
   auto phase_stats = champsim::main(gen_environment, phases, traces, reset_ins_count);
 
+  // WL
+  // Write the reset instructions to files
+  if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
+  {
+    for (uint64_t reset_ins : reset_ins_count)
+      fwrite(&reset_ins, sizeof(uint64_t), 1, ins_number_every_4M_cycles_file);
+  }
+  // WL
+
   fmt::print("\nChampSim completed all CPUs\n\n");
 
   champsim::plain_printer{std::cout}.print(phase_stats);

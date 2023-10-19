@@ -114,12 +114,12 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
     // WL
     if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
     {
-      if (cpu_0.current_cycle >= next_reset_moment && 
-        all_warmup_complete > NUM_CPUS) {
-        reset_ins_count.push_back(ooo_cpu[0]->num_retired);
+      if (cpu_0.current_cycle >= next_reset_moment)
+      {
+        reset_ins_count.push_back(cpu_0.num_retired);
         next_reset_moment += RESET_INTERVAL;
 
-	std::cout << "Recording @ins. count = " << ooo_cpu[0]->num_retired << " at cycle " << ooo_cpu[0]->current_cycle << std::endl;
+	std::cout << "Recording @ins. count = " << cpu_0.num_retired << " at cycle " << cpu_0.current_cycle << std::endl;
       }
     }
     else
@@ -131,7 +131,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       // During the overhead, CPU does not take in instructions.
       //ooo_cpu[0]->context_switch_stall = CONTEXT_SWITCH_OVERHEAD_CYCLES;
 
-      std::cout << "Resetting @ins. count = " << ooo_cpu[0]->num_retired << " at cycle " << ooo_cpu[0]->current_cycle << std::endl;
+      std::cout << "Resetting @ins. count = " << cpu_0.num_retired << " at cycle " << cpu_0.current_cycle << std::endl;
 
       champsim::operable::context_switch_mode = true;
 
