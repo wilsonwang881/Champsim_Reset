@@ -37,6 +37,7 @@ constexpr int DEADLOCK_CYCLE{500};
 auto start_time = std::chrono::steady_clock::now();
 
 // WL
+#define RESET_INTERVAL 4000000
 uint64_t next_reset_moment = 0;
 
 std::chrono::seconds elapsed_time() { return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time); }
@@ -68,10 +69,17 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
   }
 
   //WL
+  O3_CPU& cpu_0 = env.cpu_view()[0];
+/*
+  for (O3_CPU& cpu : env.cpu_view()) 
+  {
+    cpu_0 = cpu;
+    break;
+  }
+*/
   if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
   {
-    for (O3_CPU& cpu : env.cpu_view()) 
-      next_reset_moment = cpu.current_cycle + 4000000;
+    next_reset_moment = cpu_0.current_cycle + 4000000;
   }
 
   std::cout << "Resetting start at cycle " << next_reset_moment << std::endl;
@@ -106,38 +114,30 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
     // WL
     if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
     {
-    if (ooo_cpu[0]->current_cycle >= next_reset_moment && 
+      if (cpu_0.current_cycle >= next_reset_moment && 
         all_warmup_complete > NUM_CPUS) {
-      fwrite(&(ooo_cpu[0]->num_retired), sizeof(uint64_t), 1, ins_number_every_4M_cycles_file); // int fwrite_size = 
-      next_reset_moment += RESET_INTERVAL;
+        reset_ins_count.push_back(ooo_cpu[0]->num_retired);
+        next_reset_moment += RESET_INTERVAL;
 
-      cout << "Recording @ins. count = " << ooo_cpu[0]->num_retired << " at cycle " << ooo_cpu[0]->current_cycle << endl;
-    }
+	std::cout << "Recording @ins. count = " << ooo_cpu[0]->num_retired << " at cycle " << ooo_cpu[0]->current_cycle << std::endl;
+      }
     }
     else
     {
-    if (ooo_cpu[0]->num_retired >= next_reset_moment && 
-        all_warmup_complete > NUM_CPUS &&
+    if (cpu_0.num_retired >= next_reset_moment && 
         reset_ins_count_readin_index <= num_resets) {
-
-      for (auto op: operables)
-      {
-        op->reset_this_cycle = true;        
-      }      
 
       // Assume the overhead is 1 microscrond.
       // During the overhead, CPU does not take in instructions.
       //ooo_cpu[0]->context_switch_stall = CONTEXT_SWITCH_OVERHEAD_CYCLES;
 
-      cout << "Resetting @ins. count = " << ooo_cpu[0]->num_retired << " at cycle " << ooo_cpu[0]->current_cycle << endl;
+      std::cout << "Resetting @ins. count = " << ooo_cpu[0]->num_retired << " at cycle " << ooo_cpu[0]->current_cycle << std::endl;
 
       champsim::operable::context_switch_mode = true;
 
       // prevent out of range index
       if (reset_ins_count_readin_index < num_resets)
-      {
         next_reset_moment = reset_ins_count[reset_ins_count_readin_index];
-      }
             
       reset_ins_count_readin_index++;
     }    
