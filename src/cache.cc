@@ -770,4 +770,14 @@ void CACHE::print_deadlock()
     champsim::range_print_deadlock(ul->PQ, NAME + "_PQ", q_writer, q_entry_pack);
   }
 }
+
+// WL
+void CACHE::invalidate_all_cache_blocks()
+{
+  std::cout << "Invalidate blocks in CACHE " << NAME << " at cycle " << current_cycle << std::endl;
+
+  for (size_t i = 0; i < NUM_SET * NUM_WAY; i++)
+    block[i].valid = 0;
+}
+
 // LCOV_EXCL_STOP

@@ -242,6 +242,8 @@ public:
 
   void reset_spp_camera_prefetcher(); // WL
 
+  void invalidate_all_cache_blocks(); // WL
+
   template <unsigned long long P_FLAG, unsigned long long R_FLAG>
   struct module_model final : module_concept {
     CACHE* intern_;
