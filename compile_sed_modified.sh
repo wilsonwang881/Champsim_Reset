@@ -30,8 +30,6 @@ do
 	# Get the name of the binary.
  	tmpp_base_name=${bin_names[i]}
 
-	# Update the Makefile with gcc/g++ path
-
 	# Update macros.
  	sed -i "s/#define simulate_with_cache_reset 0/#define simulate_with_cache_reset ${cache_setting[i]}/g" inc/operable.h
  	sed -i "s/#define simulate_with_prefetcher_reset 0/#define simulate_with_prefetcher_reset ${prefetcher_setting[i]}/g" inc/operable.h
