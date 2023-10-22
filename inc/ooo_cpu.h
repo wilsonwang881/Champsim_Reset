@@ -190,6 +190,8 @@ public:
 
   void print_deadlock() override final;
 
+  void reset_components(); // WL
+
 #include "ooo_cpu_module_decl.inc"
 
   struct module_concept {

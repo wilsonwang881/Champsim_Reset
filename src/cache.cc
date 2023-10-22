@@ -772,6 +772,18 @@ void CACHE::print_deadlock()
 }
 
 // WL
+void CACHE::reset_components()
+{
+  if (context_switch_mode)
+  {
+    if (SIMULATE_WITH_CACHE_RESET)
+      CACHE::invalidate_all_cache_blocks();
+    if (SIMULATE_WITH_PREFETCHER_RESET)
+      CACHE::reset_spp_camera_prefetcher();
+  }
+}
+
+// WL
 void CACHE::invalidate_all_cache_blocks()
 {
   std::cout << "Invalidate blocks in CACHE " << NAME << " at cycle " << current_cycle << std::endl;

@@ -37,6 +37,9 @@
 #include "operable.h"
 #include <type_traits>
 
+// WL
+#include <iostream>
+
 struct cache_stats {
   std::string name;
   // prefetch stats
@@ -239,6 +242,8 @@ public:
 
     //virtual void reset_spp_camera_prefetcher() = 0; // WL
   };
+
+  void reset_components(); // WL
 
   void reset_spp_camera_prefetcher(); // WL
 
