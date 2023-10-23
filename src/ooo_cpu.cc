@@ -51,6 +51,7 @@ long O3_CPU::operate()
   progress += check_dib();
   initialize_instruction();
 
+  reset_components(); // WL
   // heartbeat
   if (show_heartbeat && (num_retired >= next_print_instruction)) {
     auto heartbeat_instr{std::ceil(num_retired - last_heartbeat_instr)};
@@ -707,4 +708,16 @@ bool CacheBus::issue_write(request_type data_packet)
   data_packet.response_requested = false;
 
   return lower_level->add_wq(data_packet);
+}
+
+// WL
+void O3_CPU::reset_components()
+{
+  if (champsim::operable::context_switch_mode)
+  {
+    if (SIMULATE_WITH_BTB_RESET)
+      impl_initialize_btb();
+    if (SIMULATE_WITH_BRANCH_PREDICTOR_RESET)
+      impl_initialize_branch_predictor();
+  }
 }
