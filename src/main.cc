@@ -45,17 +45,21 @@ int main(int argc, char** argv)
   std::vector<uint64_t> reset_ins_count;
 
   if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
-    ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "wb");
+    ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "w");
   else
   {
-    ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "rb");
+    ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "r");
     uint64_t reset_ins_count_readin;
+    char newline_char;
+    int read_ret;
     std::cout << "Reset at instruction:" << std::endl;
 
     while(fread(&reset_ins_count_readin, sizeof(uint64_t), 1, ins_number_every_4M_cycles_file) == 1)
     {
        reset_ins_count.push_back(reset_ins_count_readin);
        std::cout << (unsigned)reset_ins_count_readin << std::endl;
+       read_ret = fread(&newline_char, sizeof(char), 1, ins_number_every_4M_cycles_file);
+       assert(read_ret);
     }
  
     std::cout << "Number of resets: " << reset_ins_count.size() << std::endl;
@@ -128,7 +132,10 @@ int main(int argc, char** argv)
   if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
   {
     for (uint64_t reset_ins : reset_ins_count)
+    {
       fwrite(&reset_ins, sizeof(uint64_t), 1, ins_number_every_4M_cycles_file);
+      fwrite("\n", sizeof(char), 1, ins_number_every_4M_cycles_file);
+    }
   }
   // WL
 
