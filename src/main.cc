@@ -41,7 +41,7 @@ bool champsim::operable::context_switch_mode = false;
 int main(int argc, char** argv)
 {
   // WL
-  FILE* ins_number_every_4M_cycles_file;
+  fstream ins_number_every_4M_cycles_file;
   std::vector<uint64_t> reset_ins_count;
 
   if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
