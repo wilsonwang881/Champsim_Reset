@@ -30,6 +30,8 @@
 #include <CLI/CLI.hpp>
 #include <fmt/core.h>
 
+#include <iostream> // WL
+
 namespace champsim
 {
 std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases, std::vector<tracereader>& traces, std::vector<uint64_t>& reset_ins_count);
@@ -41,28 +43,23 @@ bool champsim::operable::context_switch_mode = false;
 int main(int argc, char** argv)
 {
   // WL
-  fstream ins_number_every_4M_cycles_file;
   std::vector<uint64_t> reset_ins_count;
-
-  if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
-    ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "w");
-  else
+  if (DUMP_INS_NUMBER_EVERY_4M_CYCLES == 0)
   {
-    ins_number_every_4M_cycles_file = fopen("reset_ins_number.txt", "r");
+    std::ifstream ins_number_every_4M_cycles_file;
+    ins_number_every_4M_cycles_file.open("reset_ins_number.txt", std::ios::in);
+
     uint64_t reset_ins_count_readin;
-    char newline_char;
-    int read_ret;
     std::cout << "Reset at instruction:" << std::endl;
 
-    while(fread(&reset_ins_count_readin, sizeof(uint64_t), 1, ins_number_every_4M_cycles_file) == 1)
+    while(ins_number_every_4M_cycles_file >> reset_ins_count_readin)
     {
        reset_ins_count.push_back(reset_ins_count_readin);
        std::cout << (unsigned)reset_ins_count_readin << std::endl;
-       read_ret = fread(&newline_char, sizeof(char), 1, ins_number_every_4M_cycles_file);
-       assert(read_ret);
     }
  
     std::cout << "Number of resets: " << reset_ins_count.size() << std::endl;
+    ins_number_every_4M_cycles_file.close();
   }
   // WL
 
@@ -131,11 +128,15 @@ int main(int argc, char** argv)
   // Write the reset instructions to files
   if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0)
   {
+    std::ofstream ins_number_every_4M_cycles_file;
+    ins_number_every_4M_cycles_file.open("reset_ins_number.txt", std::ios::out);
+
     for (uint64_t reset_ins : reset_ins_count)
     {
-      fwrite(&reset_ins, sizeof(uint64_t), 1, ins_number_every_4M_cycles_file);
-      fwrite("\n", sizeof(char), 1, ins_number_every_4M_cycles_file);
+      ins_number_every_4M_cycles_file << reset_ins << std::endl;
     }
+
+    ins_number_every_4M_cycles_file.close();
   }
   // WL
 
