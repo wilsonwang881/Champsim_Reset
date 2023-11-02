@@ -37,8 +37,10 @@ namespace champsim
 std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases, std::vector<tracereader>& traces, std::vector<uint64_t>& reset_ins_count);
 }
 
-
+// WL
 bool champsim::operable::context_switch_mode = false;
+bool champsim::operable::record_on_demand_accesses = false;
+// WL
 
 int main(int argc, char** argv)
 {

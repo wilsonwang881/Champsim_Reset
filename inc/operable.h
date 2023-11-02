@@ -39,6 +39,7 @@ public:
 
   // WL
   static bool context_switch_mode;
+  static bool record_on_demand_accesses;
   int context_switch_cycles_stalled = 0;
   // WL
 
