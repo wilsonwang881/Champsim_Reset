@@ -41,6 +41,11 @@
 #include "util/lru_table.h"
 #include <type_traits>
 
+// WL 
+#include <iostream> 
+#include <fstream>
+// WL 
+
 enum STATUS { INFLIGHT = 1, COMPLETED = 2 };
 
 class CACHE;
@@ -95,6 +100,20 @@ class O3_CPU : public champsim::operable
 {
 public:
   uint32_t cpu = 0;
+
+  // WL
+  struct on_demand_access_record{
+    uint64_t cycle;
+    uint64_t ip;
+  };
+
+  on_demand_access_record on_demand_access_records[1000];
+  size_t on_demand_access_record_index;
+
+  std::ofstream context_switch_access_file;
+
+  void dump_accesses();
+  // WL
 
   // cycle
   uint64_t begin_phase_cycle = 0;

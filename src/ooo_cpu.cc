@@ -76,6 +76,11 @@ void O3_CPU::initialize()
   // BRANCH PREDICTOR & BTB
   impl_initialize_branch_predictor();
   impl_initialize_btb();
+
+  // WL: open a file to write the first 1000 on demand accesses after a context switch
+  context_switch_access_file.open("context_switch_accesses.txt", std::ios::out);
+  on_demand_access_record_index = 0;
+  // WL
 }
 
 void O3_CPU::begin_phase()
@@ -105,6 +110,14 @@ void O3_CPU::end_phase(unsigned finished_cpu)
   }
 }
 
+// WL 
+void O3_CPU::dump_accesses()
+{
+  for(auto access: on_demand_access_records) {
+    context_switch_access_file << access.cycle << " " << access.ip << std::endl;
+  }
+}
+
 void O3_CPU::initialize_instruction()
 {
   auto instrs_to_read_this_cycle = std::min(FETCH_WIDTH, static_cast<long>(IFETCH_BUFFER_SIZE - std::size(IFETCH_BUFFER)));
@@ -115,6 +128,21 @@ void O3_CPU::initialize_instruction()
     auto stop_fetch = do_init_instruction(input_queue.front());
     if (stop_fetch)
       instrs_to_read_this_cycle = 0;
+
+    // WL 
+    if (record_on_demand_accesses) {
+      on_demand_access_records[on_demand_access_record_index].cycle = current_cycle;
+      on_demand_access_records[on_demand_access_record_index].ip = input_queue.front().ip;
+      on_demand_access_record_index++;
+    }
+
+    if (on_demand_access_record_index >= 1000) {
+      record_on_demand_accesses = false;
+      on_demand_access_record_index = 0;
+      std::cout << "Dumping 1st 1000 on demand accesses after context switch." << std::endl;
+      dump_accesses();
+    }
+    // WL
 
     // Add to IFETCH_BUFFER
     IFETCH_BUFFER.push_back(input_queue.front());

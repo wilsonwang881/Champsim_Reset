@@ -113,7 +113,8 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
         reset_ins_count.push_back(cpu_0.num_retired);
         next_reset_moment += RESET_INTERVAL;
 
-	std::cout << "Recording @ins. count = " << cpu_0.num_retired << " at cycle " << cpu_0.current_cycle << std::endl;
+        std::cout << "Recording @ins. count = " << cpu_0.num_retired << " at cycle " << cpu_0.current_cycle << std::endl;
+        champsim::operable::record_on_demand_accesses = true;
       }
     }
     else
