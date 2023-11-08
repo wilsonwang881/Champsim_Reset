@@ -114,7 +114,7 @@ void O3_CPU::end_phase(unsigned finished_cpu)
 void O3_CPU::dump_accesses()
 {
   for(auto access: on_demand_access_records) {
-    context_switch_access_file << access.cycle << " " << access.ip << std::endl;
+    context_switch_access_file << (unsigned)access.cycle << " " << (unsigned)access.ip << std::endl;
   }
 }
 
