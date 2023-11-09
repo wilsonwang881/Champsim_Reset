@@ -121,3 +121,20 @@ int spp::PATTERN_TABLE::get_prefetch_range(uint32_t sig)
 
   return 4 * abs(max_delta_way->delta); 
 }
+
+// WL 
+std::string spp::PATTERN_TABLE::record_Bootstrap_Table()
+{
+  std::string content;
+
+  for(auto var : page_bootstrap_table) {
+    content = content + (var.valid ? "1" : "0") + " " + \
+              std::to_string(var.sig) + " " + \
+              std::to_string(var.confidence) + " " + \
+              std::to_string(var.offset) + " " + \
+              std::to_string(var.delta) + " " + \
+              std::to_string(var.last_accessed_address) + "\n";
+  }
+
+  return content;
+}

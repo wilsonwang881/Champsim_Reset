@@ -40,6 +40,7 @@ std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases,
 // WL
 bool champsim::operable::context_switch_mode = false;
 bool champsim::operable::record_on_demand_accesses = false;
+bool champsim::operable::record_prefetcher_states = false;
 // WL
 
 int main(int argc, char** argv)

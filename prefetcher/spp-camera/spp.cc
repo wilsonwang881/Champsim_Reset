@@ -289,3 +289,11 @@ void spp::prefetcher::context_switch_issue(CACHE* cache)
     }
   }
 }
+
+// WL 
+void spp::prefetcher::record_spp_states()
+{
+  std::cout <<Something "Something" << std::endl;
+  std::string bootstrap_table_content = bootstrap_table.record_Bootstrap_Table();
+
+}

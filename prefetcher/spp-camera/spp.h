@@ -17,6 +17,8 @@
 
 // WL
 #include <iostream>
+#include <fstream>
+// WL 
 
 class CACHE;
 
@@ -53,7 +55,8 @@ namespace spp {
 
     public:
     bool warmup = true;
-    bool context_switch_prefetch_gathered = false;
+    bool context_switch_prefetch_gathered = false; // WL 
+    std::ofstream prefetcher_state_file; // WL 
 
     void update_demand(uint64_t base_addr, uint32_t set);
     void issue(CACHE* cache);
@@ -61,10 +64,13 @@ namespace spp {
     void initiate_lookahead(uint64_t base_addr);
     void print_stats(std::ostream& ostr);
     
-    void clear_states(); // WL
-    void context_switch_gather_prefetches(); // WL
-    bool context_switch_queue_empty(); // WL
-    void context_switch_issue(CACHE* cache); // WL
+    // WL 
+    void clear_states();
+    void context_switch_gather_prefetches();
+    bool context_switch_queue_empty();
+    void context_switch_issue(CACHE* cache);
+    void record_spp_states();
+    // WL 
   };
 } // namespace spp
 

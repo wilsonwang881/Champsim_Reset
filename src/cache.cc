@@ -416,6 +416,10 @@ long CACHE::operate()
         channels_bandwidth_consumed, pq_bandwidth_consumed, tag_bw);
   }
 
+  // WL 
+  reset_components();
+  // WL
+
   return progress;
 }
 
@@ -780,6 +784,15 @@ void CACHE::reset_components()
       CACHE::invalidate_all_cache_blocks();
     if (SIMULATE_WITH_PREFETCHER_RESET)
       CACHE::reset_spp_camera_prefetcher();
+  }
+
+  std::string L2_name("cpu0_L2C");
+
+  if (record_prefetcher_states) {
+    if (L2_name.compare(NAME) == 0) {
+      record_spp_camera_states(); 
+      record_prefetcher_states = false;
+    }
   }
 }
 

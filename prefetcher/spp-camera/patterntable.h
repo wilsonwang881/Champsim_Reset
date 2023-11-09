@@ -41,8 +41,11 @@ namespace spp
 
       void update_pattern(uint32_t last_sig, int curr_delta);
       std::optional<std::pair<int, int>> lookahead_step(uint32_t sig, int confidence, uint32_t depth);
-      void clear(); // WL
-      std::optional<std::pair<unsigned int, unsigned int>> query_pt(uint32_t sig, int delta); // WL
-      int get_prefetch_range(uint32_t sig); // WL
+
+      // WL 
+      void clear();
+      std::optional<std::pair<unsigned int, unsigned int>> query_pt(uint32_t sig, int delta);
+      int get_prefetch_range(uint32_t sig);
+      std::string record_Pattern_Table();
   };
 }

@@ -243,11 +243,12 @@ public:
     //virtual void reset_spp_camera_prefetcher() = 0; // WL
   };
 
-  void reset_components(); // WL
-
-  void reset_spp_camera_prefetcher(); // WL
-
-  void invalidate_all_cache_blocks(); // WL
+  // WL 
+  void reset_components(); 
+  void reset_spp_camera_prefetcher();
+  void invalidate_all_cache_blocks();
+  void record_spp_camera_states();
+  // WL
 
   template <unsigned long long P_FLAG, unsigned long long R_FLAG>
   struct module_model final : module_concept {

@@ -17,6 +17,11 @@ void CACHE::prefetcher_initialize()
   std::cout << "Pattern table" << " sets: " << spp::PATTERN_TABLE::SET << " ways: " << spp::PATTERN_TABLE::WAY << std::endl;
   std::cout << "Prefetch filter" << " sets: " << spp::SPP_PREFETCH_FILTER::SET << " ways: " << spp::SPP_PREFETCH_FILTER::WAY << std::endl;
   std::cout << std::endl;
+
+  // WL 
+  auto &pref = ::SPP[{this, cpu}];
+  pref.prefetcher_state_file.open("prefetcher_states.txt", std::ios::out);
+  // WL 
 }
 
 uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
@@ -83,9 +88,19 @@ void CACHE::prefetcher_final_stats()
   ::SPP[{this, cpu}].print_stats(std::cout);
 }
 
+// WL
 void CACHE::reset_spp_camera_prefetcher()
 {
   std::cout << "Reset spp camera prefetcher at CACHE " << NAME << std::endl;
   auto &pref = ::SPP[{this, cpu}];
   pref.clear_states();
+}
+
+// WL 
+void CACHE::record_spp_camera_states()
+{
+  std::cout << "Recording SPP states at CACHE " << NAME << std::endl;
+  
+  auto &pref = ::SPP[{this, cpu}];
+  pref.record_spp_states();
 }
