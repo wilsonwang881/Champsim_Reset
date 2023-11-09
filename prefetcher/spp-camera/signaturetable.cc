@@ -99,3 +99,20 @@ bool spp::SIGNATURE_TABLE::get_st_entry(int index, uint32_t &el_last_offset, uin
 
   return sigtable[index].valid;
 }
+
+// WL
+std::string spp::SIGNATURE_TABLE::record_Signature_Table()
+{
+  std::string content;
+
+  for(auto var : sigtable) {
+    content = content + (var.valid ? "1" : "0") + " " + \
+              std::to_string(var.partial_page) + " " + \
+              std::to_string(var.last_offset) + " " + \
+              std::to_string(var.sig) + " " + \
+              std::to_string(var.last_used) + " " + \
+              std::to_string(var.last_accessed_page_num) + "\n";
+  }
+
+  return content;
+}

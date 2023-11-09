@@ -3,6 +3,8 @@
 #include <optional>
 #include <tuple>
 
+#include <string> // WL
+
 namespace spp
 {
   class SIGNATURE_TABLE
@@ -30,8 +32,12 @@ namespace spp
     public:
       std::optional<std::pair<uint32_t, int32_t>> read(uint64_t addr);
       void update(uint64_t base_addr, uint32_t sig);    
-      void clear(); // WL  
+
+      // WL
+      void clear();
       bool get_st_entry(int index, uint32_t &el_last_offet, uint32_t &el_sig, uint64_t &el_last_accessed_page_num, int &el_page_offset_diff);
+      std::string record_Signature_Table();
+      // WL
   };
 }
 
