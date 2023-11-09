@@ -103,7 +103,7 @@ bool spp::SIGNATURE_TABLE::get_st_entry(int index, uint32_t &el_last_offset, uin
 // WL
 std::string spp::SIGNATURE_TABLE::record_Signature_Table()
 {
-  std::string content;
+  std::string content("Signature Table\n");
 
   for(auto var : sigtable) {
     content = content + (var.valid ? "1" : "0") + " " + \

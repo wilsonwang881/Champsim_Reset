@@ -76,7 +76,7 @@ void spp::BOOTSTRAP_TABLE::clear()
 // WL 
 std::string spp::BOOTSTRAP_TABLE::record_Bootstrap_Table()
 {
-  std::string content;
+  std::string content("Bootstrap Table\n");
 
   for(auto var : page_bootstrap_table) {
     content = content + (var.valid ? "1" : "0") + " " + \

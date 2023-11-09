@@ -26,7 +26,7 @@ for ((i = 0; i<$(( number_of_workloads)); i++));
 do
        mkdir -p "${workloadRelativeArray[$i]}";
        cd "${workloadRelativeArray[$i]}";
-       job_cmd="cd $PWD && $champsim_bin_path/bin/sed_no_reset_record_reset_ins --warmup_instructions 0 --simulation_instructions 2000000000 ${workloadAbsoluteArray[$i]} > log.txt"
+       job_cmd="cd $PWD && $champsim_bin_path/bin/sed_no_reset_record_reset_ins --warmup-instructions 0 --simulation-instructions 2000000000 ${workloadAbsoluteArray[$i]} > log.txt"
        cmdArray+=("$job_cmd");
        cd ../
 done

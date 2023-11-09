@@ -293,12 +293,13 @@ void spp::prefetcher::context_switch_issue(CACHE* cache)
 // WL 
 void spp::prefetcher::record_spp_states()
 {
-  std::cout << "Recording BT, PT" << std::endl;
+  std::cout << "Recording BT, PT, ST" << std::endl;
   std::string bootstrap_table_content = bootstrap_table.record_Bootstrap_Table();
   std::string pattern_table_content = pattern_table.record_Pattern_Table();
   std::string signature_table_content = signature_table.record_Signature_Table();
 
   prefetcher_state_file << "=================================" << std::endl;
+  prefetcher_state_file << "Current cycle = " << (unsigned)cache_cycle << std::endl;
   prefetcher_state_file << bootstrap_table_content;
   prefetcher_state_file << pattern_table_content;
   prefetcher_state_file << signature_table_content;

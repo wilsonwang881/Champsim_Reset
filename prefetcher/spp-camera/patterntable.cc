@@ -125,7 +125,7 @@ int spp::PATTERN_TABLE::get_prefetch_range(uint32_t sig)
 // WL
 std::string spp::PATTERN_TABLE::record_Pattern_Table()
 {
-  std::string content;
+  std::string content("Pattern Table\n");
 
   for(auto pattern_table_set : pattable) {
 

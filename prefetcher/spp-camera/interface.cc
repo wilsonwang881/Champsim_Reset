@@ -102,5 +102,6 @@ void CACHE::record_spp_camera_states()
   std::cout << "Recording SPP states at CACHE " << NAME << std::endl;
   
   auto &pref = ::SPP[{this, cpu}];
+  pref.cache_cycle = current_cycle;
   pref.record_spp_states();
 }
