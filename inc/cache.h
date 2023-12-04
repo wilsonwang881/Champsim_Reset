@@ -39,6 +39,8 @@
 
 // WL
 #include <iostream>
+#include <fstream>
+// WL
 
 struct cache_stats {
   std::string name;
@@ -248,6 +250,8 @@ public:
   void reset_spp_camera_prefetcher();
   void invalidate_all_cache_blocks();
   void record_spp_camera_states();
+  void record_L1I_states();
+  void record_L1D_states();
   // WL
 
   template <unsigned long long P_FLAG, unsigned long long R_FLAG>

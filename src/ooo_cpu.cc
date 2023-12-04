@@ -130,14 +130,14 @@ void O3_CPU::initialize_instruction()
       instrs_to_read_this_cycle = 0;
 
     // WL 
-    if (record_on_demand_accesses) {
+    if (have_recorded_on_demand_accesses) {
       on_demand_access_records[on_demand_access_record_index].cycle = current_cycle;
       on_demand_access_records[on_demand_access_record_index].ip = input_queue.front().ip;
       on_demand_access_record_index++;
     }
 
     if (on_demand_access_record_index >= 1000) {
-      record_on_demand_accesses = false;
+      have_recorded_on_demand_accesses = false;
       on_demand_access_record_index = 0;
       std::cout << "Dumping 1st 1000 on demand accesses after context switch." << std::endl;
       dump_accesses();

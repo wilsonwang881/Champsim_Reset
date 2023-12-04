@@ -39,8 +39,10 @@ public:
 
   // WL
   static bool context_switch_mode;
-  static bool record_on_demand_accesses;
-  static bool record_prefetcher_states;
+  static bool have_recorded_on_demand_accesses;
+  static bool have_recorded_prefetcher_states;
+  static bool have_recorded_L1I_states;
+  static bool have_recorded_L1D_states;
   int context_switch_cycles_stalled = 0;
   // WL
 

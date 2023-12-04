@@ -778,6 +778,7 @@ void CACHE::print_deadlock()
 // WL
 void CACHE::reset_components()
 {
+  // Optionally reset caches or prefetcher.
   if (context_switch_mode)
   {
     if (SIMULATE_WITH_CACHE_RESET)
@@ -787,11 +788,27 @@ void CACHE::reset_components()
   }
 
   std::string L2_name("cpu0_L2C");
+  std::string L1I_name("cpu0_L1I");
+  std::string L1D_name("cpu0_L1D");
 
-  if (record_prefetcher_states) {
+  // Record prefetcher states.
+  if (have_recorded_prefetcher_states) {
     if (L2_name.compare(NAME) == 0) {
       record_spp_camera_states(); 
-      record_prefetcher_states = false;
+      have_recorded_prefetcher_states = false;
+    }
+  }
+
+  // Record L1 cache states.
+  if (have_recorded_L1I_states) {
+    if (L1I_name.compare(NAME) == 0) {
+      record_L1I_states();
+      have_recorded_L1I_states = false;
+    }
+  }else if(have_recorded_L1D_states) {
+    if (L1D_name.compare(NAME) == 0) {
+      record_L1D_states();
+      have_recorded_L1D_states = false;
     }
   }
 }
@@ -803,6 +820,36 @@ void CACHE::invalidate_all_cache_blocks()
 
   for (size_t i = 0; i < NUM_SET * NUM_WAY; i++)
     block[i].valid = 0;
+}
+
+// WL 
+void CACHE::record_L1I_states()
+{
+  std::ofstream L1I_state_file("L1I_state.txt", std::ofstream::app);
+
+  L1I_state_file << "=================================" << std::endl;
+  L1I_state_file << "Current cycle = " << current_cycle << std::endl;
+
+  for(auto var : block) {
+    L1I_state_file << (var.valid ? "1" : "0") << " " << (unsigned)var.address << std::endl;
+  }
+
+  L1I_state_file.close();
+}
+
+// WL 
+void CACHE::record_L1D_states()
+{
+  std::ofstream L1D_state_file("L1D_state.txt", std::ofstream::app);
+
+  L1D_state_file << "=================================" << std::endl;
+  L1D_state_file << "Current cycle = " << current_cycle << std::endl;
+
+  for(auto var : block) {
+    L1D_state_file << (var.valid ? "1" : "0") << " " << (unsigned)var.address << std::endl;
+  }
+
+  L1D_state_file.close();
 }
 
 // LCOV_EXCL_STOP
