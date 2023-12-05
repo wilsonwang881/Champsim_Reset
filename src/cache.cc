@@ -825,6 +825,8 @@ void CACHE::invalidate_all_cache_blocks()
 // WL 
 void CACHE::record_L1I_states()
 {
+  std::cout << "Recording " << NAME << " states." << std::endl;
+
   std::ofstream L1I_state_file("L1I_state.txt", std::ofstream::app);
 
   L1I_state_file << "=================================" << std::endl;
@@ -840,6 +842,8 @@ void CACHE::record_L1I_states()
 // WL 
 void CACHE::record_L1D_states()
 {
+  std::cout << "Recording " << NAME << " states." << std::endl;
+
   std::ofstream L1D_state_file("L1D_state.txt", std::ofstream::app);
 
   L1D_state_file << "=================================" << std::endl;

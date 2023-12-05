@@ -110,9 +110,14 @@ public:
   on_demand_access_record on_demand_access_records[1000];
   size_t on_demand_access_record_index;
 
+  on_demand_access_record before_reset_on_demand_access_records[1000];
+  size_t before_reset_on_demand_access_record_index;
+
   std::ofstream context_switch_access_file;
+  std::ofstream before_reset_context_switch_access_file;
 
   void dump_accesses();
+  void dump_before_reset_accesses();
   // WL
 
   // cycle
