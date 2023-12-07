@@ -68,6 +68,11 @@ class CACHE : public champsim::operable
   using request_type = typename channel_type::request_type;
   using response_type = typename channel_type::response_type;
 
+  // WL 
+  uint64_t hit_count_history[1000];
+  uint64_t miss_count_history[1000];
+  // WL
+
   struct tag_lookup_type {
     uint64_t address;
     uint64_t v_address;
@@ -252,6 +257,7 @@ public:
   void record_spp_camera_states();
   void record_L1I_states();
   void record_L1D_states();
+  void record_hit_miss();
   // WL
 
   template <unsigned long long P_FLAG, unsigned long long R_FLAG>

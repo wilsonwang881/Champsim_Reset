@@ -811,6 +811,8 @@ void CACHE::reset_components()
       have_recorded_L1D_states = false;
     }
   }
+
+  record_hit_miss();
 }
 
 // WL
