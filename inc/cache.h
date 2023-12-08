@@ -71,6 +71,7 @@ class CACHE : public champsim::operable
   // WL 
   uint64_t hit_count_history[1000];
   uint64_t miss_count_history[1000];
+  size_t hit_miss_history_index;
   // WL
 
   struct tag_lookup_type {
@@ -257,7 +258,9 @@ public:
   void record_spp_camera_states();
   void record_L1I_states();
   void record_L1D_states();
-  void record_hit_miss();
+  void record_hit_miss_update(uint64_t tag_checks);
+  void record_hit_miss_select_cache();
+  void record_hit_miss_write_to_file();
   // WL
 
   template <unsigned long long P_FLAG, unsigned long long R_FLAG>

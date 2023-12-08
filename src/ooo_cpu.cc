@@ -152,6 +152,12 @@ void O3_CPU::initialize_instruction()
       on_demand_access_record_index = 0;
       std::cout << "Dumping 1st 1000 on demand accesses after context switch." << std::endl;
       dump_accesses();
+      /*
+      have_recorded_before_reset_hit_miss_number_L1I = true;
+      have_recorded_before_reset_hit_miss_number_L1D = true;
+      have_recorded_before_reset_hit_miss_number_L2C = true;
+      have_recorded_before_reset_hit_miss_number_LLC = true;
+      */
     }
 
     // Record the 1000 accesses right before the context switch.

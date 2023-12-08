@@ -418,6 +418,22 @@ long CACHE::operate()
 
   // WL 
   reset_components();
+
+  std::string L1I_name("cpu0_L1I");
+  std::string L1D_name("cpu0_L1D");
+  std::string L2_name("cpu0_L2C");
+  std::string LLC_name("LLC");
+
+  if ((L1I_name.compare(NAME) == 0 ||
+      L1D_name.compare(NAME) == 0 ||
+      L2_name.compare(NAME) == 0 ||
+      LLC_name.compare(NAME) == 0) &&
+      tag_bw_consumed > 0)
+  {
+    record_hit_miss_update(tag_bw_consumed);
+  }
+
+  record_hit_miss_select_cache();
   // WL
 
   return progress;
@@ -678,6 +694,10 @@ void CACHE::initialize()
 {
   impl_prefetcher_initialize();
   impl_initialize_replacement();
+
+  // WL 
+  hit_miss_history_index = 0;
+  hit_miss_history_index++;
 }
 
 void CACHE::begin_phase()
@@ -811,8 +831,6 @@ void CACHE::reset_components()
       have_recorded_L1D_states = false;
     }
   }
-
-  record_hit_miss();
 }
 
 // WL
@@ -858,4 +876,106 @@ void CACHE::record_L1D_states()
   L1D_state_file.close();
 }
 
+// WL 
+void CACHE::record_hit_miss_update(uint64_t tag_checks)
+{
+  // Gather miss numbers.
+  uint64_t miss = 0;
+
+  for(auto type : {access_type::LOAD, access_type::RFO, access_type::PREFETCH, access_type::WRITE, access_type::TRANSLATION}) {
+    miss =
+        std::accumulate(std::begin(sim_stats.misses.at(champsim::to_underlying(type))), std::end(sim_stats.misses.at(champsim::to_underlying(type))), miss);
+  }
+
+  for (size_t i = 0; i < tag_checks; i++) {
+
+    size_t tmpp = (hit_miss_history_index + i) % 1000;
+    miss_count_history[tmpp] = miss;
+  }
+
+  // Gather hit numbers.
+  uint64_t hit = 0;
+
+  for(auto type : {access_type::LOAD, access_type::RFO, access_type::PREFETCH, access_type::WRITE, access_type::TRANSLATION}) {
+    hit =
+        std::accumulate(std::begin(sim_stats.hits.at(champsim::to_underlying(type))), std::end(sim_stats.hits.at(champsim::to_underlying(type))), hit);
+  }
+
+  for (size_t i = 0; i < tag_checks; i++) {
+
+    size_t tmpp = (hit_miss_history_index + i) % 1000;
+    hit_count_history[tmpp] = hit;
+  }
+
+  /*
+  else if (have_recorded_after_reset_hit_miss_number) {
+    uint64_t hit_hiss_history_index_before = (hit_miss_history_index == 0) ? 999 : hit_miss_history_index - 1;
+
+    std::cout << "Recording " << NAME << " hit/miss numbers after reset." << std::endl;
+
+    std::ofstream hit_miss_number_file((NAME + "_hit_miss_record.txt").c_str(), std::ofstream::app);
+
+    hit_miss_number_file << "Current cycle = " << current_cycle << std::endl;
+    hit_miss_number_file << "After context switch:" << std::endl;
+    hit_miss_number_file << "hit = " << (unsigned)(hit_count_history[hit_miss_history_index] - hit_count_history[hit_hiss_history_index_before]) << std::endl;
+    hit_miss_number_file << "miss = " << (unsigned)(miss_count_history[hit_miss_history_index] - miss_count_history[hit_hiss_history_index_before]) << std::endl;
+
+    have_recorded_after_reset_hit_miss_number = false;
+    hit_miss_number_file.close();
+  }
+  */
+
+  // Increment the index.
+  hit_miss_history_index = (hit_miss_history_index + tag_checks) % 1000;
+}
+
+// WL
+void CACHE::record_hit_miss_select_cache()
+{
+  std::string L1I_name("cpu0_L1I");
+  std::string L1D_name("cpu0_L1D");
+  std::string L2C_name("cpu0_L2C");
+  std::string LLC_name("LLC");
+
+  // Write the hit/miss numbers to file.
+  if (L1I_name.compare(NAME) == 0 && have_recorded_before_reset_hit_miss_number_L1I) {
+
+    record_hit_miss_write_to_file();
+    have_recorded_before_reset_hit_miss_number_L1I = false;
+  }
+  else if (L1D_name.compare(NAME) == 0 && have_recorded_before_reset_hit_miss_number_L1D) {
+
+    record_hit_miss_write_to_file();
+    have_recorded_before_reset_hit_miss_number_L1D = false;
+  }
+  else if (L2C_name.compare(NAME) == 0 && have_recorded_before_reset_hit_miss_number_L2C) {
+
+    record_hit_miss_write_to_file();
+    have_recorded_before_reset_hit_miss_number_L2C = false;
+  }
+  else if (LLC_name.compare(NAME) == 0 && have_recorded_before_reset_hit_miss_number_LLC) {
+
+    record_hit_miss_write_to_file();
+    have_recorded_before_reset_hit_miss_number_LLC = false;
+  }
+}
+
+// WL 
+void CACHE::record_hit_miss_write_to_file()
+{
+  uint64_t hit_miss_history_index_before = (hit_miss_history_index == 0) ? 999 : (hit_miss_history_index - 1);
+
+  std::cout << "Recording " << NAME << " hit/miss numbers before reset." << std::endl;
+
+  std::ofstream hit_miss_number_file((NAME + "_hit_miss_record.txt").c_str(), std::ofstream::app);
+
+  hit_miss_number_file << "=================================" << std::endl;
+  hit_miss_number_file << "Current cycle = " << current_cycle << std::endl;
+  hit_miss_number_file << "index = " << hit_miss_history_index << std::endl;
+  hit_miss_number_file << "1000 accesses before this moment:" << std::endl;
+  hit_miss_number_file << "hit = " << (unsigned)hit_count_history[hit_miss_history_index] << " " << hit_count_history[hit_miss_history_index_before] << " " << (unsigned)(hit_count_history[hit_miss_history_index_before] - hit_count_history[hit_miss_history_index]) << std::endl;
+  hit_miss_number_file << "miss = " << (unsigned)miss_count_history[hit_miss_history_index] << " " << miss_count_history[hit_miss_history_index_before] << " " << (unsigned)(miss_count_history[hit_miss_history_index_before] - miss_count_history[hit_miss_history_index]) << std::endl;
+
+  hit_miss_number_file.close();
+}
 // LCOV_EXCL_STOP

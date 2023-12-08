@@ -41,6 +41,11 @@ std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases,
 bool champsim::operable::context_switch_mode = false;
 bool champsim::operable::have_recorded_on_demand_accesses = false;
 bool champsim::operable::have_recorded_before_reset_on_demand_accesses = false;
+bool champsim::operable::have_recorded_before_reset_hit_miss_number_L1I = false; 
+bool champsim::operable::have_recorded_before_reset_hit_miss_number_L1D = false; 
+bool champsim::operable::have_recorded_before_reset_hit_miss_number_L2C = false; 
+bool champsim::operable::have_recorded_before_reset_hit_miss_number_LLC = false; 
+bool champsim::operable::have_recorded_after_reset_hit_miss_number = false;
 bool champsim::operable::have_recorded_prefetcher_states = false;
 bool champsim::operable::have_recorded_L1I_states = false;
 bool champsim::operable::have_recorded_L1D_states = false;
