@@ -40,6 +40,8 @@
 // WL
 #include <iostream>
 #include <fstream>
+
+#define history_length 1001
 // WL
 
 struct cache_stats {
@@ -69,9 +71,11 @@ class CACHE : public champsim::operable
   using response_type = typename channel_type::response_type;
 
   // WL 
-  uint64_t hit_count_history[1000];
-  uint64_t miss_count_history[1000];
+  uint64_t current_cycle_history[history_length];
+  uint64_t hit_count_history[history_length];
+  uint64_t miss_count_history[history_length];
   size_t hit_miss_history_index;
+  size_t after_reset_index_start;
   // WL
 
   struct tag_lookup_type {
@@ -260,7 +264,7 @@ public:
   void record_L1D_states();
   void record_hit_miss_update(uint64_t tag_checks);
   void record_hit_miss_select_cache();
-  void record_hit_miss_write_to_file();
+  void record_hit_miss_write_to_file(bool before_or_after_reset);
   // WL
 
   template <unsigned long long P_FLAG, unsigned long long R_FLAG>

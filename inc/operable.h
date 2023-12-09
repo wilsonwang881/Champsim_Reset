@@ -45,7 +45,10 @@ public:
   static bool have_recorded_before_reset_hit_miss_number_L1D;
   static bool have_recorded_before_reset_hit_miss_number_L2C;
   static bool have_recorded_before_reset_hit_miss_number_LLC;
-  static bool have_recorded_after_reset_hit_miss_number;
+  static bool have_recorded_after_reset_hit_miss_number_L1I;
+  static bool have_recorded_after_reset_hit_miss_number_L1D;
+  static bool have_recorded_after_reset_hit_miss_number_L2C;
+  static bool have_recorded_after_reset_hit_miss_number_LLC;
   static bool have_recorded_prefetcher_states;
   static bool have_recorded_L1I_states;
   static bool have_recorded_L1D_states;

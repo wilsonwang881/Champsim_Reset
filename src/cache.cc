@@ -419,6 +419,8 @@ long CACHE::operate()
   // WL 
   reset_components();
 
+  record_hit_miss_select_cache();
+
   std::string L1I_name("cpu0_L1I");
   std::string L1D_name("cpu0_L1D");
   std::string L2_name("cpu0_L2C");
@@ -432,8 +434,6 @@ long CACHE::operate()
   {
     record_hit_miss_update(tag_bw_consumed);
   }
-
-  record_hit_miss_select_cache();
   // WL
 
   return progress;
@@ -887,12 +887,6 @@ void CACHE::record_hit_miss_update(uint64_t tag_checks)
         std::accumulate(std::begin(sim_stats.misses.at(champsim::to_underlying(type))), std::end(sim_stats.misses.at(champsim::to_underlying(type))), miss);
   }
 
-  for (size_t i = 0; i < tag_checks; i++) {
-
-    size_t tmpp = (hit_miss_history_index + i) % 1000;
-    miss_count_history[tmpp] = miss;
-  }
-
   // Gather hit numbers.
   uint64_t hit = 0;
 
@@ -901,10 +895,47 @@ void CACHE::record_hit_miss_update(uint64_t tag_checks)
         std::accumulate(std::begin(sim_stats.hits.at(champsim::to_underlying(type))), std::end(sim_stats.hits.at(champsim::to_underlying(type))), hit);
   }
 
-  for (size_t i = 0; i < tag_checks; i++) {
+  std::string L1I_name("cpu0_L1I");
+  std::string L1D_name("cpu0_L1D");
+  std::string L2C_name("cpu0_L2C");
+  std::string LLC_name("LLC");
 
-    size_t tmpp = (hit_miss_history_index + i) % 1000;
+  // Update the history records.
+  for (size_t i = 0; i < tag_checks; i++)
+  {
+    size_t tmpp = (hit_miss_history_index + i) % history_length;
+
+    miss_count_history[tmpp] = miss;
     hit_count_history[tmpp] = hit;
+    current_cycle_history[tmpp] = current_cycle;
+
+    if ((tmpp) == (after_reset_index_start))
+    {
+      if (L1I_name.compare(NAME) == 0 && have_recorded_after_reset_hit_miss_number_L1I) 
+      {
+       
+        record_hit_miss_write_to_file(false);
+        have_recorded_after_reset_hit_miss_number_L1I = false;
+      }
+      else if (L1D_name.compare(NAME) == 0 && have_recorded_after_reset_hit_miss_number_L1D)
+      {
+       
+        record_hit_miss_write_to_file(false);
+        have_recorded_after_reset_hit_miss_number_L1D = false;
+      }
+      else if (L2C_name.compare(NAME) == 0 && have_recorded_after_reset_hit_miss_number_L2C)
+      {
+       
+        record_hit_miss_write_to_file(false);
+        have_recorded_after_reset_hit_miss_number_L2C = false;
+      }
+      else if (LLC_name.compare(NAME) == 0 && have_recorded_after_reset_hit_miss_number_LLC)
+      {
+       
+        record_hit_miss_write_to_file(false);
+        have_recorded_after_reset_hit_miss_number_LLC = false;
+      }
+    }
   }
 
   /*
@@ -926,7 +957,7 @@ void CACHE::record_hit_miss_update(uint64_t tag_checks)
   */
 
   // Increment the index.
-  hit_miss_history_index = (hit_miss_history_index + tag_checks) % 1000;
+  hit_miss_history_index = (hit_miss_history_index + tag_checks) % history_length;
 }
 
 // WL
@@ -940,41 +971,72 @@ void CACHE::record_hit_miss_select_cache()
   // Write the hit/miss numbers to file.
   if (L1I_name.compare(NAME) == 0 && have_recorded_before_reset_hit_miss_number_L1I) {
 
-    record_hit_miss_write_to_file();
+    record_hit_miss_write_to_file(true);
     have_recorded_before_reset_hit_miss_number_L1I = false;
+    have_recorded_after_reset_hit_miss_number_L1I = true;
+    after_reset_index_start = hit_miss_history_index - 1;
   }
   else if (L1D_name.compare(NAME) == 0 && have_recorded_before_reset_hit_miss_number_L1D) {
 
-    record_hit_miss_write_to_file();
+    record_hit_miss_write_to_file(true);
     have_recorded_before_reset_hit_miss_number_L1D = false;
+    have_recorded_after_reset_hit_miss_number_L1D = true;
+    after_reset_index_start = hit_miss_history_index - 1;
   }
   else if (L2C_name.compare(NAME) == 0 && have_recorded_before_reset_hit_miss_number_L2C) {
 
-    record_hit_miss_write_to_file();
+    record_hit_miss_write_to_file(true);
     have_recorded_before_reset_hit_miss_number_L2C = false;
+    have_recorded_after_reset_hit_miss_number_L2C = true;
+    after_reset_index_start = hit_miss_history_index - 1;
   }
   else if (LLC_name.compare(NAME) == 0 && have_recorded_before_reset_hit_miss_number_LLC) {
 
-    record_hit_miss_write_to_file();
+    record_hit_miss_write_to_file(true);
     have_recorded_before_reset_hit_miss_number_LLC = false;
+    have_recorded_after_reset_hit_miss_number_LLC = true;
+    after_reset_index_start = hit_miss_history_index - 1;
   }
 }
 
 // WL 
-void CACHE::record_hit_miss_write_to_file()
+void CACHE::record_hit_miss_write_to_file(bool before_or_after_reset)
 {
-  uint64_t hit_miss_history_index_before = (hit_miss_history_index == 0) ? 999 : (hit_miss_history_index - 1);
-
-  std::cout << "Recording " << NAME << " hit/miss numbers before reset." << std::endl;
+  std::cout << "Recording " << NAME << " hit/miss numbers " << (before_or_after_reset ? "before" : "after") << " reset." << std::endl;
 
   std::ofstream hit_miss_number_file((NAME + "_hit_miss_record.txt").c_str(), std::ofstream::app);
 
-  hit_miss_number_file << "=================================" << std::endl;
-  hit_miss_number_file << "Current cycle = " << current_cycle << std::endl;
-  hit_miss_number_file << "index = " << hit_miss_history_index << std::endl;
-  hit_miss_number_file << "1000 accesses before this moment:" << std::endl;
-  hit_miss_number_file << "hit = " << (unsigned)hit_count_history[hit_miss_history_index] << " " << hit_count_history[hit_miss_history_index_before] << " " << (unsigned)(hit_count_history[hit_miss_history_index_before] - hit_count_history[hit_miss_history_index]) << std::endl;
-  hit_miss_number_file << "miss = " << (unsigned)miss_count_history[hit_miss_history_index] << " " << miss_count_history[hit_miss_history_index_before] << " " << (unsigned)(miss_count_history[hit_miss_history_index_before] - miss_count_history[hit_miss_history_index]) << std::endl;
+  if (before_or_after_reset)
+  {
+    uint64_t hit_miss_history_index_before = (hit_miss_history_index == 0) ? (history_length - 1) : (hit_miss_history_index - 1);
+
+    hit_miss_number_file << "=================================" << std::endl;
+    hit_miss_number_file << "Current cycle = " << current_cycle << std::endl;
+    hit_miss_number_file << "1000 accesses before this moment:" << std::endl;
+    hit_miss_number_file << "hit = " << (unsigned)(hit_count_history[hit_miss_history_index_before] - hit_count_history[hit_miss_history_index]) << std::endl;
+    hit_miss_number_file << "miss = " << (unsigned)(miss_count_history[hit_miss_history_index_before] - miss_count_history[hit_miss_history_index]) << std::endl;
+    hit_miss_number_file << "cycles taken = " << (unsigned)(current_cycle_history[hit_miss_history_index_before] - current_cycle_history[hit_miss_history_index]) << std::endl;
+  }
+  else
+  {
+    after_reset_index_start++;
+    uint64_t hit_miss_history_index_after = (after_reset_index_start == 0) ? (history_length - 1) : (after_reset_index_start - 1);
+
+    hit_miss_number_file << "=================================" << std::endl;
+    hit_miss_number_file << "Current cycle = " << current_cycle << std::endl;
+    hit_miss_number_file << "1000 accesses before this moment:" << std::endl;
+    hit_miss_number_file << "hit = " << (unsigned)(hit_count_history[hit_miss_history_index_after] - hit_count_history[after_reset_index_start]) << std::endl;
+    hit_miss_number_file << "miss = " << (unsigned)(miss_count_history[hit_miss_history_index_after] - miss_count_history[after_reset_index_start]) << std::endl;
+    hit_miss_number_file << "cycles taken = " << (unsigned)(current_cycle_history[hit_miss_history_index_after] - current_cycle_history[after_reset_index_start]) << std::endl;
+
+    /*
+    hit_miss_number_file << "index = " << hit_miss_history_index << std::endl;
+    hit_miss_number_file << "after_reset_index_start = " << after_reset_index_start << std::endl;
+    for(size_t i = 0; i < history_length; i++) {
+      hit_miss_number_file << i << " " << current_cycle_history[i] << std::endl; 
+    }
+    */
+  }
 
   hit_miss_number_file.close();
 }
