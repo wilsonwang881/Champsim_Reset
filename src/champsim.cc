@@ -137,6 +137,15 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       std::cout << "Resetting @ins. count = " << cpu_0.num_retired << " at cycle " << cpu_0.current_cycle << std::endl;
 
       champsim::operable::context_switch_mode = true;
+      champsim::operable::have_recorded_on_demand_accesses = true;
+      champsim::operable::have_recorded_before_reset_on_demand_accesses = true;
+      champsim::operable::have_recorded_before_reset_hit_miss_number_L1I = true;
+      champsim::operable::have_recorded_before_reset_hit_miss_number_L1D = true;
+      champsim::operable::have_recorded_before_reset_hit_miss_number_L2C = true;
+      champsim::operable::have_recorded_before_reset_hit_miss_number_LLC = true;
+      champsim::operable::have_recorded_prefetcher_states = true;
+      champsim::operable::have_recorded_L1I_states = true;
+      champsim::operable::have_recorded_L1D_states = true;
 
       // prevent out of range index
       if (reset_ins_count_readin_index < num_resets)
