@@ -42,6 +42,7 @@
 #include <iostream>
 #include <fstream>
 
+
 #define history_length 1001
 // WL
 
@@ -72,11 +73,10 @@ class CACHE : public champsim::operable
   using response_type = typename channel_type::response_type;
 
   // WL 
-  uint64_t current_cycle_history[history_length];
-  uint64_t hit_count_history[history_length];
-  uint64_t miss_count_history[history_length];
-  size_t hit_miss_history_index;
-  size_t after_reset_index_start;
+  std::deque<uint64_t> current_cycle_history;
+  std::deque<uint64_t> hit_count_history;
+  std::deque<uint64_t> miss_count_history;
+  int after_reset_updates;
   // WL
 
   struct tag_lookup_type {
@@ -496,27 +496,34 @@ public:
     // WL
     std::cout << "Initializing cache " << NAME << std::endl;
 
-    std::string L1D_file_name("./cpu0_L1D_hit_miss_record.txt");
-    std::string L1I_file_name("./cpu0_L1I_hit_miss_record.txt");
-    std::string L2C_file_name("./cpu0_L2C_hit_miss_record.txt");
-    std::string LLC_file_name("./LLC_hit_miss_record.txt");
+    std::string L1I_name("cpu0_L1I");
+    std::string L1D_name("cpu0_L1D");
+    std::string L2C_name("cpu0_L2C");
+    std::string LLC_name("LLC");
 
-    if (L1D_file_name.compare(NAME) == 0)
+    std::string L1D_file_name("cpu0_L1D_hit_miss_record.txt");
+    std::string L1I_file_name("cpu0_L1I_hit_miss_record.txt");
+    std::string L2C_file_name("cpu0_L2C_hit_miss_record.txt");
+    std::string LLC_file_name("LLC_hit_miss_record.txt");
+
+    if (L1D_name.compare(NAME) == 0)
     {
       remove(L1D_file_name.c_str());
     }
-    else if (L1I_file_name.compare(NAME) == 0)
+    else if (L1I_name.compare(NAME) == 0)
     {
       remove(L1I_file_name.c_str());
     }
-    else if (L2C_file_name.compare(NAME) == 0)
+    else if (L2C_name.compare(NAME) == 0)
     {
       remove(L2C_file_name.c_str());
     }
-    else if (LLC_file_name.compare(NAME) == 0)
+    else if (LLC_name.compare(NAME) == 0)
     {
       remove(LLC_file_name.c_str());
     }
+
+    after_reset_updates = 0;
     // WL
   }
 };
