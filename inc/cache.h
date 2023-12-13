@@ -38,6 +38,7 @@
 #include <type_traits>
 
 // WL
+#include <cstdio>
 #include <iostream>
 #include <fstream>
 
@@ -492,6 +493,31 @@ public:
         match_offset_bits(b.m_wq_full_addr), virtual_prefetch(b.m_va_pref), pref_activate_mask(b.m_pref_act_mask),
         module_pimpl(std::make_unique<module_model<P_FLAG, R_FLAG>>(this))
   {
+    // WL
+    std::cout << "Initializing cache " << NAME << std::endl;
+
+    std::string L1D_file_name("./cpu0_L1D_hit_miss_record.txt");
+    std::string L1I_file_name("./cpu0_L1I_hit_miss_record.txt");
+    std::string L2C_file_name("./cpu0_L2C_hit_miss_record.txt");
+    std::string LLC_file_name("./LLC_hit_miss_record.txt");
+
+    if (L1D_file_name.compare(NAME) == 0)
+    {
+      remove(L1D_file_name.c_str());
+    }
+    else if (L1I_file_name.compare(NAME) == 0)
+    {
+      remove(L1I_file_name.c_str());
+    }
+    else if (L2C_file_name.compare(NAME) == 0)
+    {
+      remove(L2C_file_name.c_str());
+    }
+    else if (LLC_file_name.compare(NAME) == 0)
+    {
+      remove(LLC_file_name.c_str());
+    }
+    // WL
   }
 };
 

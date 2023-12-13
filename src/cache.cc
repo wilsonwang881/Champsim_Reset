@@ -702,6 +702,7 @@ void CACHE::initialize()
 
 void CACHE::begin_phase()
 {
+  std::cout << "begin_phase() " << NAME << std::endl; // WL
   stats_type new_roi_stats, new_sim_stats;
 
   new_roi_stats.name = NAME;
@@ -880,15 +881,18 @@ void CACHE::record_L1D_states()
 void CACHE::record_hit_miss_update(uint64_t tag_checks)
 {
   // Gather miss numbers.
-  uint64_t miss = 0;
+  auto miss = 0ull;
 
-  for(auto type : {access_type::LOAD, access_type::RFO, access_type::PREFETCH, access_type::WRITE, access_type::TRANSLATION}) {
+  for(auto type : {access_type::LOAD, access_type::RFO, access_type::PREFETCH, access_type::WRITE, access_type::TRANSLATION
+}) {
     miss =
         std::accumulate(std::begin(sim_stats.misses.at(champsim::to_underlying(type))), std::end(sim_stats.misses.at(champsim::to_underlying(type))), miss);
+
+   // std::cout << "total miss => " << sim_stats.misses.at(0)[0] << std::endl;
   }
 
   // Gather hit numbers.
-  uint64_t hit = 0;
+  auto hit = 0ull;
 
   for(auto type : {access_type::LOAD, access_type::RFO, access_type::PREFETCH, access_type::WRITE, access_type::TRANSLATION}) {
     hit =
@@ -899,6 +903,8 @@ void CACHE::record_hit_miss_update(uint64_t tag_checks)
   std::string L1D_name("cpu0_L1D");
   std::string L2C_name("cpu0_L2C");
   std::string LLC_name("LLC");
+
+ // std::cout << "testing => " << miss << " " << hit << " " << current_cycle << " " << tag_checks << std::endl;
 
   // Update the history records.
   for (size_t i = 0; i < tag_checks; i++)
@@ -1016,6 +1022,12 @@ void CACHE::record_hit_miss_write_to_file(bool before_or_after_reset)
     hit_miss_number_file << "hit = " << (unsigned)(hit_count_history[hit_miss_history_index_before] - hit_count_history[hit_miss_history_index]) << std::endl;
     hit_miss_number_file << "miss = " << (unsigned)(miss_count_history[hit_miss_history_index_before] - miss_count_history[hit_miss_history_index]) << std::endl;
     hit_miss_number_file << "cycles taken = " << (unsigned)(current_cycle_history[hit_miss_history_index_before] - current_cycle_history[hit_miss_history_index]) << std::endl;
+
+    hit_miss_number_file << "index = " << hit_miss_history_index << std::endl;
+    hit_miss_number_file << "hit_miss_history_index_before = " << hit_miss_history_index_before << std::endl;
+    for(size_t i = 0; i < history_length; i++) {
+      hit_miss_number_file << i << " " << (unsigned)hit_count_history[i] << " " << (unsigned)miss_count_history[i] << " " << current_cycle_history[i] << std::endl; 
+    }
   }
   else
   {
@@ -1029,13 +1041,12 @@ void CACHE::record_hit_miss_write_to_file(bool before_or_after_reset)
     hit_miss_number_file << "miss = " << (unsigned)(miss_count_history[hit_miss_history_index_after] - miss_count_history[after_reset_index_start]) << std::endl;
     hit_miss_number_file << "cycles taken = " << (unsigned)(current_cycle_history[hit_miss_history_index_after] - current_cycle_history[after_reset_index_start]) << std::endl;
 
-    /*
+    
     hit_miss_number_file << "index = " << hit_miss_history_index << std::endl;
     hit_miss_number_file << "after_reset_index_start = " << after_reset_index_start << std::endl;
     for(size_t i = 0; i < history_length; i++) {
       hit_miss_number_file << i << " " << current_cycle_history[i] << std::endl; 
     }
-    */
   }
 
   hit_miss_number_file.close();
