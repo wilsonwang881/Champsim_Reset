@@ -50,12 +50,13 @@ void CACHE::prefetcher_cycle_operate()
   if (champsim::operable::context_switch_mode)
   {
     // Gather prefetches via the signature and pattern tables.
+    /*
     if (!pref.context_switch_prefetch_gathered)
     {
       pref.context_switch_gather_prefetches();
       pref.context_switch_prefetch_gathered = true;
     }
-    
+   
     // Issue prefetches until the queue is empty.
     if (!pref.context_switch_queue_empty())
     {
@@ -63,13 +64,14 @@ void CACHE::prefetcher_cycle_operate()
     }
     // Toggle switches after all prefetches are issued.
     else
-    {
+    */
+    //{
       champsim::operable::context_switch_mode = false;
       pref.context_switch_prefetch_gathered = false;
       std::cout << NAME << " stalled " << context_switch_cycles_stalled << " cycles" << " done at cycle " << current_cycle << std::endl;
       context_switch_cycles_stalled = 0;
       //this->reset_spp_camera_prefetcher();
-    }
+    //}
   }
   // Normal operation.
   // No prefetch gathering via the signature and pattern tables.

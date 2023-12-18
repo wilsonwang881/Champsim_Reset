@@ -795,15 +795,6 @@ void CACHE::print_deadlock()
 // WL
 void CACHE::reset_components()
 {
-  // Optionally reset caches or prefetcher.
-  if (context_switch_mode)
-  {
-    if (SIMULATE_WITH_CACHE_RESET)
-      CACHE::invalidate_all_cache_blocks();
-    if (SIMULATE_WITH_PREFETCHER_RESET)
-      CACHE::reset_spp_camera_prefetcher();
-  }
-
   std::string L2_name("cpu0_L2C");
   std::string L1I_name("cpu0_L1I");
   std::string L1D_name("cpu0_L1D");
@@ -826,6 +817,21 @@ void CACHE::reset_components()
     if (L1D_name.compare(NAME) == 0) {
       //record_L1D_states();
       have_recorded_L1D_states = false;
+    }
+  }
+
+  // Optionally reset caches or prefetcher.
+  if (context_switch_mode)
+  {
+    if (SIMULATE_WITH_CACHE_RESET)
+      CACHE::invalidate_all_cache_blocks();
+
+    if (SIMULATE_WITH_PREFETCHER_RESET)
+    {
+      if (L2_name.compare(NAME) == 0)
+      {
+        CACHE::reset_spp_camera_prefetcher();
+      }
     }
   }
 }

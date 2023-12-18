@@ -260,13 +260,21 @@ void spp::prefetcher::context_switch_gather_prefetches()
   }
 
   // Debug print.
-  printf("Addresses to be prefetched after a context switch\n");
+  //printf("Addresses to be prefetched after a context switch\n");
 
   std::deque<std::pair<uint64_t, bool>>::iterator it;
+
+  /*
   for (it = context_switch_issue_queue.begin(); it != context_switch_issue_queue.end(); ++it)
   {
     printf("0x%012lx %d\n", it->first, it->second);
   }
+  */
+
+  // WL 
+  // For testing purposes, temporarily not issue any context switch prefetches.
+  context_switch_issue_queue.clear();
+ 
 }
 
 // WL

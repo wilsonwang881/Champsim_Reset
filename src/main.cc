@@ -66,13 +66,11 @@ int main(int argc, char** argv)
     uint64_t reset_ins_count_readin;
     std::cout << "Reset at instruction:" << std::endl;
 
-    /*
     while(ins_number_every_4M_cycles_file >> reset_ins_count_readin)
     {
        reset_ins_count.push_back(reset_ins_count_readin);
-       std::cout << (unsigned)reset_ins_count_readin << std::endl;
+       //std::cout << (unsigned)reset_ins_count_readin << std::endl;
     }
-    */
  
     std::cout << "Number of resets: " << reset_ins_count.size() << std::endl;
     ins_number_every_4M_cycles_file.close();

@@ -31,14 +31,14 @@ do
  	tmpp_base_name=${bin_names[i]}
 
 	# Update macros.
- 	sed -i "s/#define simulate_with_cache_reset 0/#define simulate_with_cache_reset ${cache_setting[i]}/g" inc/operable.h
- 	sed -i "s/#define simulate_with_prefetcher_reset 0/#define simulate_with_prefetcher_reset ${prefetcher_setting[i]}/g" inc/operable.h
- 	sed -i "s/#define simulate_with_btb_reset 0/#define simulate_with_btb_reset ${btb_setting[i]}/g" inc/operable.h
- 	sed -i "s/#define simulate_with_branch_predictor_reset 0/#define simulate_with_branch_predictor_reset ${branch_predictor_setting[i]}/g" inc/operable.h
- 	sed -i "s/#define dump_ins_number_every_4m_cycles 1/#define dump_ins_number_every_4m_cycles ${dump_setting[i]}/g" src/main.cc
+ 	sed -i "s/#define SIMULATE_WITH_CACHE_RESET 0/#define SIMULATE_WITH_CACHE_RESET ${cache_setting[i]}/g" inc/operable.h
+ 	sed -i "s/#define SIMULATE_WITH_PREFETCHER_RESET 0/#define SIMULATE_WITH_PREFETCHER_RESET ${prefetcher_setting[i]}/g" inc/operable.h
+ 	sed -i "s/#define SIMULATE_WITH_BTB_RESET 0/#define SIMULATE_WITH_BTB_RESET ${btb_setting[i]}/g" inc/operable.h
+ 	sed -i "s/#define SIMULATE_WITH_BRANCH_PREDICTOR_RESET 0/#define SIMULATE_WITH_BRANCH_PREDICTOR_RESET ${branch_predictor_setting[i]}/g" inc/operable.h
+ 	sed -i "s/#define DUMP_INS_NUMBER_EVERY_4M_CYCLES 1/#define DUMP_INS_NUMBER_EVERY_4M_CYCLES ${dump_setting[i]}/g" inc/champsim.h
  
  	# Threaded compile
- 	make -j 10;
+ 	make -j 16;
  
  	# Prompt
  	echo "$tmpp_base_name" compiled;
@@ -47,10 +47,10 @@ do
  	mv bin/champsim bin/"$tmpp_base_name";
 
 	# Revert changes made to the macros.
-	sed -i "s/#define simulate_with_cache_reset ${cache_setting[i]}/#define simulate_with_cache_reset 0/g" inc/operable.h
- 	sed -i "s/#define simulate_with_prefetcher_reset ${prefetcher_setting[i]}/#define simulate_with_prefetcher_reset 0/g" inc/operable.h
- 	sed -i "s/#define simulate_with_btb_reset ${btb_setting[i]}/#define simulate_with_btb_reset 0/g" inc/operable.h
- 	sed -i "s/#define simulate_with_branch_predictor_reset ${branch_predictor_setting[i]}/#define simulate_with_branch_predictor_reset 0/g" inc/operable.h
- 	sed -i "s/#define dump_ins_number_every_4m_cycles ${dump_setting[i]}/#define dump_ins_number_every_4m_cycles 1/g" src/main.cc
+	sed -i "s/#define SIMULATE_WITH_CACHE_RESET ${cache_setting[i]}/#define SIMULATE_WITH_CACHE_RESET 0/g" inc/operable.h
+ 	sed -i "s/#define SIMULATE_WITH_PREFETCHER_RESET ${prefetcher_setting[i]}/#define SIMULATE_WITH_PREFETCHER_RESET 0/g" inc/operable.h
+ 	sed -i "s/#define SIMULATE_WITH_BTB_RESET ${btb_setting[i]}/#define SIMULATE_WITH_BTB_RESET 0/g" inc/operable.h
+ 	sed -i "s/#define SIMULATE_WITH_BRANCH_PREDICTOR_RESET ${branch_predictor_setting[i]}/#define SIMULATE_WITH_BRANCH_PREDICTOR_RESET 0/g" inc/operable.h
+ 	sed -i "s/#define DUMP_INS_NUMBER_EVERY_4M_CYCLES ${dump_setting[i]}/#define DUMP_INS_NUMBER_EVERY_4M_CYCLES 1/g" inc/champsim.h
 done
 
