@@ -421,14 +421,9 @@ long CACHE::operate()
 
   record_hit_miss_select_cache();
 
-  std::string L1I_name("cpu0_L1I");
-  std::string L1D_name("cpu0_L1D");
-  std::string L2_name("cpu0_L2C");
-  std::string LLC_name("LLC");
-
   if ((L1I_name.compare(NAME) == 0 ||
       L1D_name.compare(NAME) == 0 ||
-      L2_name.compare(NAME) == 0 ||
+      L2C_name.compare(NAME) == 0 ||
       LLC_name.compare(NAME) == 0) &&
       tag_bw_consumed > 0)
   {
@@ -795,13 +790,9 @@ void CACHE::print_deadlock()
 // WL
 void CACHE::reset_components()
 {
-  std::string L2_name("cpu0_L2C");
-  std::string L1I_name("cpu0_L1I");
-  std::string L1D_name("cpu0_L1D");
-
   // Record prefetcher states.
   if (have_recorded_prefetcher_states) {
-    if (L2_name.compare(NAME) == 0) {
+    if (L2C_name.compare(NAME) == 0) {
       record_spp_camera_states(); 
       have_recorded_prefetcher_states = false;
     }
@@ -820,18 +811,57 @@ void CACHE::reset_components()
     }
   }
 
-  // Optionally reset caches or prefetcher.
-  if (context_switch_mode)
+  if (SIMULATE_WITH_CACHE_RESET)
   {
-    if (SIMULATE_WITH_CACHE_RESET)
-      CACHE::invalidate_all_cache_blocks();
-
-    if (SIMULATE_WITH_PREFETCHER_RESET)
+    if (have_cleared_L1I && !L1I_name.compare(NAME))
     {
-      if (L2_name.compare(NAME) == 0)
-      {
-        CACHE::reset_spp_camera_prefetcher();
-      }
+      have_cleared_L1I = false;
+      CACHE::invalidate_all_cache_blocks();
+    }
+
+    if (have_cleared_L1D && !L1D_name.compare(NAME))
+    {
+      have_cleared_L1D = false;
+      CACHE::invalidate_all_cache_blocks();
+    }
+
+    if (have_cleared_L2C && !L2C_name.compare(NAME))
+    {
+      have_cleared_L2C = false;
+      CACHE::invalidate_all_cache_blocks();
+    }
+
+    if (have_cleared_LLC && !LLC_name.compare(NAME))
+    {
+      have_cleared_LLC = false;
+      CACHE::invalidate_all_cache_blocks();
+    }
+
+    if (have_cleared_ITLB && !ITLB_name.compare(NAME))
+    {
+      have_cleared_ITLB = false;  
+      CACHE::invalidate_all_cache_blocks();
+    }
+
+    if (have_cleared_DTLB && !DTLB_name.compare(NAME))
+    {
+      have_cleared_DTLB = false;
+      CACHE::invalidate_all_cache_blocks();
+    }
+
+    if (have_cleared_STLB && !STLB_name.compare(NAME))
+    {
+      have_cleared_STLB = false;
+      CACHE::invalidate_all_cache_blocks();
+    }
+  }
+
+  if (SIMULATE_WITH_PREFETCHER_RESET)
+  {
+    if (have_cleared_prefetcher && !L2C_name.compare(NAME))
+    {
+      have_cleared_prefetcher = false;
+      CACHE::reset_spp_camera_prefetcher();
     }
   }
 }
@@ -839,7 +869,7 @@ void CACHE::reset_components()
 // WL
 void CACHE::invalidate_all_cache_blocks()
 {
-  std::cout << "Invalidate blocks in CACHE " << NAME << " at cycle " << current_cycle << std::endl;
+  std::cout << "=> CACHE " << NAME << " cleared at cycle " << current_cycle << std::endl;
 
   for (size_t i = 0; i < NUM_SET * NUM_WAY; i++)
     block[i].valid = 0;
@@ -898,11 +928,6 @@ void CACHE::record_hit_miss_update(uint64_t tag_checks)
     hit =
         std::accumulate(std::begin(sim_stats.hits.at(champsim::to_underlying(type))), std::end(sim_stats.hits.at(champsim::to_underlying(type))), hit);
   }
-
-  std::string L1I_name("cpu0_L1I");
-  std::string L1D_name("cpu0_L1D");
-  std::string L2C_name("cpu0_L2C");
-  std::string LLC_name("LLC");
 
   // Update the history records.
   for (size_t i = 0; i < tag_checks; i++)
@@ -975,11 +1000,6 @@ void CACHE::record_hit_miss_update(uint64_t tag_checks)
 // WL
 void CACHE::record_hit_miss_select_cache()
 {
-  std::string L1I_name("cpu0_L1I");
-  std::string L1D_name("cpu0_L1D");
-  std::string L2C_name("cpu0_L2C");
-  std::string LLC_name("LLC");
-
   // Write the hit/miss numbers to file.
   if (L1I_name.compare(NAME) == 0 && have_recorded_before_reset_hit_miss_number_L1I) {
 

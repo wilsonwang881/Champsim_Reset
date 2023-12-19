@@ -27,6 +27,8 @@
 #define SIMULATE_WITH_BTB_RESET 0
 #define SIMULATE_WITH_BRANCH_PREDICTOR_RESET 0
 #define RESET_INTERVAL 4000000
+
+#include <string>
 // WL
 
 namespace champsim
@@ -53,6 +55,23 @@ public:
   static bool have_recorded_L1I_states;
   static bool have_recorded_L1D_states;
   int context_switch_cycles_stalled = 0;
+  static bool have_cleared_L1I;
+  static bool have_cleared_L1D;
+  static bool have_cleared_L2C;
+  static bool have_cleared_LLC;
+  static bool have_cleared_ITLB;
+  static bool have_cleared_DTLB;
+  static bool have_cleared_STLB;
+
+  const std::string L1I_name = "cpu0_L1I";
+  const std::string L1D_name = "cpu0_L1D";
+  const std::string L2C_name = "cpu0_L2C";
+  const std::string LLC_name = "LLC";
+  const std::string DTLB_name = "cpu0_DTLB";
+  const std::string ITLB_name = "cpu0_ITLB";
+  const std::string STLB_name = "cpu0_STLB";
+
+  static bool have_cleared_prefetcher;
   // WL
 
   double leap_operation = 0;

@@ -55,6 +55,9 @@ void O3_CPU::initialize_btb()
   std::fill(std::begin(::INDIRECT_BTB[this]), std::end(::INDIRECT_BTB[this]), 0);
   std::fill(std::begin(::CALL_SIZE[this]), std::end(::CALL_SIZE[this]), 4);
   ::CONDITIONAL_HISTORY[this] = 0;
+
+  // WL 
+  std::cout << "=> BTB initialized at cycle " << current_cycle << std::endl;
 }
 
 std::pair<uint64_t, uint8_t> O3_CPU::btb_prediction(uint64_t ip)

@@ -93,7 +93,7 @@ void CACHE::prefetcher_final_stats()
 // WL
 void CACHE::reset_spp_camera_prefetcher()
 {
-  std::cout << "Reset spp camera prefetcher at CACHE " << NAME << std::endl;
+  std::cout << "=> Prefetcher cleared at CACHE " << NAME << " at cycle " << current_cycle << std::endl;
   auto &pref = ::SPP[{this, cpu}];
   pref.clear_states();
 }

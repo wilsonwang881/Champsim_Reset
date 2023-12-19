@@ -52,6 +52,14 @@ bool champsim::operable::have_recorded_after_reset_hit_miss_number_LLC = false;
 bool champsim::operable::have_recorded_prefetcher_states = false;
 bool champsim::operable::have_recorded_L1I_states = false;
 bool champsim::operable::have_recorded_L1D_states = false;
+bool champsim::operable::have_cleared_L1I = false;
+bool champsim::operable::have_cleared_L1D = false;
+bool champsim::operable::have_cleared_L2C = false;
+bool champsim::operable::have_cleared_LLC = false;
+bool champsim::operable::have_cleared_ITLB = false;
+bool champsim::operable::have_cleared_DTLB = false;
+bool champsim::operable::have_cleared_STLB = false;
+bool champsim::operable::have_cleared_prefetcher = false;
 // WL
 
 int main(int argc, char** argv)

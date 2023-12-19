@@ -1,17 +1,2 @@
 bin_name,Cache,Prefetcher,BTB,Branch Predictor,Dump
 sed_all_reset_read_reset_ins,1,1,1,1,0
-sed_branch_predictor_reset_read_reset_ins,0,0,0,1,0
-sed_btb_branch_predictor_reset_read_reset_ins,0,0,1,1,0
-sed_btb_prefetcher_reset_read_reset_ins,0,1,1,0,0
-sed_btb_reset_read_reset_ins,0,0,1,0,0
-sed_cache_branch_predictor_reset_read_reset_ins,1,0,0,1,0
-sed_cache_btb_branch_predictor_reset_read_reset_ins,1,0,1,1,0
-sed_cache_btb_prefetcher_reset_read_reset_ins,1,1,1,0,0
-sed_cache_btb_reset_read_reset_ins,1,0,1,0,0
-sed_cache_prefetcher_branch_predictor_reset_read_reset_ins,1,1,0,1,0
-sed_cache_prefetcher_reset_read_reset_ins,1,1,0,0,0
-sed_cache_reset_read_reset_ins,1,0,0,0,0
-sed_no_reset_record_reset_ins,0,0,0,0,1
-sed_prefetcher_branch_predictor_reset_read_reset_ins,0,1,0,1,0
-sed_prefetcher_reset_read_reset_ins,0,1,0,0,0
-sed_btb_branch_predictor_prefetcher_reset_read_reset_ins,0,1,1,1,1

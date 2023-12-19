@@ -496,11 +496,6 @@ public:
     // WL
     std::cout << "Initializing cache " << NAME << std::endl;
 
-    std::string L1I_name("cpu0_L1I");
-    std::string L1D_name("cpu0_L1D");
-    std::string L2C_name("cpu0_L2C");
-    std::string LLC_name("LLC");
-
     std::string L1D_file_name("cpu0_L1D_hit_miss_record.txt");
     std::string L1I_file_name("cpu0_L1I_hit_miss_record.txt");
     std::string L2C_file_name("cpu0_L2C_hit_miss_record.txt");

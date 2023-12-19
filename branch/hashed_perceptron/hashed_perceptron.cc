@@ -119,6 +119,8 @@ void O3_CPU::initialize_branch_predictor()
 
   for (unsigned i = 0; i < NUM_CPUS; i++)
     ::theta[i] = 10;
+
+  std::cout << "=> Branch predictor initialized at cycle " << current_cycle << std::endl;
 }
 
 uint8_t O3_CPU::predict_branch(uint64_t pc)

@@ -134,7 +134,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       // During the overhead, CPU does not take in instructions.
       //ooo_cpu[0]->context_switch_stall = CONTEXT_SWITCH_OVERHEAD_CYCLES;
 
-      std::cout << "Resetting @ins. count = " << cpu_0.num_retired << " at cycle " << cpu_0.current_cycle << std::endl;
+      std::cout << std::endl << "Resetting @ins. count = " << cpu_0.num_retired << " at cycle " << cpu_0.current_cycle << std::endl;
 
       champsim::operable::context_switch_mode = true;
       champsim::operable::have_recorded_on_demand_accesses = true;
@@ -146,6 +146,14 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       champsim::operable::have_recorded_prefetcher_states = true;
       champsim::operable::have_recorded_L1I_states = true;
       champsim::operable::have_recorded_L1D_states = true;
+      champsim::operable::have_cleared_L1I = true;
+      champsim::operable::have_cleared_L1D = true;
+      champsim::operable::have_cleared_L2C = true;
+      champsim::operable::have_cleared_LLC = true;
+      champsim::operable::have_cleared_ITLB = true;
+      champsim::operable::have_cleared_DTLB = true;
+      champsim::operable::have_cleared_STLB = true;
+      champsim::operable::have_cleared_prefetcher = true;
 
       // prevent out of range index
       if (reset_ins_count_readin_index < num_resets)
