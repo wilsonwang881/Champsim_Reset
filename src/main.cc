@@ -31,7 +31,7 @@
 #include <fmt/core.h>
 
 #include <iostream> // WL
-
+ 
 namespace champsim
 {
 std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases, std::vector<tracereader>& traces, std::vector<uint64_t>& reset_ins_count);
@@ -60,6 +60,16 @@ bool champsim::operable::have_cleared_ITLB = false;
 bool champsim::operable::have_cleared_DTLB = false;
 bool champsim::operable::have_cleared_STLB = false;
 bool champsim::operable::have_cleared_prefetcher = false;
+// WL
+
+// WL 
+namespace reset_misc {
+  on_demand_access_record on_demand_access_records[1000];
+  size_t on_demand_access_record_index;
+
+  on_demand_access_record before_reset_on_demand_access_records[1000];
+  size_t before_reset_on_demand_access_record_index;
+}
 // WL
 
 int main(int argc, char** argv)

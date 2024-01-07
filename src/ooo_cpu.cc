@@ -80,8 +80,8 @@ void O3_CPU::initialize()
   // WL: open a file to write the first 1000 on demand accesses after a context switch
   context_switch_access_file.open("context_switch_accesses.txt", std::ios::out);
   before_reset_context_switch_access_file.open("before_context_switch_accesses.txt", std::ios::out);
-  on_demand_access_record_index = 0;
-  before_reset_on_demand_access_record_index = 0;
+  reset_misc::on_demand_access_record_index = 0;
+  reset_misc::before_reset_on_demand_access_record_index = 0;
   // WL
 }
 
@@ -115,14 +115,14 @@ void O3_CPU::end_phase(unsigned finished_cpu)
 // WL 
 void O3_CPU::dump_accesses()
 {
-  for(auto access : on_demand_access_records) {
+  for(auto access : reset_misc::on_demand_access_records) {
     context_switch_access_file << (unsigned)access.cycle << " " << (unsigned)access.ip << std::endl;
   }
 }
 
 void O3_CPU::dump_before_reset_accesses()
 {
-  for(auto access : before_reset_on_demand_access_records) {
+  for(auto access : reset_misc::before_reset_on_demand_access_records) {
     before_reset_context_switch_access_file << (unsigned)access.cycle << " " << (unsigned)access.ip << std::endl;
   }
 }
@@ -141,15 +141,15 @@ void O3_CPU::initialize_instruction()
     // WL 
     // Record the first 1000 accesses right after the context switch.
     if (have_recorded_on_demand_accesses) {
-      on_demand_access_records[on_demand_access_record_index].cycle = current_cycle;
-      on_demand_access_records[on_demand_access_record_index].ip = input_queue.front().ip;
-      on_demand_access_record_index++;
+      reset_misc::on_demand_access_records[reset_misc::on_demand_access_record_index].cycle = current_cycle;
+      reset_misc::on_demand_access_records[reset_misc::on_demand_access_record_index].ip = input_queue.front().ip;
+      reset_misc::on_demand_access_record_index++;
     }
 
     // Write the first 1000 accesses after the context switch to file.
-    if (on_demand_access_record_index >= 1000) {
+    if (reset_misc::on_demand_access_record_index >= 1000) {
       have_recorded_on_demand_accesses = false;
-      on_demand_access_record_index = 0;
+      reset_misc::on_demand_access_record_index = 0;
       std::cout << "Dumping 1st 1000 on demand accesses after context switch." << std::endl;
       dump_accesses();
       /*
@@ -161,12 +161,12 @@ void O3_CPU::initialize_instruction()
     }
 
     // Record the 1000 accesses right before the context switch.
-    before_reset_on_demand_access_records[before_reset_on_demand_access_record_index].cycle = current_cycle;
-    before_reset_on_demand_access_records[before_reset_on_demand_access_record_index].ip = input_queue.front().ip;
-    before_reset_on_demand_access_record_index++;
+    reset_misc::before_reset_on_demand_access_records[reset_misc::before_reset_on_demand_access_record_index].cycle = current_cycle;
+    reset_misc::before_reset_on_demand_access_records[reset_misc::before_reset_on_demand_access_record_index].ip = input_queue.front().ip;
+    reset_misc::before_reset_on_demand_access_record_index++;
 
-    if (before_reset_on_demand_access_record_index >= 1000) 
-      before_reset_on_demand_access_record_index = before_reset_on_demand_access_record_index % 1000;
+    if (reset_misc::before_reset_on_demand_access_record_index >= 1000) 
+      reset_misc::before_reset_on_demand_access_record_index = reset_misc::before_reset_on_demand_access_record_index % 1000;
 
     if (have_recorded_before_reset_on_demand_accesses) {
       std::cout << "Dumping 1000 on demand accesses before context switch." << std::endl;

@@ -31,6 +31,22 @@
 #include <string>
 // WL
 
+// WL 
+namespace reset_misc {
+
+  struct on_demand_access_record{
+    uint64_t cycle;
+    uint64_t ip;
+  };
+
+  extern on_demand_access_record on_demand_access_records[1000];
+  extern size_t on_demand_access_record_index;
+
+  extern on_demand_access_record before_reset_on_demand_access_records[1000];
+  extern size_t before_reset_on_demand_access_record_index;
+}
+// WL
+
 namespace champsim
 {
 
