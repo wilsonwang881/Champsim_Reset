@@ -50,7 +50,6 @@ void CACHE::prefetcher_cycle_operate()
   if (champsim::operable::context_switch_mode)
   {
     // Gather prefetches via the signature and pattern tables.
-    /*
     if (!pref.context_switch_prefetch_gathered)
     {
       pref.context_switch_gather_prefetches();
@@ -64,7 +63,6 @@ void CACHE::prefetcher_cycle_operate()
     }
     // Toggle switches after all prefetches are issued.
     else
-    */
     //{
       champsim::operable::context_switch_mode = false;
       pref.context_switch_prefetch_gathered = false;

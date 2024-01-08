@@ -218,6 +218,23 @@ void spp::prefetcher::clear_states()
 // WL
 void spp::prefetcher::context_switch_gather_prefetches()
 {
+  // Gather unique page addresses.
+  std::unordered_set<uint64_t> uniq_page_address;
+
+  for(auto var : reset_misc::before_reset_on_demand_access_records) {
+    uniq_page_address.insert(var.ip >> 12);
+  }
+
+  if (uniq_page_address.size() <= 6) {
+    for(auto var : uniq_page_address) {
+      for (size_t page_offset = 0; page_offset < (4096 - 64); page_offset += 64) {
+        context_switch_issue_queue.push_back({(var + page_offset), true});
+      }
+    }
+
+    std::cout << "Ready to issue prefetches for " << uniq_page_address.size() << " pages" << std::endl;
+  }
+  /*
   // Walk the signature table.
   for (size_t index = 0; index < SIGNATURE_TABLE::SET * SIGNATURE_TABLE::WAY; index++)
   {
@@ -231,7 +248,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
 
     if (st_entry_valid)
     {
-      /*
+      
       // Use the signature and offset to index into the pattern table.
       auto pt_query_res = pattern_table.query_pt(el_sig, el_page_offset_diff);
 
@@ -245,7 +262,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
 	else
 	  context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + el_last_offset, false}); 
       }
-      */
+      
 
       int prefetch_range = pattern_table.get_prefetch_range(el_sig);
       int max_page_limit = std::min(4096 - 64, (signed)el_last_offset + prefetch_range);
@@ -262,19 +279,19 @@ void spp::prefetcher::context_switch_gather_prefetches()
   // Debug print.
   //printf("Addresses to be prefetched after a context switch\n");
 
-  std::deque<std::pair<uint64_t, bool>>::iterator it;
+  //std::deque<std::pair<uint64_t, bool>>::iterator it;
 
-  /*
+  
   for (it = context_switch_issue_queue.begin(); it != context_switch_issue_queue.end(); ++it)
   {
     printf("0x%012lx %d\n", it->first, it->second);
   }
-  */
+  
 
   // WL 
   // For testing purposes, temporarily not issue any context switch prefetches.
-  context_switch_issue_queue.clear();
- 
+  // context_switch_issue_queue.clear();
+ */
 }
 
 // WL
