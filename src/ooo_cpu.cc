@@ -775,9 +775,15 @@ void O3_CPU::reset_components()
 {
   if (champsim::operable::context_switch_mode)
   {
-    if (SIMULATE_WITH_BTB_RESET)
+    if (SIMULATE_WITH_BTB_RESET && have_cleared_BTB)
+    {
       impl_initialize_btb();
-    if (SIMULATE_WITH_BRANCH_PREDICTOR_RESET)
+      have_cleared_BTB = false;
+    } 
+    if (SIMULATE_WITH_BRANCH_PREDICTOR_RESET && have_cleared_BP)
+    {
       impl_initialize_branch_predictor();
+      have_cleared_BP = false;
+    }
   }
 }

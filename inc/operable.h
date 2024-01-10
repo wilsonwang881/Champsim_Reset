@@ -70,7 +70,7 @@ public:
   static bool have_recorded_prefetcher_states;
   static bool have_recorded_L1I_states;
   static bool have_recorded_L1D_states;
-  int context_switch_cycles_stalled = 0;
+  static uint64_t context_switch_start_cycle;
   static bool have_cleared_L1I;
   static bool have_cleared_L1D;
   static bool have_cleared_L2C;
@@ -78,6 +78,8 @@ public:
   static bool have_cleared_ITLB;
   static bool have_cleared_DTLB;
   static bool have_cleared_STLB;
+  static bool have_cleared_BTB;
+  static bool have_cleared_BP;
 
   const std::string L1I_name = "cpu0_L1I";
   const std::string L1D_name = "cpu0_L1D";

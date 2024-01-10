@@ -232,7 +232,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
       }
     }
 
-    std::cout << "Ready to issue prefetches for " << uniq_page_address.size() << " pages" << std::endl;
+    std::cout << "Ready to issue prefetches for " << uniq_page_address.size() << " page(s)" << std::endl;
   }
   /*
   // Walk the signature table.

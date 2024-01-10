@@ -60,6 +60,9 @@ bool champsim::operable::have_cleared_ITLB = false;
 bool champsim::operable::have_cleared_DTLB = false;
 bool champsim::operable::have_cleared_STLB = false;
 bool champsim::operable::have_cleared_prefetcher = false;
+bool champsim::operable::have_cleared_BTB = false;
+bool champsim::operable::have_cleared_BP = false;
+uint64_t champsim::operable::context_switch_start_cycle = 0;
 // WL
 
 // WL 

@@ -154,6 +154,9 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       champsim::operable::have_cleared_DTLB = true;
       champsim::operable::have_cleared_STLB = true;
       champsim::operable::have_cleared_prefetcher = true;
+      champsim::operable::have_cleared_BTB = true;
+      champsim::operable::have_cleared_BP = true;
+      champsim::operable::context_switch_start_cycle = cpu_0.current_cycle;
 
       // prevent out of range index
       if (reset_ins_count_readin_index < num_resets)
