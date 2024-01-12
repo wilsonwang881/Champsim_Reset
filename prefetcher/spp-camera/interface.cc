@@ -3,6 +3,8 @@
 
 #include <map>
 
+#define L1D_PREFETCHER_IN_USE 1
+
 using unique_key = std::pair<CACHE*, uint32_t>;
 
 namespace {
@@ -47,36 +49,42 @@ void CACHE::prefetcher_cycle_operate()
   // TODO: should this be pref.warmup = warmup_complete[cpu]; instead of pref.warmup = warmup; ?
 
   // Gather and issue prefetches after a context switch.
-  if (champsim::operable::context_switch_mode)
-  {
-    // Gather prefetches via the signature and pattern tables.
-    if (!pref.context_switch_prefetch_gathered)
+  if (!L1D_PREFETCHER_IN_USE) {
+    if (champsim::operable::context_switch_mode)
     {
-      pref.context_switch_gather_prefetches();
-      pref.context_switch_prefetch_gathered = true;
+      // Gather prefetches via the signature and pattern tables.
+      if (!pref.context_switch_prefetch_gathered)
+      {
+        pref.context_switch_gather_prefetches();
+        pref.context_switch_prefetch_gathered = true;
+      }
+     
+      // Issue prefetches until the queue is empty.
+      if (!pref.context_switch_queue_empty())
+      {
+        pref.context_switch_issue(this);
+      }
+      // Toggle switches after all prefetches are issued.
+      else
+      {
+        champsim::operable::context_switch_mode = false;
+        pref.context_switch_prefetch_gathered = false;
+        std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
+      }
     }
-   
-    // Issue prefetches until the queue is empty.
-    if (!pref.context_switch_queue_empty())
-    {
-      pref.context_switch_issue(this);
-    }
-    // Toggle switches after all prefetches are issued.
+    // Normal operation.
+    // No prefetch gathering via the signature and pattern tables.
     else
     {
-      champsim::operable::context_switch_mode = false;
-      pref.context_switch_prefetch_gathered = false;
-      std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
-      //context_switch_cycles_stalled = 0;
-      //this->reset_spp_camera_prefetcher();
+      pref.issue(this);
+      pref.step_lookahead();
     }
   }
-  // Normal operation.
-  // No prefetch gathering via the signature and pattern tables.
-  else
-  {
-    pref.issue(this);
-    pref.step_lookahead();
+  else {
+    if (!champsim::operable::context_switch_mode) {
+      pref.issue(this);
+      pref.step_lookahead();
+    }
   }
 }
 
