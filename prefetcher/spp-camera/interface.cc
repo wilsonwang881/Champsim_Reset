@@ -30,7 +30,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 {
   auto &pref = ::SPP[{this, cpu}];
 
-  pref.update_demand(base_addr,get_set_index(base_addr));
+  pref.update_demand(base_addr,this->get_set_index(base_addr));
   pref.initiate_lookahead(base_addr);
 
   return metadata_in;
@@ -45,6 +45,10 @@ void CACHE::prefetcher_cycle_operate()
 {
   auto &pref = ::SPP[{this, cpu}];
   pref.warmup = warmup; 
+  pref.issue(this);
+  pref.step_lookahead();
+
+  /*
   // pref.warmup = warmup_complete[cpu];
   // TODO: should this be pref.warmup = warmup_complete[cpu]; instead of pref.warmup = warmup; ?
 
@@ -86,6 +90,7 @@ void CACHE::prefetcher_cycle_operate()
       pref.step_lookahead();
     }
   }
+  */
 }
 
 void CACHE::prefetcher_final_stats()

@@ -123,6 +123,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
         champsim::operable::have_recorded_prefetcher_states = true;
         champsim::operable::have_recorded_L1I_states = true;
         champsim::operable::have_recorded_L1D_states = true;
+        champsim::operable::context_switch_mode = false;
       }
     }
     else
