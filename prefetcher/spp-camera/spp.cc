@@ -51,8 +51,6 @@ void spp::prefetcher::issue(CACHE* cache)
       filter.update_issue(addr, cache->get_set(addr));
       issue_queue.pop_front();
     }
-
-    std::cout << "Prefetch" << std::endl;
   }
 }
 

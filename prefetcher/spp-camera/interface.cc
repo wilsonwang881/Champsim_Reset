@@ -44,12 +44,11 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 void CACHE::prefetcher_cycle_operate()
 {
   auto &pref = ::SPP[{this, cpu}];
-  pref.warmup = warmup; 
-  pref.issue(this);
-  pref.step_lookahead();
+  //pref.warmup = warmup; 
+  //pref.issue(this);
+  //pref.step_lookahead();
 
-  /*
-  // pref.warmup = warmup_complete[cpu];
+  //pref.warmup = warmup_complete[cpu];
   // TODO: should this be pref.warmup = warmup_complete[cpu]; instead of pref.warmup = warmup; ?
 
   // Gather and issue prefetches after a context switch.
@@ -90,7 +89,6 @@ void CACHE::prefetcher_cycle_operate()
       pref.step_lookahead();
     }
   }
-  */
 }
 
 void CACHE::prefetcher_final_stats()
