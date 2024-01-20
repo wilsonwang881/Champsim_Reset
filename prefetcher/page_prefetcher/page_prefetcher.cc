@@ -22,12 +22,13 @@ namespace {
 
       for(auto var : reset_misc::before_reset_on_demand_access_records) {
         uniq_page_address.insert(var.ip >> 12);
+        uniq_page_address.insert((var.ip >> 12) - 1);
       }
 
-      if (uniq_page_address.size() <= 6) {
+      if (uniq_page_address.size() <= 8) {
         for(auto var : uniq_page_address) {
           for (size_t page_offset = 0; page_offset < (4096 - 64); page_offset += 64)
-            context_switch_issue_queue.push_back({var + page_offset, true});
+            context_switch_issue_queue.push_back({(var << 12) + page_offset, true});
         }
       }
 
