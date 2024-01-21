@@ -22,7 +22,7 @@ namespace {
 
       for(auto var : reset_misc::before_reset_on_demand_access_records) {
         uniq_page_address.insert(var.ip >> 12);
-        uniq_page_address.insert((var.ip >> 12) - 1);
+        //uniq_page_address.insert((var.ip >> 12) - 1);
       }
 
       if (uniq_page_address.size() <= 8) {
