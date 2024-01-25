@@ -14,6 +14,7 @@ namespace {
     bool context_switch_prefetch_gathered;
 
     std::deque<std::pair<uint64_t, bool>> context_switch_issue_queue;
+    std::deque<std::tuple<uint64_t, uint64_t, uint64_t>> context_switch_prefetching_timing; 
 
     void gather_context_switch_prefetches()
     {
@@ -32,6 +33,10 @@ namespace {
         }
       }
 
+      for(auto var : uniq_page_address) {
+        std::cout << "Base address of page to be prefetched: " << std::hex << (var << 12) << std::dec << std::endl;  
+      }
+
       std::cout << "Ready to issue prefetches for " << uniq_page_address.size() << " page(s)" << std::endl;
     }
 
@@ -42,16 +47,17 @@ namespace {
 
     void context_switch_issue(CACHE* cache)
     {
-    // Issue eligible outstanding prefetches
-    if (!std::empty(context_switch_issue_queue)) {
-      auto [addr, priority] = context_switch_issue_queue.front();
+      // Issue eligible outstanding prefetches
+      if (!std::empty(context_switch_issue_queue)) {
+        auto [addr, priority] = context_switch_issue_queue.front();
 
-      // If this fails, the queue was full.
-      bool prefetched = cache->prefetch_line(addr, priority, 0);
-      if (prefetched) {
-        context_switch_issue_queue.pop_front();
+        // If this fails, the queue was full.
+        bool prefetched = cache->prefetch_line(addr, priority, 0);
+        if (prefetched) {
+          context_switch_issue_queue.pop_front();
+          context_switch_prefetching_timing.push_back({addr, cache->current_cycle, 0});
+        }
       }
-    }
     }
   };
 
@@ -90,10 +96,23 @@ void CACHE::prefetcher_cycle_operate()
     if (!::trackers[this].context_switch_queue_empty())
     {
       ::trackers[this].context_switch_issue(this);
+
+      for(auto [addr, issued_at, received_at] : ::trackers[this].context_switch_prefetching_timing) {
+        if (received_at == 0) {
+          for(auto var : block) {
+            if (var.valid && var.address == addr) {
+              received_at == current_cycle; 
+            }
+          } 
+        } 
+      }
     }
     // Toggle switches after all prefetches are issued.
     else
     {
+      for(auto [addr, issued_at, received_at] : ::trackers[this].context_switch_prefetching_timing) {
+        std::cout << std::hex << addr << " " << std::dec << issued_at << " " << received_at << std::endl; 
+      }
       champsim::operable::context_switch_mode = false;
       ::trackers[this].context_switch_prefetch_gathered = false;
       std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
