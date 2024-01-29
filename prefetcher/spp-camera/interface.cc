@@ -3,7 +3,7 @@
 
 #include <map>
 
-#define L1D_PREFETCHER_IN_USE 0
+#define L1D_PREFETCHER_IN_USE 1
 
 using unique_key = std::pair<CACHE*, uint32_t>;
 
@@ -65,14 +65,20 @@ void CACHE::prefetcher_cycle_operate()
       // Issue prefetches until the queue is empty.
       if (!pref.context_switch_queue_empty())
       {
-        pref.context_switch_issue(this);
+        if (!champsim::operable::have_cleared_BTB
+            && !champsim::operable::have_cleared_BP) {
+          pref.context_switch_issue(this);
+        }
       }
       // Toggle switches after all prefetches are issued.
       else
       {
-        champsim::operable::context_switch_mode = false;
-        pref.context_switch_prefetch_gathered = false;
-        std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
+        if (!champsim::operable::have_cleared_BTB
+            && !champsim::operable::have_cleared_BP) {
+          champsim::operable::context_switch_mode = false;
+          pref.context_switch_prefetch_gathered = false;
+          std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
+        }
       }
     }
     // Normal operation.

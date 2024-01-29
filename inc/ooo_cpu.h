@@ -120,6 +120,8 @@ public:
 
   void dump_accesses();
   void dump_before_reset_accesses();
+
+  uint64_t reset_ins_count;
   // WL
 
   // cycle

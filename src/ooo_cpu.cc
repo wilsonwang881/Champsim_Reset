@@ -773,13 +773,19 @@ bool CacheBus::issue_write(request_type data_packet)
 // WL
 void O3_CPU::reset_components()
 {
-  if (champsim::operable::context_switch_mode)
+  // WL 
+  // Wait for input_queue that holds the trace to become empty.
+  // Hence no new intructions are being fed in.
+  if (champsim::operable::context_switch_mode 
+      && input_queue.empty()
+      && (num_retired >= reset_ins_count))
   {
     if (SIMULATE_WITH_BTB_RESET && have_cleared_BTB)
     {
       impl_initialize_btb();
       have_cleared_BTB = false;
     } 
+
     if (SIMULATE_WITH_BRANCH_PREDICTOR_RESET && have_cleared_BP)
     {
       impl_initialize_branch_predictor();

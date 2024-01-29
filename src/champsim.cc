@@ -128,7 +128,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
     }
     else
     {
-    if (cpu_0.num_retired >= next_reset_moment && 
+    if ((cpu_0.num_retired + cpu_0.input_queue.size())>= next_reset_moment && 
         reset_ins_count_readin_index <= num_resets) {
 
       // Assume the overhead is 1 microscrond.
@@ -158,6 +158,8 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       champsim::operable::have_cleared_BTB = true;
       champsim::operable::have_cleared_BP = true;
       champsim::operable::context_switch_start_cycle = cpu_0.current_cycle;
+
+      cpu_0.reset_ins_count = next_reset_moment;
 
       // prevent out of range index
       if (reset_ins_count_readin_index < num_resets)

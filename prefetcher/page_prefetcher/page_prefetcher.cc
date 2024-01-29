@@ -110,12 +110,17 @@ void CACHE::prefetcher_cycle_operate()
     // Toggle switches after all prefetches are issued.
     else
     {
+      /*
       for(auto [addr, issued_at, received_at] : ::trackers[this].context_switch_prefetching_timing) {
         std::cout << std::hex << addr << " " << std::dec << issued_at << " " << received_at << std::endl; 
       }
-      champsim::operable::context_switch_mode = false;
-      ::trackers[this].context_switch_prefetch_gathered = false;
-      std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
+      */
+       if (!champsim::operable::have_cleared_BTB
+            && !champsim::operable::have_cleared_BP) {
+         champsim::operable::context_switch_mode = false;
+         ::trackers[this].context_switch_prefetch_gathered = false;
+         std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
+       }
     }
   }
 }
