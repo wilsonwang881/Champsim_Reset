@@ -3,7 +3,7 @@
 
 #include <map>
 
-#define L1D_PREFETCHER_IN_USE 1
+#define L1D_PREFETCHER_IN_USE 0
 
 using unique_key = std::pair<CACHE*, uint32_t>;
 
@@ -65,8 +65,8 @@ void CACHE::prefetcher_cycle_operate()
       // Issue prefetches until the queue is empty.
       if (!pref.context_switch_queue_empty())
       {
-        if (!champsim::operable::have_cleared_BTB
-            && !champsim::operable::have_cleared_BP) {
+        if (champsim::operable::cpu_side_reset_ready
+            && champsim::operable::cache_clear_counter == 7) {
           pref.context_switch_issue(this);
         }
       }
@@ -74,8 +74,12 @@ void CACHE::prefetcher_cycle_operate()
       else
       {
         if (!champsim::operable::have_cleared_BTB
-            && !champsim::operable::have_cleared_BP) {
+            && !champsim::operable::have_cleared_BP
+            && champsim::operable::cpu_side_reset_ready
+            && champsim::operable::cache_clear_counter == 7) {
           champsim::operable::context_switch_mode = false;
+          champsim::operable::cpu_side_reset_ready = false;
+          champsim::operable::cache_clear_counter = 0;
           pref.context_switch_prefetch_gathered = false;
           std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
         }

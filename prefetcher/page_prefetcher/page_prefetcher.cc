@@ -8,6 +8,7 @@ namespace {
   struct tracker {
 
     std::unordered_set<uint64_t> uniq_page_address;
+    std::unordered_set<uint64_t> uniq_prefetched_page_address;
  
     public:
 
@@ -48,7 +49,9 @@ namespace {
     void context_switch_issue(CACHE* cache)
     {
       // Issue eligible outstanding prefetches
-      if (!std::empty(context_switch_issue_queue)) {
+      if (!std::empty(context_switch_issue_queue)
+          && champsim::operable::cpu_side_reset_ready
+          && champsim::operable::cache_clear_counter == 7) {
         auto [addr, priority] = context_switch_issue_queue.front();
 
         // If this fails, the queue was full.
@@ -56,6 +59,11 @@ namespace {
         if (prefetched) {
           context_switch_issue_queue.pop_front();
           context_switch_prefetching_timing.push_back({addr, cache->current_cycle, 0});
+
+          if (uniq_prefetched_page_address.find(addr >> 12) ==  uniq_prefetched_page_address.end()) {
+            std::cout << "First prefetch in page " << std::hex << addr << " prefetched at cycle " << std::dec << cache->current_cycle << std::endl;
+            uniq_prefetched_page_address.insert(addr >> 12); 
+          }
         }
       }
     }
@@ -90,6 +98,8 @@ void CACHE::prefetcher_cycle_operate()
 
       ::trackers[this].gather_context_switch_prefetches(); 
       ::trackers[this].context_switch_prefetch_gathered = true;
+      ::trackers[this].context_switch_prefetching_timing.clear();
+      ::trackers[this].uniq_prefetched_page_address.clear();
     }
    
     // Issue prefetches until the queue is empty.
@@ -110,17 +120,26 @@ void CACHE::prefetcher_cycle_operate()
     // Toggle switches after all prefetches are issued.
     else
     {
-      /*
+      std::unordered_set<uint64_t> printed_page_addresses;
+      
       for(auto [addr, issued_at, received_at] : ::trackers[this].context_switch_prefetching_timing) {
-        std::cout << std::hex << addr << " " << std::dec << issued_at << " " << received_at << std::endl; 
+        if (printed_page_addresses.find(addr >> 12) == printed_page_addresses.end()) {
+          
+          std::cout << "Page with base address " << std::hex << addr << " issued at cycle " << std::dec << issued_at << " received at cycle " << received_at << std::endl; 
+          printed_page_addresses.insert(addr >> 12);
+        }
       }
-      */
-       if (!champsim::operable::have_cleared_BTB
-            && !champsim::operable::have_cleared_BP) {
-         champsim::operable::context_switch_mode = false;
-         ::trackers[this].context_switch_prefetch_gathered = false;
-         std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
-       }
+
+      if (!champsim::operable::have_cleared_BTB
+          && !champsim::operable::have_cleared_BP
+          && champsim::operable::cpu_side_reset_ready
+          && champsim::operable::cache_clear_counter == 7) {
+        champsim::operable::context_switch_mode = false;
+        champsim::operable::cpu_side_reset_ready = false;
+        champsim::operable::cache_clear_counter = 0;
+        ::trackers[this].context_switch_prefetch_gathered = false;
+        std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
+      }
     }
   }
 }

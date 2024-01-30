@@ -157,7 +157,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       champsim::operable::have_cleared_prefetcher = true;
       champsim::operable::have_cleared_BTB = true;
       champsim::operable::have_cleared_BP = true;
-      champsim::operable::context_switch_start_cycle = cpu_0.current_cycle;
+      champsim::operable::cache_clear_counter = 0;
 
       cpu_0.reset_ins_count = next_reset_moment;
 

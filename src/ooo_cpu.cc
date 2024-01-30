@@ -791,5 +791,10 @@ void O3_CPU::reset_components()
       impl_initialize_branch_predictor();
       have_cleared_BP = false;
     }
+
+    if (!champsim::operable::cpu_side_reset_ready)
+      champsim::operable::context_switch_start_cycle = current_cycle;
+    
+    champsim::operable::cpu_side_reset_ready = true;
   }
 }

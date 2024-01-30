@@ -80,6 +80,7 @@ public:
   static bool have_cleared_STLB;
   static bool have_cleared_BTB;
   static bool have_cleared_BP;
+  static uint64_t cache_clear_counter;
 
   const std::string L1I_name = "cpu0_L1I";
   const std::string L1D_name = "cpu0_L1D";
@@ -90,6 +91,8 @@ public:
   const std::string STLB_name = "cpu0_STLB";
 
   static bool have_cleared_prefetcher;
+
+  static bool cpu_side_reset_ready;
   // WL
 
   double leap_operation = 0;

@@ -813,52 +813,59 @@ void CACHE::reset_components()
 
   if (SIMULATE_WITH_CACHE_RESET)
   {
-    if (have_cleared_L1I && !L1I_name.compare(NAME))
+    if (have_cleared_L1I && !L1I_name.compare(NAME) && champsim::operable::cpu_side_reset_ready)
     {
       have_cleared_L1I = false;
       CACHE::invalidate_all_cache_blocks();
+      champsim::operable::cache_clear_counter++;
     }
 
-    if (have_cleared_L1D && !L1D_name.compare(NAME))
+    if (have_cleared_L1D && !L1D_name.compare(NAME) && champsim::operable::cpu_side_reset_ready)
     {
       have_cleared_L1D = false;
       CACHE::invalidate_all_cache_blocks();
+      champsim::operable::cache_clear_counter++;
     }
 
-    if (have_cleared_L2C && !L2C_name.compare(NAME))
+    if (have_cleared_L2C && !L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready)
     {
       have_cleared_L2C = false;
       CACHE::invalidate_all_cache_blocks();
+      champsim::operable::cache_clear_counter++;
     }
 
-    if (have_cleared_LLC && !LLC_name.compare(NAME))
+    if (have_cleared_LLC && !LLC_name.compare(NAME) && champsim::operable::cpu_side_reset_ready)
     {
       have_cleared_LLC = false;
       CACHE::invalidate_all_cache_blocks();
+      champsim::operable::cache_clear_counter++;
     }
 
-    if (have_cleared_ITLB && !ITLB_name.compare(NAME))
+    if (have_cleared_ITLB && !ITLB_name.compare(NAME) && champsim::operable::cpu_side_reset_ready)
     {
       have_cleared_ITLB = false;  
       CACHE::invalidate_all_cache_blocks();
+      champsim::operable::cache_clear_counter++;
     }
 
-    if (have_cleared_DTLB && !DTLB_name.compare(NAME))
+    if (have_cleared_DTLB && !DTLB_name.compare(NAME) && champsim::operable::cpu_side_reset_ready)
     {
       have_cleared_DTLB = false;
       CACHE::invalidate_all_cache_blocks();
+      champsim::operable::cache_clear_counter++;
     }
 
-    if (have_cleared_STLB && !STLB_name.compare(NAME))
+    if (have_cleared_STLB && !STLB_name.compare(NAME) && champsim::operable::cpu_side_reset_ready)
     {
       have_cleared_STLB = false;
       CACHE::invalidate_all_cache_blocks();
+      champsim::operable::cache_clear_counter++;
     }
   }
 
   if (SIMULATE_WITH_PREFETCHER_RESET)
   {
-    if (have_cleared_prefetcher && !L2C_name.compare(NAME))
+    if (have_cleared_prefetcher && !L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready)
     {
       have_cleared_prefetcher = false;
       CACHE::reset_spp_camera_prefetcher();
