@@ -258,8 +258,10 @@ public:
 
   // WL 
   void reset_components(); 
+  void clean_components();
   void reset_spp_camera_prefetcher();
   void invalidate_all_cache_blocks();
+  void clean_all_cache_blocks();
   void record_spp_camera_states();
   void record_L1I_states();
   void record_L1D_states();

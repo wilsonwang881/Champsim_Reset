@@ -113,7 +113,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
         reset_ins_count.push_back(cpu_0.num_retired);
         next_reset_moment += RESET_INTERVAL;
 
-        std::cout << "Recording @ins. count = " << cpu_0.num_retired << " at cycle " << cpu_0.current_cycle << std::endl;
+        std::cout << std::endl << "Recording @ins. count = " << cpu_0.num_retired << " at cycle " << cpu_0.current_cycle << std::endl;
         champsim::operable::have_recorded_on_demand_accesses = true;
         champsim::operable::have_recorded_before_reset_on_demand_accesses = true;
         champsim::operable::have_recorded_before_reset_hit_miss_number_L1I = true;
@@ -124,6 +124,13 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
         champsim::operable::have_recorded_L1I_states = true;
         champsim::operable::have_recorded_L1D_states = true;
         champsim::operable::context_switch_mode = false;
+        champsim::operable::have_cleaned_L1I = false;
+        champsim::operable::have_cleaned_L1D = false;
+        champsim::operable::have_cleaned_L2C = false;
+        champsim::operable::have_cleaned_LLC = false;
+        champsim::operable::have_cleaned_ITLB = false;
+        champsim::operable::have_cleaned_DTLB = false;
+        champsim::operable::have_cleaned_STLB = false;
       }
     }
     else

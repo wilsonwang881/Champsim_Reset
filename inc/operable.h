@@ -82,6 +82,14 @@ public:
   static bool have_cleared_BP;
   static uint64_t cache_clear_counter;
 
+  static bool have_cleaned_L1I;
+  static bool have_cleaned_L1D;
+  static bool have_cleaned_L2C;
+  static bool have_cleaned_LLC;
+  static bool have_cleaned_ITLB;
+  static bool have_cleaned_DTLB;
+  static bool have_cleaned_STLB;
+
   const std::string L1I_name = "cpu0_L1I";
   const std::string L1D_name = "cpu0_L1D";
   const std::string L2C_name = "cpu0_L2C";

@@ -65,6 +65,13 @@ bool champsim::operable::have_cleared_BP = false;
 uint64_t champsim::operable::context_switch_start_cycle = 0;
 bool champsim::operable::cpu_side_reset_ready = false;
 uint64_t champsim::operable::cache_clear_counter = 0;
+bool champsim::operable::have_cleaned_L1I = true;
+bool champsim::operable::have_cleaned_L1D = true;
+bool champsim::operable::have_cleaned_L2C = true;
+bool champsim::operable::have_cleaned_LLC = true;
+bool champsim::operable::have_cleaned_ITLB = true;
+bool champsim::operable::have_cleaned_DTLB = true;
+bool champsim::operable::have_cleaned_STLB = true;
 // WL
 
 // WL 
