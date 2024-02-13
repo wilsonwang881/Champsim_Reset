@@ -174,10 +174,12 @@ void O3_CPU::initialize_instruction()
       have_recorded_before_reset_on_demand_accesses = false;
     }
     
+    // Before push_back to IFETCH_BUFFER, need to add the ASID first
+    input_queue.front().asid[0] = currently_active_thread_ID;
     // WL
 
     // Add to IFETCH_BUFFER
-    IFETCH_BUFFER.push_back(input_queue.front());
+    IFETCH_BUFFER.push_back(input_queue.front()); 
     input_queue.pop_front();
 
     IFETCH_BUFFER.back().event_cycle = current_cycle;
