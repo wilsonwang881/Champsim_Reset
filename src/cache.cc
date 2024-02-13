@@ -419,7 +419,7 @@ long CACHE::operate()
   // WL 
   reset_components();
 
-  clean_components();
+  //clean_components();
 
   record_hit_miss_select_cache();
 

@@ -122,6 +122,7 @@ public:
   void dump_before_reset_accesses();
 
   uint64_t reset_ins_count;
+  uint8_t currently_active_thread_ID;
   // WL
 
   // cycle
