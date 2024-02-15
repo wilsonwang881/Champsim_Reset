@@ -757,6 +757,7 @@ bool CacheBus::issue_read(request_type data_packet)
   data_packet.is_translated = false;
   data_packet.cpu = cpu;
   data_packet.type = access_type::LOAD;
+  data_packet.asid[0] = currently_active_thread_ID; // WL: added ASID
 
   return lower_level->add_rq(data_packet);
 }
@@ -768,6 +769,7 @@ bool CacheBus::issue_write(request_type data_packet)
   data_packet.cpu = cpu;
   data_packet.type = access_type::WRITE;
   data_packet.response_requested = false;
+  data_packet.asid[0] = currently_active_thread_ID; // WL: added ASID
 
   return lower_level->add_wq(data_packet);
 }
