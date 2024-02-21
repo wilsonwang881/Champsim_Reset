@@ -87,6 +87,7 @@ class channel
     uint64_t v_address;
     uint64_t data;
     uint32_t pf_metadata = 0;
+    uint8_t asid; // WL: added ASID
     std::vector<std::reference_wrapper<ooo_model_instr>> instr_depend_on_me{};
 
     response(uint64_t addr, uint64_t v_addr, uint64_t data_, uint32_t pf_meta, std::vector<std::reference_wrapper<ooo_model_instr>> deps)

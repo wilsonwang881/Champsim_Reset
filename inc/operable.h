@@ -101,6 +101,8 @@ public:
   static bool have_cleared_prefetcher;
 
   static bool cpu_side_reset_ready;
+
+  static uint8_t currently_active_thread_ID;
   // WL
 
   double leap_operation = 0;

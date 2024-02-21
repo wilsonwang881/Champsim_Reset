@@ -72,6 +72,7 @@ bool champsim::operable::have_cleaned_LLC = true;
 bool champsim::operable::have_cleaned_ITLB = true;
 bool champsim::operable::have_cleaned_DTLB = true;
 bool champsim::operable::have_cleaned_STLB = true;
+uint8_t champsim::operable::currently_active_thread_ID = 0;
 // WL
 
 // WL 

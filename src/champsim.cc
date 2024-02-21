@@ -168,6 +168,8 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
 
       cpu_0.reset_ins_count = next_reset_moment;
 
+      champsim::operable::currently_active_thread_ID++;
+
       // prevent out of range index
       if (reset_ins_count_readin_index < num_resets)
         next_reset_moment = reset_ins_count[reset_ins_count_readin_index];

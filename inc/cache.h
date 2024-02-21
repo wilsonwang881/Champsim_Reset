@@ -150,6 +150,7 @@ class CACHE : public champsim::operable
     uint64_t data = 0;
 
     uint32_t pf_metadata = 0;
+    uint8_t asid; // WL: added ASID
 
     BLOCK() = default;
     explicit BLOCK(mshr_type mshr);
