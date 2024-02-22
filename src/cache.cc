@@ -112,6 +112,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       writeback_packet.data = way->data;
       writeback_packet.instr_id = fill_mshr.instr_id;
       writeback_packet.ip = 0;
+      writeback_packet.asid[0] = fill_mshr.asid[0]; // WL: added ASID to writeback packet
       writeback_packet.type = access_type::WRITE;
       writeback_packet.pf_metadata = way->pf_metadata;
       writeback_packet.response_requested = false;
@@ -156,7 +157,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
     // COLLECT STATS
     sim_stats.total_miss_latency += current_cycle - (fill_mshr.cycle_enqueued + 1);
 
-    response_type response{fill_mshr.address, fill_mshr.v_address, fill_mshr.data, metadata_thru, fill_mshr.instr_depend_on_me};
+    response_type response{fill_mshr.address, fill_mshr.v_address, fill_mshr.data, metadata_thru, fill_mshr.asid[0], fill_mshr.instr_depend_on_me}; // WL: added ASID
     for (auto ret : fill_mshr.to_return)
       ret->push_back(response);
   }
@@ -201,7 +202,7 @@ bool CACHE::try_hit(const tag_lookup_type& handle_pkt)
     impl_update_replacement_state(handle_pkt.cpu, get_set_index(handle_pkt.address), way_idx, way->address, handle_pkt.ip, 0,
                                   champsim::to_underlying(handle_pkt.type), true);
 
-    response_type response{handle_pkt.address, handle_pkt.v_address, way->data, metadata_thru, handle_pkt.instr_depend_on_me};
+    response_type response{handle_pkt.address, handle_pkt.v_address, way->data, metadata_thru, handle_pkt.asid[0], handle_pkt.instr_depend_on_me}; // WL: added handle_pkt.asid[0]
     for (auto ret : handle_pkt.to_return)
       ret->push_back(response);
 

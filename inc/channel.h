@@ -90,11 +90,11 @@ class channel
     uint8_t asid; // WL: added ASID
     std::vector<std::reference_wrapper<ooo_model_instr>> instr_depend_on_me{};
 
-    response(uint64_t addr, uint64_t v_addr, uint64_t data_, uint32_t pf_meta, std::vector<std::reference_wrapper<ooo_model_instr>> deps)
-        : address(addr), v_address(v_addr), data(data_), pf_metadata(pf_meta), instr_depend_on_me(deps)
+    response(uint64_t addr, uint64_t v_addr, uint64_t data_, uint32_t pf_meta, uint8_t asid_, std::vector<std::reference_wrapper<ooo_model_instr>> deps)
+        : address(addr), v_address(v_addr), data(data_), pf_metadata(pf_meta), asid(asid_), instr_depend_on_me(deps) // WL: added asid_ and asid(asid_)
     {
     }
-    explicit response(request req) : response(req.address, req.v_address, req.data, req.pf_metadata, req.instr_depend_on_me) {}
+    explicit response(request req) : response(req.address, req.v_address, req.data, req.pf_metadata, req.asid[0], req.instr_depend_on_me) {} // WL: added req.asid[0]
   };
 
   template <typename R>
