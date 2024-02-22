@@ -59,6 +59,7 @@ auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* 
   mshr_type fwd_mshr{handle_pkt, walk_init.level};
   fwd_mshr.address = champsim::splice_bits(walk_init.ptw_addr, walk_offset, LOG2_PAGE_SIZE);
   fwd_mshr.v_address = handle_pkt.address;
+  fwd_mshr.asid[0] == handle_pkt.asid[0]; // WL: added ASID
   if (handle_pkt.response_requested)
     fwd_mshr.to_return = {&ul->returned};
 
@@ -85,6 +86,7 @@ auto PageTableWalker::handle_fill(const mshr_type& fill_mshr) -> std::optional<m
   fwd_mshr.address = fill_mshr.data;
   fwd_mshr.translation_level = fill_mshr.translation_level - 1;
   fwd_mshr.event_cycle = std::numeric_limits<uint64_t>::max();
+  fwd_mshr.asid[0] = fill_mshr.asid[0]; // WL: added ASID
 
   return step_translation(fwd_mshr);
 }
@@ -175,7 +177,10 @@ void PageTableWalker::finish_packet(const response_type& packet)
 
   auto finish_last_step = [this](auto& mshr_entry) {
     uint64_t penalty;
-    std::tie(mshr_entry.data, penalty) = this->vmem->va_to_pa(mshr_entry.cpu, mshr_entry.v_address);
+    // WL: following line is the original code
+    //std::tie(mshr_entry.data, penalty) = this->vmem->va_to_pa(mshr_entry.cpu, mshr_entry.v_address);
+    std::tie(mshr_entry.data, penalty) = this->vmem->va_to_pa(mshr_entry.asid[0], mshr_entry.v_address); // WL: this line is the modified code.
+
     mshr_entry.event_cycle = this->current_cycle + (this->warmup ? 0 : penalty + HIT_LATENCY);
 
     if constexpr (champsim::debug_print) {
@@ -184,8 +189,15 @@ void PageTableWalker::finish_packet(const response_type& packet)
     }
   };
 
+  // WL: original code
+  // auto last_finished =
+      // std::partition(std::begin(MSHR), std::end(MSHR), [addr = packet.address](auto x) { return (x.address >> LOG2_BLOCK_SIZE) == (addr >> LOG2_BLOCK_SIZE); });
+  // WL: end of original code
+  
+  // WL: modified code
   auto last_finished =
-      std::partition(std::begin(MSHR), std::end(MSHR), [addr = packet.address](auto x) { return (x.address >> LOG2_BLOCK_SIZE) == (addr >> LOG2_BLOCK_SIZE); });
+      std::partition(std::begin(MSHR), std::end(MSHR), [addr = packet.address, asid = packet.asid](auto x) { return ((x.address >> LOG2_BLOCK_SIZE) == (addr >> LOG2_BLOCK_SIZE)) && (x.asid[0] == asid); });
+  // WL: end of modified code
 
   std::for_each(std::begin(MSHR), last_finished, [finish_step, finish_last_step](auto& mshr_entry) {
     if (mshr_entry.translation_level > 0)
