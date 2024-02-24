@@ -504,6 +504,7 @@ int CACHE::prefetch_line(uint64_t pf_addr, bool fill_this_level, uint32_t prefet
   pf_packet.address = pf_addr;
   pf_packet.v_address = virtual_prefetch ? pf_addr : 0;
   pf_packet.is_translated = !virtual_prefetch;
+  pf_packet.asid[0] = champsim::operable::currently_active_thread_ID; // WL: added ASID
 
   internal_PQ.emplace_back(pf_packet, true, !fill_this_level);
   ++sim_stats.pf_issued;

@@ -154,10 +154,10 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       champsim::operable::have_recorded_prefetcher_states = true;
       champsim::operable::have_recorded_L1I_states = true;
       champsim::operable::have_recorded_L1D_states = true;
-      //champsim::operable::have_cleared_L1I = true;
-      //champsim::operable::have_cleared_L1D = true;
-      //champsim::operable::have_cleared_L2C = true;
-      //champsim::operable::have_cleared_LLC = true;
+      champsim::operable::have_cleared_L1I = false;
+      champsim::operable::have_cleared_L1D = false;
+      champsim::operable::have_cleared_L2C = false;
+      champsim::operable::have_cleared_LLC = false;
       champsim::operable::have_cleared_ITLB = true;
       champsim::operable::have_cleared_DTLB = true;
       champsim::operable::have_cleared_STLB = true;
