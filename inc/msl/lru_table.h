@@ -91,6 +91,17 @@ private:
   }
 
 public:
+  // WL: added function to clear LRU 
+  // Used in DIB clearing
+  void clear_DIB()
+  {
+    for(auto var : block) {
+      var.last_used = 0;
+      var.data = value_type();
+    }
+  }
+  // WL: end of DIB clearing code
+  
   std::optional<value_type> check_hit(const value_type& elem)
   {
     auto [set_begin, set_end] = get_set_span(elem);

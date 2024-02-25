@@ -59,7 +59,7 @@ auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* 
   mshr_type fwd_mshr{handle_pkt, walk_init.level};
   fwd_mshr.address = champsim::splice_bits(walk_init.ptw_addr, walk_offset, LOG2_PAGE_SIZE);
   fwd_mshr.v_address = handle_pkt.address;
-  fwd_mshr.asid[0] == handle_pkt.asid[0]; // WL: added ASID
+  fwd_mshr.asid[0] = handle_pkt.asid[0]; // WL: added ASID
   if (handle_pkt.response_requested)
     fwd_mshr.to_return = {&ul->returned};
 
