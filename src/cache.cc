@@ -36,12 +36,16 @@ CACHE::tag_lookup_type::tag_lookup_type(request_type req, bool local_pref, bool 
     : address(req.address), v_address(req.v_address), data(req.data), ip(req.ip), instr_id(req.instr_id), pf_metadata(req.pf_metadata), cpu(req.cpu),
       type(req.type), prefetch_from_this(local_pref), skip_fill(skip), is_translated(req.is_translated), instr_depend_on_me(req.instr_depend_on_me)
 {
+  // WL: added ASID matching.
+  asid[0] = req.asid[0];
 }
 
 CACHE::mshr_type::mshr_type(tag_lookup_type req, uint64_t cycle)
     : address(req.address), v_address(req.v_address), data(req.data), ip(req.ip), instr_id(req.instr_id), pf_metadata(req.pf_metadata), cpu(req.cpu),
       type(req.type), prefetch_from_this(req.prefetch_from_this), cycle_enqueued(cycle), instr_depend_on_me(req.instr_depend_on_me), to_return(req.to_return)
 {
+  // WL: added ASID matching.
+  asid[0] = req.asid[0];
 }
 
 CACHE::mshr_type CACHE::mshr_type::merge(mshr_type predecessor, mshr_type successor)
