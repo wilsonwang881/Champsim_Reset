@@ -81,6 +81,7 @@ CACHE::mshr_type CACHE::mshr_type::merge(mshr_type predecessor, mshr_type succes
 CACHE::BLOCK::BLOCK(mshr_type mshr)
     : valid(true), prefetch(mshr.prefetch_from_this), dirty(mshr.type == access_type::WRITE), address(mshr.address), v_address(mshr.v_address), data(mshr.data)
 {
+  asid = mshr.asid[0]; // WL: added ASID
 }
 
 bool CACHE::handle_fill(const mshr_type& fill_mshr)
