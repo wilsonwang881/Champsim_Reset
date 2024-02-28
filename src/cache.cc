@@ -236,8 +236,8 @@ bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
   cpu = handle_pkt.cpu;
 
   // check mshr
-  auto mshr_entry = std::find_if(std::begin(MSHR), std::end(MSHR), [match = handle_pkt.address >> OFFSET_BITS, shamt = OFFSET_BITS](const auto& entry) {
-    return (entry.address >> shamt) == match;
+  auto mshr_entry = std::find_if(std::begin(MSHR), std::end(MSHR), [match = handle_pkt.address >> OFFSET_BITS, shamt = OFFSET_BITS, asid = handle_pkt.asid[0]](const auto& entry) {
+    return (entry.address >> shamt) == match && (asid == entry.asid[0]); // WL: added ASID matching.
   });
   bool mshr_full = (MSHR.size() == MSHR_SIZE);
 
