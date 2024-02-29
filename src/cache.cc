@@ -62,6 +62,7 @@ CACHE::mshr_type CACHE::mshr_type::merge(mshr_type predecessor, mshr_type succes
   retval.instr_depend_on_me = merged_instr;
   retval.to_return = merged_return;
   retval.data = predecessor.data;
+  retval.asid[0] = predecessor.asid[0]; // WL: added ASID
 
   if (predecessor.event_cycle < std::numeric_limits<uint64_t>::max()) {
     retval.event_cycle = predecessor.event_cycle;
@@ -187,9 +188,9 @@ bool CACHE::try_hit(const tag_lookup_type& handle_pkt)
   const auto useful_prefetch = (hit && way->prefetch && !handle_pkt.prefetch_from_this);
 
   if constexpr (champsim::debug_print) {
-    fmt::print("[{}] {} instr_id: {} address: {:#x} v_address: {:#x} data: {:#x} set: {} way: {} ({}) type: {} cycle: {}\n", NAME, __func__, handle_pkt.instr_id,
+    fmt::print("[{}] {} instr_id: {} address: {:#x} v_address: {:#x} data: {:#x} set: {} way: {} ({}) type: {} cycle: {} packet asid: {} way asid: {}\n", NAME, __func__, handle_pkt.instr_id,
                handle_pkt.address, handle_pkt.v_address, handle_pkt.data, get_set_index(handle_pkt.address), std::distance(set_begin, way), hit ? "HIT" : "MISS",
-               access_type_names.at(champsim::to_underlying(handle_pkt.type)), current_cycle);
+               access_type_names.at(champsim::to_underlying(handle_pkt.type)), current_cycle, handle_pkt.asid[0], way->asid);
   }
 
   // update prefetcher on load instructions and prefetches from upper levels
@@ -236,8 +237,12 @@ bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
   cpu = handle_pkt.cpu;
 
   // check mshr
-  auto mshr_entry = std::find_if(std::begin(MSHR), std::end(MSHR), [match = handle_pkt.address >> OFFSET_BITS, shamt = OFFSET_BITS, asid = handle_pkt.asid[0]](const auto& entry) {
-    return (entry.address >> shamt) == match && (asid == entry.asid[0]); // WL: added ASID matching.
+  //auto mshr_entry = std::find_if(std::begin(MSHR), std::end(MSHR), [match = handle_pkt.address >> OFFSET_BITS, shamt = OFFSET_BITS, asid = handle_pkt.asid[0]](const auto& entry) {
+   // return (entry.address >> shamt) == match && (asid == entry.asid[0]); // WL: added ASID matching.
+  //});
+
+  auto mshr_entry = std::find_if(std::begin(MSHR), std::end(MSHR), [match = handle_pkt.address >> OFFSET_BITS, shamt = OFFSET_BITS](const auto& entry) {
+    return (entry.address >> shamt) == match; // WL: added ASID matching.
   });
   bool mshr_full = (MSHR.size() == MSHR_SIZE);
 
