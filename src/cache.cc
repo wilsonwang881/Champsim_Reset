@@ -546,6 +546,7 @@ void CACHE::finish_packet(const response_type& packet)
   mshr_entry->data = packet.data;
   mshr_entry->pf_metadata = packet.pf_metadata;
   mshr_entry->event_cycle = current_cycle + (warmup ? 0 : FILL_LATENCY);
+  mshr_entry->asid[0] = packet.asid; // WL: added ASID
 
   if constexpr (champsim::debug_print) {
     fmt::print("[{}_MSHR] {} instr_id: {} address: {:#x} data: {:#x} type: {} to_finish: {} event: {} current: {}\n", NAME, __func__, mshr_entry->instr_id,
@@ -586,7 +587,7 @@ void CACHE::finish_translation(const response_type& packet)
 
   // Find all packets that match the page of the returned packet
   for (auto& entry : inflight_tag_check) {
-    if ((entry.v_address >> LOG2_PAGE_SIZE) == (packet.v_address >> LOG2_PAGE_SIZE)) {
+    if ((entry.v_address >> LOG2_PAGE_SIZE) == (packet.v_address >> LOG2_PAGE_SIZE) && entry.asid[0] == packet.asid) { // WL: added ASID
       mark_translated(entry);
     }
   }
