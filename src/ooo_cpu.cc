@@ -326,6 +326,7 @@ bool O3_CPU::do_fetch_instruction(std::deque<ooo_model_instr>::iterator begin, s
   fetch_packet.instr_id = begin->instr_id;
   fetch_packet.ip = begin->ip;
   fetch_packet.instr_depend_on_me = {begin, end};
+  fetch_packet.asid[0] = champsim::operable::currently_active_thread_ID; // WL: added ASID
 
   if constexpr (champsim::debug_print) {
     fmt::print("[IFETCH] {} instr_id: {} ip: {:#x} dependents: {} event_cycle: {}\n", __func__, begin->instr_id, begin->ip,
