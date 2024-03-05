@@ -329,6 +329,7 @@ auto CACHE::initiate_tag_check(champsim::channel* ul)
   return [cycle = current_cycle + (warmup ? 0 : HIT_LATENCY), ul](const auto& entry) {
     CACHE::tag_lookup_type retval{entry};
     retval.event_cycle = cycle;
+    retval.asid[0] = entry.asid[0]; // WL: added ASID
 
     if constexpr (UpdateRequest) {
       if (entry.response_requested)

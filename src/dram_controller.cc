@@ -304,6 +304,7 @@ bool MEMORY_CONTROLLER::add_rq(const request_type& packet, champsim::channel* ul
   if (auto rq_it = std::find_if_not(std::begin(channel.RQ), std::end(channel.RQ), [](const auto& pkt) { return pkt.has_value(); });
       rq_it != std::end(channel.RQ)) {
     *rq_it = DRAM_CHANNEL::request_type{packet};
+    rq_it->value().asid[0] = packet.asid[0]; // WL: added ASID
     rq_it->value().forward_checked = false;
     rq_it->value().event_cycle = current_cycle;
     if (packet.response_requested)
@@ -323,6 +324,7 @@ bool MEMORY_CONTROLLER::add_wq(const request_type& packet)
   if (auto wq_it = std::find_if_not(std::begin(channel.WQ), std::end(channel.WQ), [](const auto& pkt) { return pkt.has_value(); });
       wq_it != std::end(channel.WQ)) {
     *wq_it = DRAM_CHANNEL::request_type{packet};
+    wq_it->value().asid[0] = packet.asid[0]; // WL: added ASID
     wq_it->value().forward_checked = false;
     wq_it->value().event_cycle = current_cycle;
 

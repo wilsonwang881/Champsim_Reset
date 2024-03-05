@@ -102,7 +102,9 @@ class CACHE : public champsim::operable
     std::vector<std::reference_wrapper<ooo_model_instr>> instr_depend_on_me{};
     std::vector<std::deque<response_type>*> to_return{};
 
-    explicit tag_lookup_type(request_type req) : tag_lookup_type(req, false, false) {}
+    explicit tag_lookup_type(request_type req) : tag_lookup_type(req, false, false) {
+      asid[0] = req.asid[0]; // WL: added ASID
+    }
     tag_lookup_type(request_type req, bool local_pref, bool skip);
   };
 
@@ -150,7 +152,7 @@ class CACHE : public champsim::operable
     uint64_t data = 0;
 
     uint32_t pf_metadata = 0;
-    uint8_t asid = 7; // WL: added ASID
+    uint8_t asid = std::numeric_limits<uint8_t>::max(); // WL: added ASID
 
     BLOCK() = default;
     explicit BLOCK(mshr_type mshr);
