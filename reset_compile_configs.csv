@@ -1,3 +1,4 @@
 bin_name,Cache,Prefetcher,BTB,Branch Predictor,Dump
 sed_all_reset_read_reset_ins,1,1,1,1,0
 sed_no_reset_record_reset_ins,0,0,0,0,1
+sed_context_switch_read_reset_ins,0,1,1,1,0

@@ -426,12 +426,14 @@ long CACHE::operate()
 
   impl_prefetcher_cycle_operate();
 
+  /*
   if constexpr (champsim::debug_print) {
     fmt::print("[{}] {} cycle completed: {} tags checked: {} remaining: {} stash consumed: {} remaining: {} channel consumed: {} pq consumed {} unused consume bw {}\n", NAME, __func__, current_cycle,
         tag_bw_consumed, std::size(inflight_tag_check),
         stash_bandwidth_consumed, std::size(translation_stash),
         channels_bandwidth_consumed, pq_bandwidth_consumed, tag_bw);
   }
+  */
 
   // WL 
   reset_components();
