@@ -73,6 +73,7 @@ bool champsim::operable::have_cleaned_ITLB = true;
 bool champsim::operable::have_cleaned_DTLB = true;
 bool champsim::operable::have_cleaned_STLB = true;
 uint8_t champsim::operable::currently_active_thread_ID = 0;
+std::vector<uint64_t> champsim::operable::reset_ins_count_global;
 // WL
 
 // WL 
@@ -100,6 +101,7 @@ int main(int argc, char** argv)
     while(ins_number_every_4M_cycles_file >> reset_ins_count_readin)
     {
        reset_ins_count.push_back(reset_ins_count_readin);
+       champsim::operable::reset_ins_count_global.push_back(reset_ins_count_readin);
        //std::cout << (unsigned)reset_ins_count_readin << std::endl;
     }
  

@@ -126,14 +126,18 @@ bool champsim::channel::do_add_queue(R& queue, std::size_t queue_size, const typ
   }
 
   if constexpr (champsim::debug_print) {
-    fmt::print("[channel] {} instr_id: {} address: {:#x} v_address: {:#x} type: {}\n", __func__, packet.instr_id, packet.address, packet.v_address,
-        access_type_names.at(champsim::to_underlying(packet.type)));
+    fmt::print("[channel] {} instr_id: {} address: {:#x} v_address: {:#x} type: {} packet asid: {}\n", __func__, packet.instr_id, packet.address, packet.v_address,
+        access_type_names.at(champsim::to_underlying(packet.type)), packet.asid[0]);
   }
 
   // Insert the packet ahead of the translation misses
   auto fwd_pkt = packet;
   fwd_pkt.forward_checked = false;
   queue.push_back(fwd_pkt);
+
+  // WL 
+  assert(fwd_pkt.asid[0] == packet.asid[0]);
+  // WL 
 
   return true;
 }

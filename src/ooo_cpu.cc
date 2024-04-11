@@ -120,10 +120,36 @@ void O3_CPU::dump_accesses()
   }
 }
 
+// WL
 void O3_CPU::dump_before_reset_accesses()
 {
   for(auto access : reset_misc::before_reset_on_demand_access_records) {
     before_reset_context_switch_access_file << (unsigned)access.cycle << " " << (unsigned)access.ip << std::endl;
+  }
+}
+
+// WL 
+uint8_t O3_CPU::calculate_asid(uint64_t instr_id)
+{
+  for (size_t i = 0; i <= champsim::operable::reset_ins_count_global.size(); i++) {
+
+    // Case A: i == 0 
+    if (i == 0 && instr_id <= champsim::operable::reset_ins_count_global[i]) {
+
+       return i;
+    }
+    // Case B: 0 < i < max
+    else if (i > 0 && i < champsim::operable::reset_ins_count_global.size() &&
+        (champsim::operable::reset_ins_count_global[i] >= instr_id) &&
+        (champsim::operable::reset_ins_count_global[i - 1] <= instr_id)) {
+      
+       return i;
+    }
+    // Case C: i == max
+    else if (i == champsim::operable::reset_ins_count_global.size()) {
+
+       return i;
+    }
   }
 }
 
@@ -174,8 +200,8 @@ void O3_CPU::initialize_instruction()
       have_recorded_before_reset_on_demand_accesses = false;
     }
     
-    // Before push_back to IFETCH_BUFFER, need to add the ASID first
-    input_queue.front().asid[0] = currently_active_thread_ID;
+    // Before push_back to IFETCH_BUFFER, need to change the ASID first
+    input_queue.front().asid[0] = calculate_asid(input_queue.front().asid[0]);
     // WL
 
     // Add to IFETCH_BUFFER
@@ -221,7 +247,7 @@ bool O3_CPU::do_predict_branch(ooo_model_instr& arch_instr)
 
   if (arch_instr.is_branch) {
     if constexpr (champsim::debug_print) {
-      fmt::print("[BRANCH] instr_id: {} ip: {:#x} taken: {}\n", arch_instr.instr_id, arch_instr.ip, arch_instr.branch_taken);
+      fmt::print("[BRANCH] instr_id: {} ip: {:#x} taken: {} packet asid: {}\n", arch_instr.instr_id, arch_instr.ip, arch_instr.branch_taken, arch_instr.asid[0]);
     }
 
     // call code prefetcher every time the branch predictor is used
@@ -326,11 +352,15 @@ bool O3_CPU::do_fetch_instruction(std::deque<ooo_model_instr>::iterator begin, s
   fetch_packet.instr_id = begin->instr_id;
   fetch_packet.ip = begin->ip;
   fetch_packet.instr_depend_on_me = {begin, end};
-  fetch_packet.asid[0] = champsim::operable::currently_active_thread_ID; // WL: added ASID
+
+  // WL
+  // Add ASID based on instr_id
+  fetch_packet.asid[0] = calculate_asid(begin->instr_id);
+  // WL
 
   if constexpr (champsim::debug_print) {
-    fmt::print("[IFETCH] {} instr_id: {} ip: {:#x} dependents: {} event_cycle: {}\n", __func__, begin->instr_id, begin->ip,
-               std::size(fetch_packet.instr_depend_on_me), begin->event_cycle);
+    fmt::print("[IFETCH] {} instr_id: {} ip: {:#x} dependents: {} event_cycle: {} packet asid: {}\n", __func__, begin->instr_id, begin->ip,
+               std::size(fetch_packet.instr_depend_on_me), begin->event_cycle, fetch_packet.asid[0]);
   }
 
   return L1I_bus.issue_read(fetch_packet);
@@ -475,7 +505,7 @@ void O3_CPU::do_execution(ooo_model_instr& rob_entry)
       sq_entry.event_cycle = current_cycle + (warmup ? 0 : EXEC_LATENCY);
 
   if constexpr (champsim::debug_print) {
-    fmt::print("[ROB] {} instr_id: {} event_cycle: {}\n", __func__, rob_entry.instr_id, rob_entry.event_cycle);
+    fmt::print("[ROB] {} instr_id: {} event_cycle: {} packet asid: {}\n", __func__, rob_entry.instr_id, rob_entry.event_cycle, rob_entry.asid[0]);
   }
 }
 
@@ -514,8 +544,8 @@ void O3_CPU::do_memory_scheduling(ooo_model_instr& instr)
     SQ.emplace_back(instr.instr_id, dmem, instr.ip, instr.asid); // add it to the store queue
 
   if constexpr (champsim::debug_print) {
-    fmt::print("[DISPATCH] {} instr_id: {} loads: {} stores: {}\n", __func__, instr.instr_id, std::size(instr.source_memory),
-               std::size(instr.destination_memory));
+    fmt::print("[DISPATCH] {} instr_id: {} loads: {} stores: {} packet asid: {}\n", __func__, instr.instr_id, std::size(instr.source_memory),
+               std::size(instr.destination_memory), instr.asid[0]);
   }
 }
 
@@ -596,7 +626,7 @@ bool O3_CPU::execute_load(const LSQ_ENTRY& lq_entry)
   data_packet.asid[0] = lq_entry.asid[0]; // WL: added ASID
 
   if constexpr (champsim::debug_print) {
-    fmt::print("[LQ] {} instr_id: {} vaddr: {:#x}\n", __func__, data_packet.instr_id, data_packet.v_address);
+    fmt::print("[LQ] {} instr_id: {} vaddr: {:#x} lq_entry_asid: {} packet asid: {}\n", __func__, data_packet.instr_id, data_packet.v_address, lq_entry.asid[0], data_packet.asid[0]);
   }
 
   return L1D_bus.issue_read(data_packet);
@@ -654,8 +684,13 @@ long O3_CPU::handle_memory_return()
         --l1i_bw;
         ++progress;
 
+        // WL
+        // Add ASID based on instr_id
+        fetched.asid[0] = calculate_asid(fetched.instr_id);
+        // WL
+        
         if constexpr (champsim::debug_print) {
-          fmt::print("[IFETCH] {} instr_id: {} fetch completed\n", __func__, fetched.instr_id);
+          fmt::print("[IFETCH] {} instr_id: {} fetch completed packet asid: {}\n", __func__, fetched.instr_id, fetched.asid[0]);
         }
       }
 
@@ -689,7 +724,7 @@ long O3_CPU::retire_rob()
 {
   auto [retire_begin, retire_end] = champsim::get_span_p(std::cbegin(ROB), std::cend(ROB), RETIRE_WIDTH, [](const auto& x) { return x.executed == COMPLETED; });
   if constexpr (champsim::debug_print) {
-    std::for_each(retire_begin, retire_end, [](const auto& x) { fmt::print("[ROB] retire_rob instr_id: {} is retired\n", x.instr_id); });
+    std::for_each(retire_begin, retire_end, [](const auto& x) { fmt::print("[ROB] retire_rob instr_id: {} is retired packet asid: {}\n", x.instr_id, x.asid[0]); });
   }
   auto retire_count = std::distance(retire_begin, retire_end);
   num_retired += retire_count;
@@ -749,8 +784,8 @@ void LSQ_ENTRY::finish(std::deque<ooo_model_instr>::iterator begin, std::deque<o
   assert(rob_entry->completed_mem_ops <= rob_entry->num_mem_ops());
 
   if constexpr (champsim::debug_print) {
-    fmt::print("[LSQ] {} instr_id: {} full_address: {:#x} remain_mem_ops: {} event_cycle: {}\n", __func__, instr_id, virtual_address,
-               rob_entry->num_mem_ops() - rob_entry->completed_mem_ops, event_cycle);
+    fmt::print("[LSQ] {} instr_id: {} full_address: {:#x} remain_mem_ops: {} event_cycle: {} packet asid: {}\n", __func__, instr_id, virtual_address,
+               rob_entry->num_mem_ops() - rob_entry->completed_mem_ops, event_cycle, rob_entry->asid[0]);
   }
 }
 

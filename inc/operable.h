@@ -103,6 +103,8 @@ public:
   static bool cpu_side_reset_ready;
 
   static uint8_t currently_active_thread_ID;
+
+  static std::vector<uint64_t> reset_ins_count_global;
   // WL
 
   double leap_operation = 0;

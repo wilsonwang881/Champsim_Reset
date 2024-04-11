@@ -101,9 +101,9 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
 
   if constexpr (champsim::debug_print) {
     fmt::print(
-        "[{}] {} instr_id: {} address: {:#x} v_address: {:#x} set: {} way: {} type: {} prefetch_metadata: {} cycle_enqueued: {} cycle: {}\n",
+        "[{}] {} instr_id: {} address: {:#x} v_address: {:#x} set: {} way: {} type: {} prefetch_metadata: {} cycle_enqueued: {} cycle: {} packet asid: {}\n",
         NAME, __func__, fill_mshr.instr_id, fill_mshr.address, fill_mshr.v_address, get_set_index(fill_mshr.address), way_idx,
-        access_type_names.at(champsim::to_underlying(fill_mshr.type)), fill_mshr.pf_metadata, fill_mshr.cycle_enqueued, current_cycle);
+        access_type_names.at(champsim::to_underlying(fill_mshr.type)), fill_mshr.pf_metadata, fill_mshr.cycle_enqueued, current_cycle, fill_mshr.asid[0]);
   }
 
   bool success = true;
@@ -124,8 +124,8 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       writeback_packet.response_requested = false;
 
       if constexpr (champsim::debug_print) {
-        fmt::print("[{}] {} evict address: {:#x} v_address: {:#x} prefetch_metadata: {}\n", NAME,
-            __func__, writeback_packet.address, writeback_packet.v_address, fill_mshr.pf_metadata);
+        fmt::print("[{}] {} evict address: {:#x} v_address: {:#x} prefetch_metadata: {} packet asid: {} fill_mshr_asid: {}\n", NAME,
+            __func__, writeback_packet.address, writeback_packet.v_address, fill_mshr.pf_metadata, writeback_packet.asid[0], fill_mshr.asid[0]);
       }
 
       success = lower_level->add_wq(writeback_packet);
@@ -227,9 +227,9 @@ bool CACHE::try_hit(const tag_lookup_type& handle_pkt)
 bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
 {
   if constexpr (champsim::debug_print) {
-    fmt::print("[{}] {} instr_id: {} address: {:#x} v_address: {:#x} type: {} local_prefetch: {} cycle: {}\n", NAME, __func__,
+    fmt::print("[{}] {} instr_id: {} address: {:#x} v_address: {:#x} type: {} local_prefetch: {} cycle: {} packet asid: {}\n", NAME, __func__,
                handle_pkt.instr_id, handle_pkt.address, handle_pkt.v_address,
-               access_type_names.at(champsim::to_underlying(handle_pkt.type)), handle_pkt.prefetch_from_this, current_cycle);
+               access_type_names.at(champsim::to_underlying(handle_pkt.type)), handle_pkt.prefetch_from_this, current_cycle, handle_pkt.asid[0]);
   }
 
   mshr_type to_allocate{handle_pkt, current_cycle};
@@ -237,13 +237,13 @@ bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
   cpu = handle_pkt.cpu;
 
   // check mshr
-  //auto mshr_entry = std::find_if(std::begin(MSHR), std::end(MSHR), [match = handle_pkt.address >> OFFSET_BITS, shamt = OFFSET_BITS, asid = handle_pkt.asid[0]](const auto& entry) {
-   // return (entry.address >> shamt) == match && (asid == entry.asid[0]); // WL: added ASID matching.
-  //});
-
-  auto mshr_entry = std::find_if(std::begin(MSHR), std::end(MSHR), [match = handle_pkt.address >> OFFSET_BITS, shamt = OFFSET_BITS](const auto& entry) {
-    return (entry.address >> shamt) == match; // WL: added ASID matching.
+  auto mshr_entry = std::find_if(std::begin(MSHR), std::end(MSHR), [match = handle_pkt.address >> OFFSET_BITS, shamt = OFFSET_BITS, asid = handle_pkt.asid[0]](const auto& entry) {
+    return ((entry.address >> shamt) == match) && (asid == entry.asid[0]); // WL: added ASID matching.
   });
+
+  //auto mshr_entry = std::find_if(std::begin(MSHR), std::end(MSHR), [match = handle_pkt.address >> OFFSET_BITS, shamt = OFFSET_BITS](const auto& entry) {
+  //  return (entry.address >> shamt) == match; // WL: added ASID matching.
+  //});
   bool mshr_full = (MSHR.size() == MSHR_SIZE);
 
   if (mshr_entry != MSHR.end()) // miss already inflight
@@ -254,7 +254,11 @@ bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
         ++sim_stats.pf_useful;
     }
 
-    *mshr_entry = mshr_type::merge(*mshr_entry, to_allocate);
+    // WL: add ASID check before MSHR merging
+    if (mshr_entry->asid[0] == to_allocate.asid[0]) {
+      *mshr_entry = mshr_type::merge(*mshr_entry, to_allocate);
+    }
+    // WL
   } else {
     if (mshr_full) { // not enough MSHR resource
       if constexpr (champsim::debug_print) {
@@ -337,8 +341,8 @@ auto CACHE::initiate_tag_check(champsim::channel* ul)
     }
 
     if constexpr (champsim::debug_print) {
-      fmt::print("[TAG] initiate_tag_check instr_id: {} address: {:#x} v_address: {:#x} type: {} response_requested: {} event: {}\n", retval.instr_id, retval.address,
-                 retval.v_address, access_type_names.at(champsim::to_underlying(retval.type)), !std::empty(retval.to_return), retval.event_cycle);
+      fmt::print("[TAG] initiate_tag_check instr_id: {} address: {:#x} v_address: {:#x} type: {} response_requested: {} event: {} packet asid: {}\n", retval.instr_id, retval.address,
+                 retval.v_address, access_type_names.at(champsim::to_underlying(retval.type)), !std::empty(retval.to_return), retval.event_cycle, retval.asid[0]);
     }
 
     return retval;
@@ -552,9 +556,9 @@ void CACHE::finish_packet(const response_type& packet)
   mshr_entry->asid[0] = packet.asid; // WL: added ASID
 
   if constexpr (champsim::debug_print) {
-    fmt::print("[{}_MSHR] {} instr_id: {} address: {:#x} data: {:#x} type: {} to_finish: {} event: {} current: {}\n", NAME, __func__, mshr_entry->instr_id,
+    fmt::print("[{}_MSHR] {} instr_id: {} address: {:#x} data: {:#x} type: {} to_finish: {} event: {} current: {} packet asid: {}\n", NAME, __func__, mshr_entry->instr_id,
                mshr_entry->address, mshr_entry->data, access_type_names.at(champsim::to_underlying(mshr_entry->type)), std::size(lower_level->returned),
-               mshr_entry->event_cycle, current_cycle);
+               mshr_entry->event_cycle, current_cycle, packet.asid);
   }
 
   // Order this entry after previously-returned entries, but before non-returned
@@ -618,8 +622,8 @@ void CACHE::issue_translation()
       q_entry.translate_issued = this->lower_translate->add_rq(fwd_pkt);
       if constexpr (champsim::debug_print) {
         if (q_entry.translate_issued) {
-          fmt::print("[TRANSLATE] do_issue_translation instr_id: {} paddr: {:#x} vaddr: {:#x} cycle: {}\n", q_entry.instr_id, q_entry.address, q_entry.v_address,
-                     access_type_names.at(champsim::to_underlying(q_entry.type)));
+          fmt::print("[TRANSLATE] do_issue_translation instr_id: {} paddr: {:#x} vaddr: {:#x} cycle: {} packet asid: {} forwarded packet_asid: {}\n", q_entry.instr_id, q_entry.address, q_entry.v_address,
+                     access_type_names.at(champsim::to_underlying(q_entry.type)), q_entry.asid[0], fwd_pkt.asid[0]);
         }
       }
     }

@@ -135,14 +135,14 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
     }
     else
     {
-    if ((cpu_0.num_retired + cpu_0.input_queue.size())>= next_reset_moment && 
+    if ((cpu_0.num_retired)>= next_reset_moment && // + cpu_0.input_queue.size() 
         reset_ins_count_readin_index <= num_resets) {
 
       // Assume the overhead is 1 microscrond.
       // During the overhead, CPU does not take in instructions.
       //ooo_cpu[0]->context_switch_stall = CONTEXT_SWITCH_OVERHEAD_CYCLES;
 
-      std::cout << std::endl << "Resetting @ins. count = " << cpu_0.num_retired << " at cycle " << cpu_0.current_cycle << std::endl;
+      std::cout << std::endl << "Resetting @ins. count = " << std::dec << (unsigned)cpu_0.num_retired << " + " << (unsigned)cpu_0.input_queue.size() << " = " << (unsigned)(cpu_0.num_retired + cpu_0.input_queue.size()) << " at cycle " << cpu_0.current_cycle << std::endl;
 
       champsim::operable::context_switch_mode = true;
       champsim::operable::have_recorded_on_demand_accesses = true;
@@ -188,8 +188,12 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
 	    for (O3_CPU& cpu : env.cpu_view()) {
 	      auto& trace = traces.at(trace_index.at(cpu.cpu));
 	      for (auto pkt_count = cpu.IN_QUEUE_SIZE - static_cast<long>(std::size(cpu.input_queue)); !trace.eof() && pkt_count > 0; --pkt_count)
-		cpu.input_queue.push_back(trace());
-
+        {
+          cpu.input_queue.push_back(trace());
+          //cpu.input_queue.back().asid[0] = champsim::operable::currently_active_thread_ID;
+          //std::cout << "[INS] ip 0x" << std::hex << (unsigned)cpu.input_queue.back().ip << " asid " << (unsigned)cpu.input_queue.back().asid[0] << std::endl;
+        }
+		
 	      // If any trace reaches EOF, terminate all phases
 	      if (trace.eof())
 		std::fill(std::begin(next_phase_complete), std::end(next_phase_complete), true);
