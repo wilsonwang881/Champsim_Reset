@@ -40,6 +40,9 @@ auto start_time = std::chrono::steady_clock::now();
 #define RESET_INTERVAL 4000000
 uint64_t next_reset_moment = 0;
 
+// WL 
+uint64_t fed_in_instruction = 0;
+
 std::chrono::seconds elapsed_time() { return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time); }
 
 namespace champsim
@@ -190,6 +193,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
 	      for (auto pkt_count = cpu.IN_QUEUE_SIZE - static_cast<long>(std::size(cpu.input_queue)); !trace.eof() && pkt_count > 0; --pkt_count)
         {
           cpu.input_queue.push_back(trace());
+          fed_in_instruction++;
           //cpu.input_queue.back().asid[0] = champsim::operable::currently_active_thread_ID;
           //std::cout << "[INS] ip 0x" << std::hex << (unsigned)cpu.input_queue.back().ip << " asid " << (unsigned)cpu.input_queue.back().asid[0] << std::endl;
         }

@@ -201,7 +201,10 @@ void O3_CPU::initialize_instruction()
     }
     
     // Before push_back to IFETCH_BUFFER, need to change the ASID first
-    input_queue.front().asid[0] = calculate_asid(input_queue.front().asid[0]);
+    input_queue.front().asid[0] = calculate_asid(input_queue.front().instr_id);
+    if constexpr (champsim::debug_print) {
+      fmt::print("[initialize_instruction] instr_id: {} ip: {} packet asid: {} should be: {}\n", input_queue.front().instr_id, input_queue.front().ip, input_queue.front().asid[0], calculate_asid(input_queue.front().instr_id));
+    }
     // WL
 
     // Add to IFETCH_BUFFER
@@ -355,7 +358,7 @@ bool O3_CPU::do_fetch_instruction(std::deque<ooo_model_instr>::iterator begin, s
 
   // WL
   // Add ASID based on instr_id
-  fetch_packet.asid[0] = calculate_asid(begin->instr_id);
+  fetch_packet.asid[0] = begin->asid[0]; //calculate_asid(begin->instr_id);
   // WL
 
   if constexpr (champsim::debug_print) {
@@ -686,7 +689,7 @@ long O3_CPU::handle_memory_return()
 
         // WL
         // Add ASID based on instr_id
-        fetched.asid[0] = calculate_asid(fetched.instr_id);
+        //fetched.asid[0] = calculate_asid(fetched.instr_id);
         // WL
         
         if constexpr (champsim::debug_print) {

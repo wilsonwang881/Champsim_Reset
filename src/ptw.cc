@@ -26,6 +26,8 @@
 #include "vmem.h"
 #include <fmt/core.h>
 
+#include <iostream>
+
 PageTableWalker::PageTableWalker(Builder b)
     : champsim::operable(b.m_freq_scale), upper_levels(b.m_uls), lower_level(b.m_ll), NAME(b.m_name), MSHR_SIZE(b.m_mshr_size), MAX_READ(b.m_max_tag_check),
       MAX_FILL(b.m_max_fill), HIT_LATENCY(b.m_latency), vmem(b.m_vmem), CR3_addr(b.m_vmem->get_pte_pa(b.m_cpu, 0, b.m_vmem->pt_levels).first)
@@ -42,8 +44,10 @@ PageTableWalker::mshr_type::mshr_type(request_type req, std::size_t level)
     : address(req.address), v_address(req.v_address), instr_depend_on_me(req.instr_depend_on_me), pf_metadata(req.pf_metadata), cpu(req.cpu),
       translation_level(level)
 {
+  std::cout << "Initializing PTW MSHR with instr_id: " << req.instr_id << " " << " packet ASID: " << (unsigned)req.asid[0] << " with level " << level << " with event_cycle: " << event_cycle << " with virtual address: " << std:hex << req.v_address << std:dec << std::endl;
   asid[0] = req.asid[0];
   asid[1] = req.asid[1];
+  instr_id = req.instr_id;
 }
 
 auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* ul) -> std::optional<mshr_type>
@@ -60,12 +64,14 @@ auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* 
   fwd_mshr.address = champsim::splice_bits(walk_init.ptw_addr, walk_offset, LOG2_PAGE_SIZE);
   fwd_mshr.v_address = handle_pkt.address;
   fwd_mshr.asid[0] = handle_pkt.asid[0]; // WL: added ASID
+  fwd_mshr.instr_id = handle_pkt.instr_id; // WL: added instr_id 
+   
   if (handle_pkt.response_requested)
     fwd_mshr.to_return = {&ul->returned};
 
   if constexpr (champsim::debug_print) {
-    fmt::print("[{}] {} address: {:#x} v_address: {:#x} pt_page_offset: {} translation_level: {} packet asid: {} handle_pkt_asid: {}\n", NAME, __func__, fwd_mshr.address, fwd_mshr.v_address,
-               walk_offset / PTE_BYTES, walk_init.level, fwd_mshr.asid[0], handle_pkt.asid[0]);
+    fmt::print("[{}] {} address: {:#x} v_address: {:#x} pt_page_offset: {} translation_level: {} packet asid: {} handle_pkt_asid: {} instr_id: {}\n", NAME, __func__, fwd_mshr.address, fwd_mshr.v_address,
+               walk_offset / PTE_BYTES, walk_init.level, fwd_mshr.asid[0], handle_pkt.asid[0], handle_pkt.instr_id);
   }
 
   return step_translation(fwd_mshr);
@@ -102,6 +108,9 @@ auto PageTableWalker::step_translation(const mshr_type& source) -> std::optional
   packet.asid[1] = source.asid[1];
   packet.is_translated = true;
   packet.type = access_type::TRANSLATION;
+  packet.instr_id = source.instr_id; // WL
+
+  std::cout << "Attempt to step_translation with instr_id: " << packet.instr_id << std::endl; // WL
 
   bool success = lower_level->add_rq(packet);
 
@@ -223,8 +232,8 @@ void PageTableWalker::begin_phase()
 // LCOV_EXCL_START Exclude the following function from LCOV
 void PageTableWalker::print_deadlock()
 {
-  champsim::range_print_deadlock(MSHR, NAME + "_MSHR", "address: {:#x} v_addr: {:#x} translation_level: {} event_cycle: {} !DEADLOCKED!", [](const auto& entry) {
-    return std::tuple{entry.address, entry.v_address, entry.translation_level, entry.event_cycle};
+  champsim::range_print_deadlock(MSHR, NAME + "_MSHR", "address: {:#x} v_addr: {:#x} translation_level: {} event_cycle: {} !DEADLOCKED! with asid: {} with instr_id: {}", [](const auto& entry) {
+    return std::tuple{entry.address, entry.v_address, entry.translation_level, entry.event_cycle, entry.asid[0], entry.instr_id};
   });
 }
 // LCOV_EXCL_STOP

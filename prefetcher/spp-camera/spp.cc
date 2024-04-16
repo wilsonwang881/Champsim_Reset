@@ -46,11 +46,13 @@ void spp::prefetcher::issue(CACHE* cache)
     auto [addr, priority] = issue_queue.front();
 
     // If this fails, the queue was full.
-    bool prefetched = cache->prefetch_line(addr, priority, 0);
+    bool prefetched = true; // WL: = cache->prefetch_line(addr, priority, 0);
     if (prefetched) {
       filter.update_issue(addr, cache->get_set(addr));
       issue_queue.pop_front();
     }
+
+    std::cout << "Prefetch" << std::endl;
   }
 }
 
@@ -308,7 +310,7 @@ void spp::prefetcher::context_switch_issue(CACHE* cache)
     auto [addr, priority] = context_switch_issue_queue.front();
 
     // If this fails, the queue was full.
-    bool prefetched = cache->prefetch_line(addr, priority, 0);
+    bool prefetched = true; // WL: cache->prefetch_line(addr, priority, 0);
     if (prefetched) {
       context_switch_issue_queue.pop_front();
     }

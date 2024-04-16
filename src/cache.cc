@@ -70,9 +70,9 @@ CACHE::mshr_type CACHE::mshr_type::merge(mshr_type predecessor, mshr_type succes
 
   if constexpr (champsim::debug_print) {
     if (successor.type == access_type::PREFETCH) {
-      fmt::print("[MSHR] {} address {:#x} type: {} into address {:#x} type: {} event: {}\n", __func__, successor.address, access_type_names.at(champsim::to_underlying(successor.type)), predecessor.address, access_type_names.at(champsim::to_underlying(successor.type)), retval.event_cycle);
+      fmt::print("[MSHR] {} address {:#x} type: {} into address {:#x} type: {} event: {} with asid: {} predecessor asid: {} predecessor instr_id: {} successor asid: {} successor instr_id: {}\n", __func__, successor.address, access_type_names.at(champsim::to_underlying(successor.type)), predecessor.address, access_type_names.at(champsim::to_underlying(successor.type)), retval.event_cycle, retval.asid[0], predecessor.asid[0], predecessor.instr_id, successor.asid[0], successor.instr_id);
     } else {
-      fmt::print("[MSHR] {} address {:#x} type: {} into address {:#x} type: {} event: {}\n", __func__, predecessor.address, access_type_names.at(champsim::to_underlying(predecessor.type)), successor.address, access_type_names.at(champsim::to_underlying(successor.type)), retval.event_cycle);
+      fmt::print("[MSHR] {} address {:#x} type: {} into address {:#x} type: {} event: {} with asid: {} predecessor asid: {} predecessor instr_id: {} successor asid: {} successor instr_id: {}\n", __func__, predecessor.address, access_type_names.at(champsim::to_underlying(predecessor.type)), successor.address, access_type_names.at(champsim::to_underlying(successor.type)), retval.event_cycle, retval.asid[0], predecessor.asid[0], predecessor.instr_id, successor.asid[0], successor.instr_id);
     }
   }
 

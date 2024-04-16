@@ -93,7 +93,7 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
   auto offset = get_offset(vaddr, level);
   auto paddr = champsim::splice_bits(ppage->second, offset * PTE_BYTES, champsim::lg2(pte_page_size));
   if constexpr (champsim::debug_print) {
-    fmt::print("[VMEM] {} paddr: {:x} vaddr: {:x} pt_page_offset: {} translation_level: {} fault: {}\n", __func__, paddr, vaddr, offset, level, fault);
+    fmt::print("[VMEM] {} paddr: {:x} vaddr: {:x} pt_page_offset: {} translation_level: {} fault: {} asid: {}\n", __func__, paddr, vaddr, offset, level, fault, cpu_num);
   }
 
   return {paddr, fault ? minor_fault_penalty : 0};
