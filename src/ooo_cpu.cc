@@ -301,7 +301,7 @@ long O3_CPU::check_dib()
 void O3_CPU::do_check_dib(ooo_model_instr& instr)
 {
   // Check DIB to see if we recently fetched this line
-  if (auto dib_result = DIB.check_hit(instr.ip); dib_result) {
+  if (auto dib_result = DIB.check_hit_with_asid_arg(instr.ip, instr.asid[0]); dib_result) {
     // The cache line is in the L0, so we can mark this as complete
     instr.fetched = COMPLETED;
 
@@ -740,6 +740,7 @@ long O3_CPU::retire_rob()
 void O3_CPU::print_deadlock()
 {
   fmt::print("DEADLOCK! CPU {} cycle {}\n", cpu, current_cycle);
+  fmt::print("input_queue size = {}\n", input_queue.size()); // WL
 
   auto instr_pack = [](const auto& entry) {
     return std::tuple{entry.instr_id, +entry.fetched, +entry.scheduled, +entry.executed, +entry.num_reg_dependent, entry.num_mem_ops() - entry.completed_mem_ops, entry.event_cycle};
@@ -841,6 +842,6 @@ void O3_CPU::reset_components()
     champsim::operable::cpu_side_reset_ready = true;
 
     // Clear DIB 
-    DIB.clear_DIB();
+    //DIB.clear_DIB();
   }
 }

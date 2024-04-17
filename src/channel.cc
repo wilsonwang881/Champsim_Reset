@@ -146,7 +146,7 @@ bool champsim::channel::add_rq(const request_type& packet)
 {
   sim_stats.RQ_ACCESS++;
 
-  std::cout << "Attempt to do_add_queue in add_rq with instr_id: " << packet.instr_id << std::endl; // WL
+  //std::cout << "Attempt to do_add_queue in add_rq with instr_id: " << packet.instr_id << std::endl; // WL
 
   auto result = do_add_queue(RQ, RQ_SIZE, packet);
 
@@ -162,7 +162,7 @@ bool champsim::channel::add_wq(const request_type& packet)
 {
   sim_stats.WQ_ACCESS++;
 
-  std::cout << "Attempt to do_add_queue in add_wq" << std::endl; // WL 
+  //std::cout << "Attempt to do_add_queue in add_wq" << std::endl; // WL 
                                                                  //
   auto result = do_add_queue(WQ, WQ_SIZE, packet);
 
@@ -178,7 +178,7 @@ bool champsim::channel::add_pq(const request_type& packet)
 {
   sim_stats.PQ_ACCESS++;
 
-  std::cout << "Attempt to do_add_queue in add_pq" << std::endl; // WL 
+  //std::cout << "Attempt to do_add_queue in add_pq" << std::endl; // WL 
 
   auto fwd_pkt = packet;
   auto result = do_add_queue(PQ, PQ_SIZE, fwd_pkt);

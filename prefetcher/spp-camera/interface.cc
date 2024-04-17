@@ -75,8 +75,8 @@ void CACHE::prefetcher_cycle_operate()
       {
         if (!champsim::operable::have_cleared_BTB
             && !champsim::operable::have_cleared_BP
-            && champsim::operable::cpu_side_reset_ready
-            && champsim::operable::cache_clear_counter == 7) {
+            && champsim::operable::cpu_side_reset_ready) {
+            //&& champsim::operable::cache_clear_counter == 7) {
           champsim::operable::context_switch_mode = false;
           champsim::operable::cpu_side_reset_ready = false;
           champsim::operable::cache_clear_counter = 0;

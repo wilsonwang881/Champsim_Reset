@@ -30,7 +30,7 @@ struct deadlock : public std::exception {
   explicit deadlock(uint32_t cpu) : which(cpu) {}
 };
 
-#define DEBUG_PRINT // WL: added debug print
+// #define DEBUG_PRINT // WL: added debug print
 
 #ifdef DEBUG_PRINT
 constexpr bool debug_print = true;

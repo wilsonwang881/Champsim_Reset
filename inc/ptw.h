@@ -32,6 +32,7 @@ class PageTableWalker : public champsim::operable
     uint64_t vaddr;
     uint64_t ptw_addr;
     std::size_t level;
+    uint8_t asid;
   };
 
   struct pscl_indexer {

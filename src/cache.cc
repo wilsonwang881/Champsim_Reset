@@ -358,13 +358,18 @@ long CACHE::operate()
 
   // Finish returns
   std::for_each(std::cbegin(lower_level->returned), std::cend(lower_level->returned), [this](const auto& pkt) { this->finish_packet(pkt); });
-  progress += std::distance(std::cbegin(lower_level->returned), std::cend(lower_level->returned));
+  long tmpp_progress{0};
+  tmpp_progress = std::distance(std::cbegin(lower_level->returned), std::cend(lower_level->returned));
+  //std::cout << "A tmpp_progress = " << tmpp_progress << std::endl;
+  progress += tmpp_progress;
   lower_level->returned.clear();
 
   // Finish translations
   if (lower_translate != nullptr) {
     std::for_each(std::cbegin(lower_translate->returned), std::cend(lower_translate->returned), [this](const auto& pkt) { this->finish_translation(pkt); });
-    progress += std::distance(std::cbegin(lower_translate->returned), std::cend(lower_translate->returned));
+    tmpp_progress = std::distance(std::cbegin(lower_translate->returned), std::cend(lower_translate->returned));
+    //std::cout << "B tmpp_progress = " << tmpp_progress << std::endl;
+    progress += tmpp_progress;
     lower_translate->returned.clear();
   }
 
@@ -377,7 +382,9 @@ long CACHE::operate()
     fill_bw -= std::distance(fill_begin, complete_end);
     q.get().erase(fill_begin, complete_end);
   }
-  progress += MAX_FILL - fill_bw;
+  tmpp_progress = MAX_FILL - fill_bw;
+  //std::cout << "C tmpp_progress = " << tmpp_progress << std::endl;
+  progress += tmpp_progress;
 
   // Initiate tag checks
   auto tag_bw = std::max(0ll, std::min<long long>(static_cast<long long>(MAX_TAG), MAX_TAG * HIT_LATENCY - std::size(inflight_tag_check)));
@@ -387,6 +394,7 @@ long CACHE::operate()
   auto stash_bandwidth_consumed = champsim::transform_while_n(
       translation_stash, std::back_inserter(inflight_tag_check), tag_bw, [](const auto& entry) { return entry.is_translated; }, initiate_tag_check<false>());
   tag_bw -= stash_bandwidth_consumed;
+  //std::cout << "D tmpp_progress = " << stash_bandwidth_consumed << std::endl;
   progress += stash_bandwidth_consumed;
   std::vector<long long> channels_bandwidth_consumed{};
   for (auto* ul : upper_levels) {
@@ -394,11 +402,13 @@ long CACHE::operate()
       auto bandwidth_consumed = champsim::transform_while_n(q.get(), std::back_inserter(inflight_tag_check), tag_bw, can_translate, initiate_tag_check<true>(ul));
       channels_bandwidth_consumed.push_back(bandwidth_consumed);
       tag_bw -= bandwidth_consumed;
+      //std::cout << "E tmpp_progress = " << bandwidth_consumed << std::endl;
       progress += bandwidth_consumed;
     }
   }
   auto pq_bandwidth_consumed = champsim::transform_while_n(internal_PQ, std::back_inserter(inflight_tag_check), tag_bw, can_translate, initiate_tag_check<false>());
   tag_bw -= pq_bandwidth_consumed;
+  //std::cout << "F tmpp_progress = " << pq_bandwidth_consumed << std::endl;
   progress += pq_bandwidth_consumed;
 
   // Issue translations
@@ -408,7 +418,9 @@ long CACHE::operate()
   auto [last_not_missed, stash_end] =
       champsim::extract_if(std::begin(inflight_tag_check), std::end(inflight_tag_check), std::back_inserter(translation_stash),
                            [cycle = current_cycle](const auto& x) { return x.event_cycle < cycle && !x.is_translated; });
-  progress += std::distance(last_not_missed, std::end(inflight_tag_check));
+  tmpp_progress = std::distance(last_not_missed, std::end(inflight_tag_check));
+  //std::cout << "G tmpp_progress = " << tmpp_progress << std::endl;
+  progress += tmpp_progress;
   inflight_tag_check.erase(last_not_missed, std::end(inflight_tag_check));
 
   // Perform tag checks
@@ -425,7 +437,9 @@ long CACHE::operate()
                            [cycle = current_cycle](const auto& pkt) { return pkt.event_cycle <= cycle && pkt.is_translated; });
   auto finish_tag_check_end = std::find_if_not(tag_check_ready_begin, tag_check_ready_end, do_tag_check);
   auto tag_bw_consumed = std::distance(tag_check_ready_begin, finish_tag_check_end);
-  progress += std::distance(tag_check_ready_begin, finish_tag_check_end);
+  tmpp_progress = std::distance(tag_check_ready_begin, finish_tag_check_end);
+  //std::cout << "H tmpp_progress = " << tmpp_progress << std::endl;
+  progress += tmpp_progress;
   inflight_tag_check.erase(tag_check_ready_begin, finish_tag_check_end);
 
   impl_prefetcher_cycle_operate();
@@ -576,7 +590,7 @@ void CACHE::finish_translation(const response_type& packet)
 
   // WL: modified matches_vpage
   auto matches_vpage = [page_num = packet.v_address >> LOG2_PAGE_SIZE, asid = packet.asid](const auto& entry) {
-    return ((entry.v_address >> LOG2_PAGE_SIZE) == page_num) && (asid == entry.asid[0]);
+    return ((entry.v_address >> LOG2_PAGE_SIZE) == page_num) && (asid == entry.asid[0] && !entry.is_translated); // WL: add !entry.is_translated
   };
   auto mark_translated = [p_page = packet.data, this](auto& entry) {
     entry.address = champsim::splice_bits(p_page, entry.v_address, LOG2_PAGE_SIZE); // translated address

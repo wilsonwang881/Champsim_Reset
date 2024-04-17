@@ -44,7 +44,7 @@ PageTableWalker::mshr_type::mshr_type(request_type req, std::size_t level)
     : address(req.address), v_address(req.v_address), instr_depend_on_me(req.instr_depend_on_me), pf_metadata(req.pf_metadata), cpu(req.cpu),
       translation_level(level)
 {
-  std::cout << "Initializing PTW MSHR with instr_id: " << req.instr_id << " " << " packet ASID: " << (unsigned)req.asid[0] << " with level " << level << " with event_cycle: " << event_cycle << " with virtual address: " << std:hex << req.v_address << std:dec << std::endl;
+  //std::cout << "Initializing PTW MSHR with instr_id: " << req.instr_id << " " << " packet ASID: " << (unsigned)req.asid[0] << " with level " << level << " with event_cycle: " << event_cycle << " with virtual address: 0x" << std::hex << req.v_address << std::dec << std::endl;
   asid[0] = req.asid[0];
   asid[1] = req.asid[1];
   instr_id = req.instr_id;
@@ -52,9 +52,9 @@ PageTableWalker::mshr_type::mshr_type(request_type req, std::size_t level)
 
 auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* ul) -> std::optional<mshr_type>
 {
-  pscl_entry walk_init = {handle_pkt.v_address, CR3_addr, std::size(pscl)};
+  pscl_entry walk_init = {handle_pkt.v_address, CR3_addr, std::size(pscl), handle_pkt.asid[0]}; // WL: added ASID
   std::vector<std::optional<pscl_entry>> pscl_hits;
-  std::transform(std::begin(pscl), std::end(pscl), std::back_inserter(pscl_hits), [walk_init](auto& x) { return x.check_hit(walk_init); });
+  std::transform(std::begin(pscl), std::end(pscl), std::back_inserter(pscl_hits), [walk_init](auto& x) { return x.check_hit_with_asid(walk_init); }); // WL: changed check_hit to check_hit_with_asid
   walk_init =
       std::accumulate(std::begin(pscl_hits), std::end(pscl_hits), std::optional<pscl_entry>(walk_init), [](auto x, auto& y) { return y.value_or(*x); }).value();
 
@@ -86,7 +86,7 @@ auto PageTableWalker::handle_fill(const mshr_type& fill_mshr) -> std::optional<m
   }
 
   const auto pscl_idx = std::size(pscl) - fill_mshr.translation_level;
-  pscl.at(pscl_idx).fill({fill_mshr.v_address, fill_mshr.data, fill_mshr.translation_level - 1});
+  pscl.at(pscl_idx).fill_with_asid({fill_mshr.v_address, fill_mshr.data, fill_mshr.translation_level - 1, fill_mshr.asid[0]}); // WL: changed fill to fill_with_asid
 
   mshr_type fwd_mshr = fill_mshr;
   fwd_mshr.address = fill_mshr.data;
@@ -110,7 +110,7 @@ auto PageTableWalker::step_translation(const mshr_type& source) -> std::optional
   packet.type = access_type::TRANSLATION;
   packet.instr_id = source.instr_id; // WL
 
-  std::cout << "Attempt to step_translation with instr_id: " << packet.instr_id << std::endl; // WL
+  //std::cout << "Attempt to step_translation with instr_id: " << packet.instr_id << std::endl; // WL
 
   bool success = lower_level->add_rq(packet);
 
