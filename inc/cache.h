@@ -95,7 +95,7 @@ class CACHE : public champsim::operable
     bool is_translated;
     bool translate_issued = false;
 
-    uint8_t asid[2] = {std::numeric_limits<uint8_t>::max(), std::numeric_limits<uint8_t>::max()};
+    uint16_t asid[2] = {std::numeric_limits<uint16_t>::max(), std::numeric_limits<uint16_t>::max()};
 
     uint64_t event_cycle = std::numeric_limits<uint64_t>::max();
 
@@ -121,7 +121,7 @@ class CACHE : public champsim::operable
     access_type type;
     bool prefetch_from_this;
 
-    uint8_t asid[2] = {std::numeric_limits<uint8_t>::max(), std::numeric_limits<uint8_t>::max()};
+    uint16_t asid[2] = {std::numeric_limits<uint16_t>::max(), std::numeric_limits<uint16_t>::max()};
 
     uint64_t event_cycle = std::numeric_limits<uint64_t>::max();
     uint64_t cycle_enqueued;
@@ -152,7 +152,7 @@ class CACHE : public champsim::operable
     uint64_t data = 0;
 
     uint32_t pf_metadata = 0;
-    uint8_t asid = std::numeric_limits<uint8_t>::max(); // WL: added ASID
+    uint16_t asid = std::numeric_limits<uint16_t>::max(); // WL: added ASID
 
     BLOCK() = default;
     explicit BLOCK(mshr_type mshr);

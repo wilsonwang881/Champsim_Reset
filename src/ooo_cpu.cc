@@ -129,26 +129,26 @@ void O3_CPU::dump_before_reset_accesses()
 }
 
 // WL 
-uint8_t O3_CPU::calculate_asid(uint64_t instr_id)
+uint16_t O3_CPU::calculate_asid(uint64_t instr_id)
 {
   for (size_t i = 0; i <= champsim::operable::reset_ins_count_global.size(); i++) {
 
     // Case A: i == 0 
     if (i == 0 && instr_id <= champsim::operable::reset_ins_count_global[i]) {
 
-       return i % 255;
+       return i;
     }
     // Case B: 0 < i < max
     else if (i > 0 && i < champsim::operable::reset_ins_count_global.size() &&
         (champsim::operable::reset_ins_count_global[i] >= instr_id) &&
         (champsim::operable::reset_ins_count_global[i - 1] <= instr_id)) {
       
-       return i % 255;
+       return i;
     }
     // Case C: i == max
     else if (i == champsim::operable::reset_ins_count_global.size()) {
 
-       return i % 255;
+       return i;
     }
   }
 }
@@ -773,7 +773,7 @@ void O3_CPU::print_deadlock()
 }
 // LCOV_EXCL_STOP
 
-LSQ_ENTRY::LSQ_ENTRY(uint64_t id, uint64_t addr, uint64_t local_ip, std::array<uint8_t, 2> local_asid)
+LSQ_ENTRY::LSQ_ENTRY(uint64_t id, uint64_t addr, uint64_t local_ip, std::array<uint16_t, 2> local_asid)
     : instr_id(id), virtual_address(addr), ip(local_ip), asid(local_asid)
 {
 }

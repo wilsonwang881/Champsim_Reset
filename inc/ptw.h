@@ -32,7 +32,7 @@ class PageTableWalker : public champsim::operable
     uint64_t vaddr;
     uint64_t ptw_addr;
     std::size_t level;
-    uint8_t asid;
+    uint16_t asid;
   };
 
   struct pscl_indexer {
@@ -58,7 +58,7 @@ class PageTableWalker : public champsim::operable
     uint64_t event_cycle = std::numeric_limits<uint64_t>::max();
     uint32_t pf_metadata = 0;
     uint32_t cpu = std::numeric_limits<uint32_t>::max();
-    uint8_t asid[2] = {std::numeric_limits<uint8_t>::max(), std::numeric_limits<uint8_t>::max()};
+    uint16_t asid[2] = {std::numeric_limits<uint16_t>::max(), std::numeric_limits<uint16_t>::max()};
 
     std::size_t translation_level = 0;
 

@@ -54,7 +54,7 @@ private:
   struct block_t {
     uint64_t last_used = 0;
     value_type data;
-    uint8_t asid; // WL: added ASID
+    uint16_t asid; // WL: added ASID
   };
   using block_vec_type = std::vector<block_t>;
 
@@ -95,7 +95,7 @@ private:
   }
 
   // WL 
-  auto match_func_with_asid_arg(const value_type& elem, uint8_t asid)
+  auto match_func_with_asid_arg(const value_type& elem, uint16_t asid)
   {
     return [tag = tag_projection(elem), proj = this->tag_projection, _asid = asid](const block_t& x) {
       /*
@@ -158,7 +158,7 @@ public:
   }
 
   // WL
-  std::optional<value_type> check_hit_with_asid_arg(const value_type& elem, uint8_t asid)
+  std::optional<value_type> check_hit_with_asid_arg(const value_type& elem, uint16_t asid)
   {
     auto [set_begin, set_end] = get_set_span(elem);
     auto hit = std::find_if(set_begin, set_end, match_func_with_asid_arg(elem, asid));

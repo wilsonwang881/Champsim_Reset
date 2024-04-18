@@ -78,7 +78,7 @@ class bulk_tracereader
   static_assert(std::is_trivial_v<T>);
   static_assert(std::is_standard_layout_v<T>);
 
-  uint8_t cpu;
+  uint16_t cpu;
   bool eof_ = false;
   F trace_file;
 
@@ -89,8 +89,8 @@ class bulk_tracereader
 public:
   ooo_model_instr operator()();
 
-  bulk_tracereader(uint8_t cpu_idx, std::string tf) : cpu(cpu_idx), trace_file(tf) {}
-  bulk_tracereader(uint8_t cpu_idx, F&& file) : cpu(cpu_idx), trace_file(std::move(file)) {}
+  bulk_tracereader(uint16_t cpu_idx, std::string tf) : cpu(cpu_idx), trace_file(tf) {}
+  bulk_tracereader(uint16_t cpu_idx, F&& file) : cpu(cpu_idx), trace_file(std::move(file)) {}
 
   bool eof() const { return trace_file.eof() && std::size(instr_buffer) <= refresh_thresh; }
 };
@@ -138,6 +138,6 @@ ooo_model_instr bulk_tracereader<T, F>::operator()()
 std::string get_fptr_cmd(std::string_view fname);
 } // namespace champsim
 
-champsim::tracereader get_tracereader(std::string fname, uint8_t cpu, bool is_cloudsuite, bool repeat);
+champsim::tracereader get_tracereader(std::string fname, uint16_t cpu, bool is_cloudsuite, bool repeat);
 
 #endif

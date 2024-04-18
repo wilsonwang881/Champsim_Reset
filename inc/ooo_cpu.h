@@ -85,13 +85,13 @@ struct LSQ_ENTRY {
   uint64_t ip = 0;
   uint64_t event_cycle = 0;
 
-  std::array<uint8_t, 2> asid = {std::numeric_limits<uint8_t>::max(), std::numeric_limits<uint8_t>::max()};
+  std::array<uint16_t, 2> asid = {std::numeric_limits<uint16_t>::max(), std::numeric_limits<uint16_t>::max()};
   bool fetch_issued = false;
 
   uint64_t producer_id = std::numeric_limits<uint64_t>::max();
   std::vector<std::reference_wrapper<std::optional<LSQ_ENTRY>>> lq_depend_on_me{};
 
-  LSQ_ENTRY(uint64_t id, uint64_t addr, uint64_t ip, std::array<uint8_t, 2> asid);
+  LSQ_ENTRY(uint64_t id, uint64_t addr, uint64_t ip, std::array<uint16_t, 2> asid);
   void finish(std::deque<ooo_model_instr>::iterator begin, std::deque<ooo_model_instr>::iterator end) const;
 };
 
@@ -120,7 +120,7 @@ public:
 
   void dump_accesses();
   void dump_before_reset_accesses();
-  uint8_t calculate_asid(uint64_t instr_id);
+  uint16_t calculate_asid(uint64_t instr_id);
 
   uint64_t reset_ins_count;
   // WL
@@ -160,7 +160,7 @@ public:
   std::vector<std::optional<LSQ_ENTRY>> LQ;
   std::deque<LSQ_ENTRY> SQ;
 
-  std::array<std::vector<std::reference_wrapper<ooo_model_instr>>, std::numeric_limits<uint8_t>::max() + 1> reg_producers;
+  std::array<std::vector<std::reference_wrapper<ooo_model_instr>>, std::numeric_limits<uint16_t>::max() + 1> reg_producers;
 
   // Constants
   const std::size_t IFETCH_BUFFER_SIZE, DISPATCH_BUFFER_SIZE, DECODE_BUFFER_SIZE, ROB_SIZE, SQ_SIZE;

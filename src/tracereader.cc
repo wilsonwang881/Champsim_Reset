@@ -33,7 +33,7 @@ ooo_model_instr apply_branch_target(ooo_model_instr branch, const ooo_model_inst
 }
 
 template <template <class, class> typename R, typename T>
-champsim::tracereader get_tracereader_for_type(std::string fname, uint8_t cpu)
+champsim::tracereader get_tracereader_for_type(std::string fname, uint16_t cpu)
 {
   bool is_gzip_compressed = (fname.substr(std::size(fname) - 2) == "gz");
   bool is_lzma_compressed = (fname.substr(std::size(fname) - 2) == "xz");
@@ -51,9 +51,9 @@ champsim::tracereader get_tracereader_for_type(std::string fname, uint8_t cpu)
 } // namespace champsim
 
 template <typename T, typename S>
-using repeatable_reader_t = champsim::repeatable<champsim::bulk_tracereader<T, S>, uint8_t, std::string>;
+using repeatable_reader_t = champsim::repeatable<champsim::bulk_tracereader<T, S>, uint16_t, std::string>;
 
-champsim::tracereader get_tracereader(std::string fname, uint8_t cpu, bool is_cloudsuite, bool repeat)
+champsim::tracereader get_tracereader(std::string fname, uint16_t cpu, bool is_cloudsuite, bool repeat)
 {
   if (is_cloudsuite) {
     if (repeat)
