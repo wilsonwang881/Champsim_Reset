@@ -590,7 +590,7 @@ void CACHE::finish_translation(const response_type& packet)
 
   // WL: modified matches_vpage
   auto matches_vpage = [page_num = packet.v_address >> LOG2_PAGE_SIZE, asid = packet.asid](const auto& entry) {
-    return ((entry.v_address >> LOG2_PAGE_SIZE) == page_num) && (asid == entry.asid[0] && !entry.is_translated); // WL: add !entry.is_translated
+    return ((entry.v_address >> LOG2_PAGE_SIZE) == page_num) && (asid == entry.asid[0]) && (!entry.is_translated); // WL: add !entry.is_translated
   };
   auto mark_translated = [p_page = packet.data, this](auto& entry) {
     entry.address = champsim::splice_bits(p_page, entry.v_address, LOG2_PAGE_SIZE); // translated address

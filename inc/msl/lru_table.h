@@ -121,13 +121,13 @@ private:
 
   // WL
   template <typename U>
-  auto match_and_check_with_asid(U tag)
+  auto match_and_check_with_asid(U tag, uint16_t _asid)
   {
-    return [tag, proj = this->tag_projection](const auto& x, const auto& y) {
-      auto x_valid = x.last_used > 0;
-      auto y_valid = y.last_used > 0;
-      auto x_match = proj(x.data) == tag;
-      auto y_match = proj(y.data) == tag;
+    return [tag, proj = this->tag_projection, asid = _asid](const auto& x, const auto& y) {
+      auto x_valid = x.last_used > 0 && x.asid == asid;
+      auto y_valid = y.last_used > 0 && y.asid == asid;
+      auto x_match = proj(x.data) == tag && x.asid == asid;
+      auto y_match = proj(y.data) == tag && y.asid == asid;
       auto cmp_lru = x.last_used < y.last_used;
       return !x_valid || (y_valid && ((!x_match && y_match) || ((x_match == y_match) && cmp_lru)));
     };
@@ -203,12 +203,27 @@ public:
     auto tag = tag_projection(elem);
     auto [set_begin, set_end] = get_set_span(elem);
     if (set_begin != set_end) {
-      auto [miss, hit] = std::minmax_element(set_begin, set_end, match_and_check_with_asid(tag));
+      auto [miss, hit] = std::minmax_element(set_begin, set_end, match_and_check_with_asid(tag, elem.asid));
 
       if (tag_projection(hit->data) == tag && hit->asid == elem.asid)
         *hit = {++access_count, elem, elem.asid};
       else
         *miss = {++access_count, elem, elem.asid};
+    }
+  }
+
+  // WL 
+  void fill_with_asid_arg(const value_type& elem, uint16_t asid)
+  {
+    auto tag = tag_projection(elem);
+    auto [set_begin, set_end] = get_set_span(elem);
+    if (set_begin != set_end) {
+      auto [miss, hit] = std::minmax_element(set_begin, set_end, match_and_check_with_asid(tag, asid));
+
+      if (tag_projection(hit->data) == tag && hit->asid == asid)
+        *hit = {++access_count, elem, asid};
+      else
+        *miss = {++access_count, elem, asid};
     }
   }
 

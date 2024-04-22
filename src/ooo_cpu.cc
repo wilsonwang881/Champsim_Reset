@@ -42,15 +42,15 @@ long O3_CPU::operate()
   progress += schedule_instruction();          // schedule instructions
   progress += handle_memory_return();          // finalize memory transactions
   progress += operate_lsq();                   // execute memory transactions
-
+                                               //
   progress += dispatch_instruction(); // dispatch
   progress += decode_instruction();   // decode
   progress += promote_to_decode();
 
   progress += fetch_instruction(); // fetch
   progress += check_dib();
-  initialize_instruction();
 
+  initialize_instruction();
   reset_components(); // WL
   // heartbeat
   if (show_heartbeat && (num_retired >= next_print_instruction)) {
@@ -96,6 +96,7 @@ void O3_CPU::begin_phase()
   stats.begin_instrs = num_retired;
   stats.begin_cycles = current_cycle;
   sim_stats = stats;
+  std::cout << "begin_phase() " << stats.name << std::endl; // WL
 }
 
 void O3_CPU::end_phase(unsigned finished_cpu)
@@ -201,9 +202,16 @@ void O3_CPU::initialize_instruction()
     }
     
     // Before push_back to IFETCH_BUFFER, need to change the ASID first
-    input_queue.front().asid[0] = calculate_asid(input_queue.front().instr_id);
-    if constexpr (champsim::debug_print) {
+    // But exclude ASID calculation in the baseline
+    // where the reset instruction numbers need to be recorded
+    if (DUMP_INS_NUMBER_EVERY_4M_CYCLES == 0) 
+      input_queue.front().asid[0] = calculate_asid(input_queue.front().instr_id);
+
+    if constexpr (champsim::debug_print && DUMP_INS_NUMBER_EVERY_4M_CYCLES == 0) {
       fmt::print("[initialize_instruction] instr_id: {} ip: {} packet asid: {} should be: {}\n", input_queue.front().instr_id, input_queue.front().ip, input_queue.front().asid[0], calculate_asid(input_queue.front().instr_id));
+    }
+    if constexpr (champsim::debug_print && DUMP_INS_NUMBER_EVERY_4M_CYCLES != 0) {
+      fmt::print("[initialize_instruction] instr_id: {} ip: {} packet asid: {}\n", input_queue.front().instr_id, input_queue.front().ip, input_queue.front().asid[0]);
     }
     // WL
 
@@ -417,7 +425,7 @@ long O3_CPU::decode_instruction()
   return progress;
 }
 
-void O3_CPU::do_dib_update(const ooo_model_instr& instr) { DIB.fill(instr.ip); }
+void O3_CPU::do_dib_update(const ooo_model_instr& instr) { DIB.fill_with_asid_arg(instr.ip, instr.asid[0]); }
 
 long O3_CPU::dispatch_instruction()
 {

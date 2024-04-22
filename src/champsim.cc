@@ -87,7 +87,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
   std::vector<bool> phase_complete(std::size(env.cpu_view()), false);
   while (!std::accumulate(std::begin(phase_complete), std::end(phase_complete), true, std::logical_and{})) {
     auto next_phase_complete = phase_complete;
-
+    
     // Operate
     long progress{0};
     for (champsim::operable& op : operables) {
