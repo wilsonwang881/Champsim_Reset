@@ -105,6 +105,10 @@ public:
   static uint16_t currently_active_thread_ID;
 
   static std::vector<uint64_t> reset_ins_count_global;
+
+  static uint64_t number_of_instructions_to_skip_before_log;
+
+  static uint64_t cpu0_num_retired;
   // WL
 
   double leap_operation = 0;

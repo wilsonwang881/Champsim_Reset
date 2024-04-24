@@ -134,6 +134,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
         champsim::operable::have_cleaned_ITLB = false;
         champsim::operable::have_cleaned_DTLB = false;
         champsim::operable::have_cleaned_STLB = false;
+        champsim::operable::cpu0_num_retired = cpu_0.num_retired;
       }
     }
     else

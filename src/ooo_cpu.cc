@@ -207,10 +207,10 @@ void O3_CPU::initialize_instruction()
     if (DUMP_INS_NUMBER_EVERY_4M_CYCLES == 0) 
       input_queue.front().asid[0] = calculate_asid(input_queue.front().instr_id);
 
-    if constexpr (champsim::debug_print && DUMP_INS_NUMBER_EVERY_4M_CYCLES == 0) {
+    if (champsim::debug_print && DUMP_INS_NUMBER_EVERY_4M_CYCLES == 0 && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
       fmt::print("[initialize_instruction] instr_id: {} ip: {} packet asid: {} should be: {}\n", input_queue.front().instr_id, input_queue.front().ip, input_queue.front().asid[0], calculate_asid(input_queue.front().instr_id));
     }
-    if constexpr (champsim::debug_print && DUMP_INS_NUMBER_EVERY_4M_CYCLES != 0) {
+    if (champsim::debug_print && DUMP_INS_NUMBER_EVERY_4M_CYCLES != 0 && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
       fmt::print("[initialize_instruction] instr_id: {} ip: {} packet asid: {}\n", input_queue.front().instr_id, input_queue.front().ip, input_queue.front().asid[0]);
     }
     // WL
@@ -257,7 +257,7 @@ bool O3_CPU::do_predict_branch(ooo_model_instr& arch_instr)
     predicted_branch_target = 0;
 
   if (arch_instr.is_branch) {
-    if constexpr (champsim::debug_print) {
+    if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
       fmt::print("[BRANCH] instr_id: {} ip: {:#x} taken: {} packet asid: {}\n", arch_instr.instr_id, arch_instr.ip, arch_instr.branch_taken, arch_instr.asid[0]);
     }
 
@@ -369,7 +369,7 @@ bool O3_CPU::do_fetch_instruction(std::deque<ooo_model_instr>::iterator begin, s
   fetch_packet.asid[0] = begin->asid[0]; //calculate_asid(begin->instr_id);
   // WL
 
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print("[IFETCH] {} instr_id: {} ip: {:#x} dependents: {} event_cycle: {} packet asid: {}\n", __func__, begin->instr_id, begin->ip,
                std::size(fetch_packet.instr_depend_on_me), begin->event_cycle, fetch_packet.asid[0]);
   }
@@ -515,7 +515,7 @@ void O3_CPU::do_execution(ooo_model_instr& rob_entry)
     if (sq_entry.instr_id == rob_entry.instr_id)
       sq_entry.event_cycle = current_cycle + (warmup ? 0 : EXEC_LATENCY);
 
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print("[ROB] {} instr_id: {} event_cycle: {} packet asid: {}\n", __func__, rob_entry.instr_id, rob_entry.event_cycle, rob_entry.asid[0]);
   }
 }
@@ -537,14 +537,14 @@ void O3_CPU::do_memory_scheduling(ooo_model_instr& instr)
         q_entry->reset();
         ++instr.completed_mem_ops;
 
-        if constexpr (champsim::debug_print)
+        if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log)
           fmt::print("[DISPATCH] {} instr_id: {} forwards_from: {}\n", __func__, instr.instr_id, sq_it->event_cycle);
       } else {
         assert(sq_it->instr_id < instr.instr_id);   // The found SQ entry is a prior store
         sq_it->lq_depend_on_me.push_back(*q_entry); // Forward the load when the store finishes
         (*q_entry)->producer_id = sq_it->instr_id;  // The load waits on the store to finish
 
-        if constexpr (champsim::debug_print)
+        if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log)
           fmt::print("[DISPATCH] {} instr_id: {} waits on: {}\n", __func__, instr.instr_id, sq_it->event_cycle);
       }
     }
@@ -554,7 +554,7 @@ void O3_CPU::do_memory_scheduling(ooo_model_instr& instr)
   for (auto& dmem : instr.destination_memory)
     SQ.emplace_back(instr.instr_id, dmem, instr.ip, instr.asid); // add it to the store queue
 
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print("[DISPATCH] {} instr_id: {} loads: {} stores: {} packet asid: {}\n", __func__, instr.instr_id, std::size(instr.source_memory),
                std::size(instr.destination_memory), instr.asid[0]);
   }
@@ -621,7 +621,7 @@ bool O3_CPU::do_complete_store(const LSQ_ENTRY& sq_entry)
   data_packet.ip = sq_entry.ip;
   data_packet.asid[0] = sq_entry.asid[0]; // WL: added ASID
 
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print("[SQ] {} instr_id: {} vaddr: {:x}\n", __func__, data_packet.instr_id, data_packet.v_address);
   }
 
@@ -636,7 +636,7 @@ bool O3_CPU::execute_load(const LSQ_ENTRY& lq_entry)
   data_packet.ip = lq_entry.ip;
   data_packet.asid[0] = lq_entry.asid[0]; // WL: added ASID
 
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print("[LQ] {} instr_id: {} vaddr: {:#x} lq_entry_asid: {} packet asid: {}\n", __func__, data_packet.instr_id, data_packet.v_address, lq_entry.asid[0], data_packet.asid[0]);
   }
 
@@ -700,7 +700,7 @@ long O3_CPU::handle_memory_return()
         //fetched.asid[0] = calculate_asid(fetched.instr_id);
         // WL
         
-        if constexpr (champsim::debug_print) {
+        if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
           fmt::print("[IFETCH] {} instr_id: {} fetch completed packet asid: {}\n", __func__, fetched.instr_id, fetched.asid[0]);
         }
       }
@@ -734,7 +734,7 @@ long O3_CPU::handle_memory_return()
 long O3_CPU::retire_rob()
 {
   auto [retire_begin, retire_end] = champsim::get_span_p(std::cbegin(ROB), std::cend(ROB), RETIRE_WIDTH, [](const auto& x) { return x.executed == COMPLETED; });
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     std::for_each(retire_begin, retire_end, [](const auto& x) { fmt::print("[ROB] retire_rob instr_id: {} is retired packet asid: {}\n", x.instr_id, x.asid[0]); });
   }
   auto retire_count = std::distance(retire_begin, retire_end);
@@ -795,7 +795,7 @@ void LSQ_ENTRY::finish(std::deque<ooo_model_instr>::iterator begin, std::deque<o
   ++rob_entry->completed_mem_ops;
   assert(rob_entry->completed_mem_ops <= rob_entry->num_mem_ops());
 
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print("[LSQ] {} instr_id: {} full_address: {:#x} remain_mem_ops: {} event_cycle: {} packet asid: {}\n", __func__, instr_id, virtual_address,
                rob_entry->num_mem_ops() - rob_entry->completed_mem_ops, event_cycle, rob_entry->asid[0]);
   }

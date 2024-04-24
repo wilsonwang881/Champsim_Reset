@@ -68,7 +68,7 @@ CACHE::mshr_type CACHE::mshr_type::merge(mshr_type predecessor, mshr_type succes
     retval.event_cycle = predecessor.event_cycle;
   }
 
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     if (successor.type == access_type::PREFETCH) {
       fmt::print("[MSHR] {} address {:#x} type: {} into address {:#x} type: {} event: {} with asid: {} predecessor asid: {} predecessor instr_id: {} successor asid: {} successor instr_id: {}\n", __func__, successor.address, access_type_names.at(champsim::to_underlying(successor.type)), predecessor.address, access_type_names.at(champsim::to_underlying(successor.type)), retval.event_cycle, retval.asid[0], predecessor.asid[0], predecessor.instr_id, successor.asid[0], successor.instr_id);
     } else {
@@ -99,7 +99,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
   assert(way <= set_end);
   const auto way_idx = static_cast<std::size_t>(std::distance(set_begin, way)); // cast protected by earlier assertion
 
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print(
         "[{}] {} instr_id: {} address: {:#x} v_address: {:#x} set: {} way: {} type: {} prefetch_metadata: {} cycle_enqueued: {} cycle: {} packet asid: {}\n",
         NAME, __func__, fill_mshr.instr_id, fill_mshr.address, fill_mshr.v_address, get_set_index(fill_mshr.address), way_idx,
@@ -123,7 +123,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       writeback_packet.pf_metadata = way->pf_metadata;
       writeback_packet.response_requested = false;
 
-      if constexpr (champsim::debug_print) {
+      if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
         fmt::print("[{}] {} evict address: {:#x} v_address: {:#x} prefetch_metadata: {} packet asid: {} fill_mshr_asid: {}\n", NAME,
             __func__, writeback_packet.address, writeback_packet.v_address, fill_mshr.pf_metadata, writeback_packet.asid[0], fill_mshr.asid[0]);
       }
@@ -187,7 +187,7 @@ bool CACHE::try_hit(const tag_lookup_type& handle_pkt)
   const auto hit = (way != set_end);
   const auto useful_prefetch = (hit && way->prefetch && !handle_pkt.prefetch_from_this);
 
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print("[{}] {} instr_id: {} address: {:#x} v_address: {:#x} data: {:#x} set: {} way: {} ({}) type: {} cycle: {} packet asid: {} way asid: {}\n", NAME, __func__, handle_pkt.instr_id,
                handle_pkt.address, handle_pkt.v_address, handle_pkt.data, get_set_index(handle_pkt.address), std::distance(set_begin, way), hit ? "HIT" : "MISS",
                access_type_names.at(champsim::to_underlying(handle_pkt.type)), current_cycle, handle_pkt.asid[0], way->asid);
@@ -226,7 +226,7 @@ bool CACHE::try_hit(const tag_lookup_type& handle_pkt)
 
 bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
 {
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print("[{}] {} instr_id: {} address: {:#x} v_address: {:#x} type: {} local_prefetch: {} cycle: {} packet asid: {}\n", NAME, __func__,
                handle_pkt.instr_id, handle_pkt.address, handle_pkt.v_address,
                access_type_names.at(champsim::to_underlying(handle_pkt.type)), handle_pkt.prefetch_from_this, current_cycle, handle_pkt.asid[0]);
@@ -261,7 +261,7 @@ bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
     // WL
   } else {
     if (mshr_full) { // not enough MSHR resource
-      if constexpr (champsim::debug_print) {
+      if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
         fmt::print("[{}] {} MSHR full\n", NAME, __func__);
       }
 
@@ -292,7 +292,7 @@ bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
       success = lower_level->add_pq(fwd_pkt);
 
     if (!success) {
-      if constexpr (champsim::debug_print) {
+      if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
         fmt::print("[{}] {} could not send to lower\n", NAME, __func__);
       }
 
@@ -313,7 +313,7 @@ bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
 
 bool CACHE::handle_write(const tag_lookup_type& handle_pkt)
 {
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print("[{}] {} instr_id: {} address: {:#x} v_address: {:#x} type: {} local_prefetch: {} cycle: {}\n", NAME, __func__, handle_pkt.instr_id,
                handle_pkt.address, handle_pkt.v_address, access_type_names.at(champsim::to_underlying(handle_pkt.type)), handle_pkt.prefetch_from_this,
                current_cycle);
@@ -340,7 +340,7 @@ auto CACHE::initiate_tag_check(champsim::channel* ul)
         retval.to_return = {&ul->returned};
     }
 
-    if constexpr (champsim::debug_print) {
+    if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
       fmt::print("[TAG] initiate_tag_check instr_id: {} address: {:#x} v_address: {:#x} type: {} response_requested: {} event: {} packet asid: {}\n", retval.instr_id, retval.address,
                  retval.v_address, access_type_names.at(champsim::to_underlying(retval.type)), !std::empty(retval.to_return), retval.event_cycle, retval.asid[0]);
     }
@@ -569,7 +569,7 @@ void CACHE::finish_packet(const response_type& packet)
   mshr_entry->event_cycle = current_cycle + (warmup ? 0 : FILL_LATENCY);
   mshr_entry->asid[0] = packet.asid; // WL: added ASID
 
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print("[{}_MSHR] {} instr_id: {} address: {:#x} data: {:#x} type: {} to_finish: {} event: {} current: {} packet asid: {}\n", NAME, __func__, mshr_entry->instr_id,
                mshr_entry->address, mshr_entry->data, access_type_names.at(champsim::to_underlying(mshr_entry->type)), std::size(lower_level->returned),
                mshr_entry->event_cycle, current_cycle, packet.asid);
@@ -596,7 +596,7 @@ void CACHE::finish_translation(const response_type& packet)
     entry.address = champsim::splice_bits(p_page, entry.v_address, LOG2_PAGE_SIZE); // translated address
     entry.is_translated = true;                                                     // This entry is now translated
 
-    if constexpr (champsim::debug_print) {
+    if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
       fmt::print("[{}_TRANSLATE] finish_translation paddr: {:#x} vaddr: {:#x} cycle: {}\n", this->NAME, entry.address, entry.v_address, this->current_cycle);
     }
   };
@@ -634,7 +634,7 @@ void CACHE::issue_translation()
       fwd_pkt.is_translated = true;
 
       q_entry.translate_issued = this->lower_translate->add_rq(fwd_pkt);
-      if constexpr (champsim::debug_print) {
+      if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
         if (q_entry.translate_issued) {
           fmt::print("[TRANSLATE] do_issue_translation instr_id: {} paddr: {:#x} vaddr: {:#x} cycle: {} packet asid: {} forwarded packet_asid: {}\n", q_entry.instr_id, q_entry.address, q_entry.v_address,
                      access_type_names.at(champsim::to_underlying(q_entry.type)), q_entry.asid[0], fwd_pkt.asid[0]);

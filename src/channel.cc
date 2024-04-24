@@ -118,14 +118,14 @@ bool champsim::channel::do_add_queue(R& queue, std::size_t queue_size, const typ
 
   // check occupancy
   if (std::size(queue) >= queue_size) {
-    if constexpr (champsim::debug_print) {
+    if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
       fmt::print("[channel] {} instr_id: {} address: {:#x} v_address: {:#x} type: {} FULL\n", __func__, packet.instr_id, packet.address, packet.v_address,
           access_type_names.at(champsim::to_underlying(packet.type)));
     }
     return false; // cannot handle this request
   }
 
-  if constexpr (champsim::debug_print) {
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print("[channel] {} instr_id: {} address: {:#x} v_address: {:#x} type: {} packet asid: {}\n", __func__, packet.instr_id, packet.address, packet.v_address,
         access_type_names.at(champsim::to_underlying(packet.type)), packet.asid[0]);
   }
