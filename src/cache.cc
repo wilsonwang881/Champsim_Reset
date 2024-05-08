@@ -256,12 +256,14 @@ bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
 
     // WL: add ASID check before MSHR merging
     if (mshr_entry->asid[0] == to_allocate.asid[0]) {
+      //std::cout << "MSHR merging in cache " << NAME << std::endl;
       *mshr_entry = mshr_type::merge(*mshr_entry, to_allocate);
     }
     // WL
   } else {
     if (mshr_full) { // not enough MSHR resource
       if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+        std::cout << "Failed: MSHR merging in cache " << NAME << std::endl;
         fmt::print("[{}] {} MSHR full\n", NAME, __func__);
       }
 

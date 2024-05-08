@@ -52,7 +52,15 @@ PageTableWalker::mshr_type::mshr_type(request_type req, std::size_t level)
 
 auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* ul) -> std::optional<mshr_type>
 {
+  /*
+   * WL: temporarily, we do not reload the CR3 register.
+  uint64_t previous_CR3_addr = CR3_addr; // WL
   CR3_addr = vmem->get_pte_pa(handle_pkt.asid[0], 0, vmem->pt_levels).first; // WL: update CR3_addr
+  if (previous_CR3_addr != CR3_addr) {
+    std::cout << "CR3 changed from " << std::hex << previous_CR3_addr << " " << CR3_addr << std::dec << std::endl;
+  }
+  */
+                                                                             
   pscl_entry walk_init = {handle_pkt.v_address, CR3_addr, std::size(pscl), handle_pkt.asid[0]}; // WL: added ASID
   std::vector<std::optional<pscl_entry>> pscl_hits;
   std::transform(std::begin(pscl), std::end(pscl), std::back_inserter(pscl_hits), [walk_init](auto& x) { return x.check_hit_with_asid(walk_init); }); // WL: changed check_hit to check_hit_with_asid

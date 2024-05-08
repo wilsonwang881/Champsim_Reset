@@ -57,6 +57,7 @@ std::size_t VirtualMemory::available_ppages() const { return (last_ppage - next_
 
 std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t vaddr)
 {
+  cpu_num = 0; // WL: harded coded cpu_num to be 0
   auto [ppage, fault] = vpage_to_ppage_map.insert({{cpu_num, vaddr >> LOG2_PAGE_SIZE}, ppage_front()});
 
   // this vpage doesn't yet have a ppage mapping
@@ -73,6 +74,7 @@ std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t
 
 std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64_t vaddr, std::size_t level)
 {
+  cpu_num = 0; // WL: hard coded cpu_num, which is used as 
   if (next_pte_page == 0) {
     next_pte_page = ppage_front();
     ppage_pop();
