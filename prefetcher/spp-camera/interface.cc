@@ -58,7 +58,7 @@ void CACHE::prefetcher_cycle_operate()
       // Gather prefetches via the signature and pattern tables.
       if (!pref.context_switch_prefetch_gathered)
       {
-        //pref.context_switch_gather_prefetches();
+        pref.context_switch_gather_prefetches();
         pref.context_switch_prefetch_gathered = true;
       }
      
@@ -66,7 +66,7 @@ void CACHE::prefetcher_cycle_operate()
       if (!pref.context_switch_queue_empty())
       {
         if (champsim::operable::cpu_side_reset_ready
-            && champsim::operable::cache_clear_counter == 7) {
+            ) { //&& champsim::operable::cache_clear_counter == 7
           pref.context_switch_issue(this);
         }
       }

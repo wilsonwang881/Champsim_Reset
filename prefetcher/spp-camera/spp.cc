@@ -219,12 +219,28 @@ void spp::prefetcher::clear_states()
 void spp::prefetcher::context_switch_gather_prefetches()
 {
   // Gather unique page addresses.
-  std::unordered_set<uint64_t> uniq_page_address;
+  std::vector<uint64_t> uniq_page_address;
 
   for(auto var : reset_misc::before_reset_on_demand_access_records) {
-    uniq_page_address.insert(var.ip >> 12);
+    uint64_t page_addr = var.ip >> 12;
+    
+    for (size_t i = 0; i < uniq_page_address.size(); i++) {
+      if (uniq_page_address.at(i) == page_addr) {
+        uniq_page_address.erase(uniq_page_address.begin() + i); 
+      } 
+    }
+
+    uniq_page_address.push_back(page_addr);
   }
 
+  int num_page_addr = uniq_page_address.size();
+
+  if (num_page_addr > 6) {
+    for (size_t i = 0; i < num_page_addr - 6; i++) {
+      uniq_page_address.erase(uniq_page_address.begin());
+  }
+   
+  }
   if (uniq_page_address.size() <= 6) {
     for(auto var : uniq_page_address) {
       for (size_t page_offset = 0; page_offset < (4096 - 64); page_offset += 64) {
@@ -233,6 +249,9 @@ void spp::prefetcher::context_switch_gather_prefetches()
     }
 
     std::cout << "Ready to issue prefetches for " << uniq_page_address.size() << " page(s)" << std::endl;
+  }
+  else {
+    std::cout << "Too many pages for context switch prefetching" << std::endl;
   }
   /*
   // Walk the signature table.
