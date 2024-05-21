@@ -222,7 +222,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
   std::vector<uint64_t> uniq_page_address;
 
   for(auto var : reset_misc::before_reset_on_demand_access_records) {
-    uint64_t page_addr = var.ip >> 12;
+    uint64_t page_addr = var.ip >> 11;
     
     for (size_t i = 0; i < uniq_page_address.size(); i++) {
       if (uniq_page_address.at(i) == page_addr) {
@@ -243,12 +243,12 @@ void spp::prefetcher::context_switch_gather_prefetches()
   }
   if (uniq_page_address.size() <= 6) {
     for(auto var : uniq_page_address) {
-      for (size_t page_offset = 0; page_offset < (4096 - 64); page_offset += 64) {
+      for (size_t page_offset = 0; page_offset < (2048 - 64); page_offset += 64) {
         context_switch_issue_queue.push_back({(var + page_offset), true});
       }
     }
 
-    std::cout << "Ready to issue prefetches for " << uniq_page_address.size() << " page(s)" << std::endl;
+    std::cout << "Ready to issue prefetches for " << uniq_page_address.size() << " half page(s)" << std::endl;
   }
   else {
     std::cout << "Too many pages for context switch prefetching" << std::endl;
