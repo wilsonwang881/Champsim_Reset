@@ -235,13 +235,13 @@ void spp::prefetcher::context_switch_gather_prefetches()
 
   int num_page_addr = uniq_page_address.size();
 
-  if (num_page_addr > 6) {
-    for (size_t i = 0; i < num_page_addr - 6; i++) {
+  if (num_page_addr > 12) {
+    for (size_t i = 0; i < num_page_addr - 12; i++) {
       uniq_page_address.erase(uniq_page_address.begin());
   }
    
   }
-  if (uniq_page_address.size() <= 6) {
+  if (uniq_page_address.size() <= 12) {
     for(auto var : uniq_page_address) {
       for (size_t page_offset = 0; page_offset < (2048 - 64); page_offset += 64) {
         context_switch_issue_queue.push_back({(var + page_offset), true});
