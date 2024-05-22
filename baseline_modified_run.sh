@@ -34,8 +34,8 @@ do
        job_cmd="cd $PWD && $champsim_bin_path/bin/baseline_observation_window_size_$SIZE --warmup-instructions 0 --simulation-instructions 100000000 ${workloadAbsoluteArray[$i]} > log.txt"
        cmdArray+=("$job_cmd");
        cd ../
-    cd ../
   done
+  cd ../
 done
 
 cd ../;
