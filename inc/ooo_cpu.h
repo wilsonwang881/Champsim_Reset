@@ -101,20 +101,6 @@ class O3_CPU : public champsim::operable
 public:
   uint32_t cpu = 0;
 
-  // WL
-  /*
-  struct on_demand_access_record{
-    uint64_t cycle;
-    uint64_t ip;
-  };
-
-  on_demand_access_record on_demand_access_records[1000];
-  size_t on_demand_access_record_index;
-
-  on_demand_access_record before_reset_on_demand_access_records[1000];
-  size_t before_reset_on_demand_access_record_index;
-  */
-
   std::ofstream context_switch_access_file;
   std::ofstream before_reset_context_switch_access_file;
 
