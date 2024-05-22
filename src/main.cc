@@ -80,10 +80,10 @@ uint64_t champsim::operable::cpu0_num_retired = 0;
 
 // WL 
 namespace reset_misc {
-  on_demand_access_record on_demand_access_records[1000];
+  on_demand_access_record on_demand_access_records[ON_DEMAND_ACCESS_RECORD_SIZE];
   size_t on_demand_access_record_index;
 
-  on_demand_access_record before_reset_on_demand_access_records[1000];
+  on_demand_access_record before_reset_on_demand_access_records[ON_DEMAND_ACCESS_RECORD_SIZE];
   size_t before_reset_on_demand_access_record_index;
 }
 // WL

@@ -27,6 +27,7 @@
 #define SIMULATE_WITH_BTB_RESET 0
 #define SIMULATE_WITH_BRANCH_PREDICTOR_RESET 0
 #define RESET_INTERVAL 4000000
+#define ON_DEMAND_ACCESS_RECORD_SIZE 1000
 
 #include <string>
 // WL
@@ -39,10 +40,10 @@ namespace reset_misc {
     uint64_t ip;
   };
 
-  extern on_demand_access_record on_demand_access_records[1000];
+  extern on_demand_access_record on_demand_access_records[ON_DEMAND_ACCESS_RECORD_SIZE];
   extern size_t on_demand_access_record_index;
 
-  extern on_demand_access_record before_reset_on_demand_access_records[1000];
+  extern on_demand_access_record before_reset_on_demand_access_records[ON_DEMAND_ACCESS_RECORD_SIZE];
   extern size_t before_reset_on_demand_access_record_index;
 }
 // WL
