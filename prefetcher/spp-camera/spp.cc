@@ -221,7 +221,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
   // Gather unique page addresses.
   std::vector<uint64_t> uniq_page_address;
 
-  for(auto var : reset_misc::before_reset_on_demand_access_records) {
+  for(auto var : reset_misc::before_reset_on_demand_ins_access) {
     uint64_t page_addr = var.ip >> 11;
     
     for (size_t i = 0; i < uniq_page_address.size(); i++) {

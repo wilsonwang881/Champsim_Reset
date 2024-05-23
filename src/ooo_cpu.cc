@@ -80,8 +80,10 @@ void O3_CPU::initialize()
   // WL: open a file to write the first 1000 on demand accesses after a context switch
   context_switch_access_file.open("context_switch_accesses.txt", std::ios::out);
   before_reset_context_switch_access_file.open("before_context_switch_accesses.txt", std::ios::out);
-  reset_misc::on_demand_access_record_index = 0;
-  reset_misc::before_reset_on_demand_access_record_index = 0;
+  reset_misc::before_reset_on_demand_ins_access_index = 0;
+  reset_misc::after_reset_on_demand_ins_access_index = 0;
+  reset_misc::before_reset_on_demand_data_access_index = 0;
+  reset_misc::after_reset_on_demand_data_access_index = 0;
   // WL
 }
 
@@ -114,9 +116,9 @@ void O3_CPU::end_phase(unsigned finished_cpu)
 }
 
 // WL 
-void O3_CPU::dump_accesses()
+void O3_CPU::dump_after_reset_accesses()
 {
-  for(auto access : reset_misc::on_demand_access_records) {
+  for(auto access : reset_misc::after_reset_on_demand_ins_access) {
     context_switch_access_file << (unsigned)access.cycle << " " << (unsigned)access.ip << std::endl;
   }
 }
@@ -124,7 +126,7 @@ void O3_CPU::dump_accesses()
 // WL
 void O3_CPU::dump_before_reset_accesses()
 {
-  for(auto access : reset_misc::before_reset_on_demand_access_records) {
+  for(auto access : reset_misc::before_reset_on_demand_ins_access) {
     before_reset_context_switch_access_file << (unsigned)access.cycle << " " << (unsigned)access.ip << std::endl;
   }
 }
@@ -168,17 +170,17 @@ void O3_CPU::initialize_instruction()
     // WL 
     // Record the first 1000 accesses right after the context switch.
     if (have_recorded_on_demand_accesses) {
-      reset_misc::on_demand_access_records[reset_misc::on_demand_access_record_index].cycle = current_cycle;
-      reset_misc::on_demand_access_records[reset_misc::on_demand_access_record_index].ip = input_queue.front().ip;
-      reset_misc::on_demand_access_record_index++;
+      reset_misc::after_reset_on_demand_ins_access[reset_misc::after_reset_on_demand_ins_access_index].cycle = current_cycle;
+      reset_misc::after_reset_on_demand_ins_access[reset_misc::after_reset_on_demand_ins_access_index].ip = input_queue.front().ip;
+      reset_misc::after_reset_on_demand_ins_access_index++;
     }
 
     // Write the first 1000 accesses after the context switch to file.
-    if (reset_misc::on_demand_access_record_index >= ON_DEMAND_ACCESS_RECORD_SIZE) {
+    if (reset_misc::after_reset_on_demand_ins_access_index >= ON_DEMAND_ACCESS_RECORD_SIZE) {
       have_recorded_on_demand_accesses = false;
-      reset_misc::on_demand_access_record_index = 0;
+      reset_misc::after_reset_on_demand_ins_access_index = 0;
       std::cout << "Dumping 1st 1000 on demand accesses after context switch." << std::endl;
-      dump_accesses();
+      dump_after_reset_accesses();
       /*
       have_recorded_before_reset_hit_miss_number_L1I = true;
       have_recorded_before_reset_hit_miss_number_L1D = true;
@@ -188,12 +190,12 @@ void O3_CPU::initialize_instruction()
     }
 
     // Record the 1000 accesses right before the context switch.
-    reset_misc::before_reset_on_demand_access_records[reset_misc::before_reset_on_demand_access_record_index].cycle = current_cycle;
-    reset_misc::before_reset_on_demand_access_records[reset_misc::before_reset_on_demand_access_record_index].ip = input_queue.front().ip;
-    reset_misc::before_reset_on_demand_access_record_index++;
+    reset_misc::before_reset_on_demand_ins_access[reset_misc::before_reset_on_demand_ins_access_index].cycle = current_cycle;
+    reset_misc::before_reset_on_demand_ins_access[reset_misc::before_reset_on_demand_ins_access_index].ip = input_queue.front().ip;
+    reset_misc::before_reset_on_demand_ins_access_index++;
 
-    if (reset_misc::before_reset_on_demand_access_record_index >= ON_DEMAND_ACCESS_RECORD_SIZE) 
-      reset_misc::before_reset_on_demand_access_record_index = reset_misc::before_reset_on_demand_access_record_index % ON_DEMAND_ACCESS_RECORD_SIZE;
+    if (reset_misc::before_reset_on_demand_ins_access_index >= ON_DEMAND_ACCESS_RECORD_SIZE) 
+      reset_misc::before_reset_on_demand_ins_access_index = reset_misc::before_reset_on_demand_ins_access_index % ON_DEMAND_ACCESS_RECORD_SIZE;
 
     if (have_recorded_before_reset_on_demand_accesses) {
       std::cout << "Dumping 1000 on demand accesses before context switch." << std::endl;

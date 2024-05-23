@@ -104,7 +104,7 @@ public:
   std::ofstream context_switch_access_file;
   std::ofstream before_reset_context_switch_access_file;
 
-  void dump_accesses();
+  void dump_after_reset_accesses();
   void dump_before_reset_accesses();
   uint16_t calculate_asid(uint64_t instr_id);
 
