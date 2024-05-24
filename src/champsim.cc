@@ -117,8 +117,10 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
         next_reset_moment += RESET_INTERVAL;
 
         std::cout << std::endl << "Recording @ins. count = " << cpu_0.num_retired << " at cycle " << cpu_0.current_cycle << std::endl;
-        champsim::operable::have_recorded_on_demand_accesses = true;
-        champsim::operable::have_recorded_before_reset_on_demand_accesses = true;
+        champsim::operable::have_recorded_on_demand_ins_accesses = true;
+        champsim::operable::have_recorded_on_demand_data_accesses = true;
+        champsim::operable::have_recorded_before_reset_on_demand_ins_accesses = true;
+        champsim::operable::have_recorded_before_reset_on_demand_data_accesses = true;
         champsim::operable::have_recorded_before_reset_hit_miss_number_L1I = true;
         champsim::operable::have_recorded_before_reset_hit_miss_number_L1D = true;
         champsim::operable::have_recorded_before_reset_hit_miss_number_L2C = true;
@@ -149,8 +151,10 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       std::cout << std::endl << "Resetting @ins. count = " << std::dec << (unsigned)cpu_0.num_retired << " + " << (unsigned)cpu_0.input_queue.size() << " = " << (unsigned)(cpu_0.num_retired + cpu_0.input_queue.size()) << " at cycle " << cpu_0.current_cycle << std::endl;
 
       champsim::operable::context_switch_mode = true;
-      champsim::operable::have_recorded_on_demand_accesses = true;
-      champsim::operable::have_recorded_before_reset_on_demand_accesses = true;
+      champsim::operable::have_recorded_on_demand_ins_accesses = true;
+      champsim::operable::have_recorded_on_demand_data_accesses = true;
+      champsim::operable::have_recorded_before_reset_on_demand_ins_accesses = true;
+      champsim::operable::have_recorded_before_reset_on_demand_data_accesses = true;
       champsim::operable::have_recorded_before_reset_hit_miss_number_L1I = true;
       champsim::operable::have_recorded_before_reset_hit_miss_number_L1D = true;
       champsim::operable::have_recorded_before_reset_hit_miss_number_L2C = true;

@@ -101,11 +101,17 @@ class O3_CPU : public champsim::operable
 public:
   uint32_t cpu = 0;
 
-  std::ofstream context_switch_access_file;
-  std::ofstream before_reset_context_switch_access_file;
+  // WL
+  std::ofstream before_reset_ins_access_file;
+  std::ofstream after_reset_ins_access_file;
 
-  void dump_after_reset_accesses();
-  void dump_before_reset_accesses();
+  std::ofstream before_reset_data_access_file;
+  std::ofstream after_reset_data_access_file;
+
+  void dump_before_reset_ins_accesses();
+  void dump_after_reset_ins_accesses();
+  void dump_before_reset_data_accesses();
+  void dump_after_reset_data_accesses();
   uint16_t calculate_asid(uint64_t instr_id);
 
   uint64_t reset_ins_count;

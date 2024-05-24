@@ -41,7 +41,7 @@ namespace reset_misc {
   };
   
   struct on_demand_data_access : on_demand_ins_access {
-    bool load_or_write; 
+    bool load_or_store; 
   };
 
   extern on_demand_ins_access before_reset_on_demand_ins_access[ON_DEMAND_ACCESS_RECORD_SIZE];
@@ -68,8 +68,10 @@ public:
 
   // WL
   static bool context_switch_mode;
-  static bool have_recorded_on_demand_accesses;
-  static bool have_recorded_before_reset_on_demand_accesses;
+  static bool have_recorded_on_demand_ins_accesses;
+  static bool have_recorded_on_demand_data_accesses;
+  static bool have_recorded_before_reset_on_demand_ins_accesses;
+  static bool have_recorded_before_reset_on_demand_data_accesses;
   static bool have_recorded_before_reset_hit_miss_number_L1I;
   static bool have_recorded_before_reset_hit_miss_number_L1D;
   static bool have_recorded_before_reset_hit_miss_number_L2C;
