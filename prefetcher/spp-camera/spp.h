@@ -71,6 +71,7 @@ namespace spp {
     void clear_states();
     void context_switch_gather_prefetches();
     bool context_switch_queue_empty();
+    void context_switch_queue_clear();
     void context_switch_issue(CACHE* cache);
     void record_spp_states();
     // WL 

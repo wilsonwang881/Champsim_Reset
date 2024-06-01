@@ -4,6 +4,7 @@
 #include <map>
 
 #define L1D_PREFETCHER_IN_USE 0
+#define CONTEXT_SWITCH_PREFETCH_IN_USE 0
 
 using unique_key = std::pair<CACHE*, uint32_t>;
 
@@ -67,7 +68,13 @@ void CACHE::prefetcher_cycle_operate()
       {
         if (champsim::operable::cpu_side_reset_ready
             ) { //&& champsim::operable::cache_clear_counter == 7
-          pref.context_switch_issue(this);
+          if (CONTEXT_SWITCH_PREFETCH_IN_USE) {
+            pref.context_switch_issue(this);
+          }
+          else {
+            pref.context_switch_queue_clear();
+            std::cout << "No context switch prefetches issued." << std::endl;
+          }
         }
       }
       // Toggle switches after all prefetches are issued.

@@ -319,6 +319,12 @@ bool spp::prefetcher::context_switch_queue_empty()
   return context_switch_issue_queue.empty();
 }
 
+// WL 
+void spp::prefetcher::context_switch_queue_clear()
+{
+  context_switch_issue_queue.clear();
+}
+
 // WL
 void spp::prefetcher::context_switch_issue(CACHE* cache)
 {

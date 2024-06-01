@@ -939,11 +939,15 @@ void O3_CPU::reset_components()
     }
 
     if (!champsim::operable::cpu_side_reset_ready)
+    {
       champsim::operable::context_switch_start_cycle = current_cycle;
-    
-    champsim::operable::cpu_side_reset_ready = true;
+      champsim::operable::cpu_side_reset_ready = true;
 
-    // Clear DIB 
-    //DIB.clear_DIB();
+      // Clear DIB 
+      DIB.clear_DIB();
+
+      std::cout << "=> DIB cleared." << std::endl;
+      std::cout << "=> CPU side reset ready." << std::endl;
+    }
   }
 }
