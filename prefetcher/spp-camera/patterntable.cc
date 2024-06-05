@@ -95,15 +95,17 @@ void spp::PATTERN_TABLE::clear()
 }
 
 // WL
-std::optional<std::pair<unsigned int, unsigned int>> spp::PATTERN_TABLE::query_pt(uint32_t sig, int curr_delta)
+std::optional<std::pair<unsigned int, unsigned int>> spp::PATTERN_TABLE::query_pt(uint32_t sig)
 {
   auto set_begin = std::begin(pattable[sig % SET].ways);
   auto set_end   = std::end(pattable[sig % SET].ways);
   auto &c_sig    = pattable[sig % SET].c_sig;
 
-  // Check for a hit
-  if (auto way = std::find_if(set_begin, set_end, [curr_delta](auto x){ return x.valid && (x.delta == curr_delta); }); way != set_end) {
-    return std::pair{way->c_delta, c_sig};
+  // Look for the max delta.
+  auto way = std::max_element(set_begin, set_end, [](auto x, auto y){ return !x.valid || (y.valid && x.c_delta < y.c_delta); });
+
+  if (way != set_end) {
+    return std::pair{way->delta, c_sig};
   }
 
   return std::nullopt;

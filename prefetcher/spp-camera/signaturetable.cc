@@ -90,12 +90,11 @@ void spp::SIGNATURE_TABLE::clear()
 }
 
 // WL
-bool spp::SIGNATURE_TABLE::get_st_entry(int index, uint32_t &el_last_offset, uint32_t &el_sig, uint64_t &el_last_accessed_page_num, int &el_page_offset_diff)
+bool spp::SIGNATURE_TABLE::get_st_entry(int index, uint32_t &el_last_offset, uint32_t &el_sig, uint64_t &el_last_accessed_page_num)
 {
   el_last_offset = sigtable[index].last_offset;
   el_sig = sigtable[index].sig;
   el_last_accessed_page_num = sigtable[index].last_accessed_page_num;
-  //el_page_offset_diff = sigtable[index].page_offset_diff;
 
   return sigtable[index].valid;
 }
