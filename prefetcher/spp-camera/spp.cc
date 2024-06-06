@@ -275,7 +275,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
 
       if (pt_query_res.has_value())
       {
-        context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res->first) << LOG2_BLOCK_SIZE), true});
+        context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res->first) << LOG2_BLOCK_SIZE), false});
       }
 	// Push to the context switch prefetch queue after checking in the filter.
 	// If c_delta / c_sig >= 1/2
@@ -300,6 +300,8 @@ void spp::prefetcher::context_switch_gather_prefetches()
       */
     }
   }
+
+  std::cout << "Gathered " << context_switch_issue_queue.size() << " prefetches." << std::endl;
 
   // Debug print.
   //printf("Addresses to be prefetched after a context switch\n");
@@ -338,6 +340,13 @@ void spp::prefetcher::context_switch_issue(CACHE* cache)
     bool prefetched = cache->prefetch_line(addr, priority, 0);
     if (prefetched) {
       context_switch_issue_queue.pop_front();
+    }
+    else {
+      bool prefetched_retry = cache->prefetch_line(addr, !priority, 0);
+
+      if (prefetched_retry) {
+        context_switch_issue_queue.pop_front();
+      }
     }
   }
 }
