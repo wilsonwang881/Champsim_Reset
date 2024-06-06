@@ -115,3 +115,51 @@ std::string spp::SIGNATURE_TABLE::record_Signature_Table()
 
   return content;
 }
+
+// WL 
+std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> spp::SIGNATURE_TABLE::get_sorted_signature()
+{
+  std::vector<sigtable_entry_t> valid_sig_table_entries;
+
+  for (auto el : sigtable) {
+    if (el.valid) 
+      valid_sig_table_entries.push_back(el); 
+  }
+
+  std::sort(valid_sig_table_entries.begin(), valid_sig_table_entries.end(), [](auto A, auto B){
+      return A.last_used > B.last_used;
+  });
+
+  uint64_t percent_sum = 0;
+
+  // A machenism should be in place here to prevent summation overflow.
+  for(auto el : valid_sig_table_entries) 
+    percent_sum += el.last_used; 
+
+  uint64_t percent_cut_off_point = percent_sum >> 3; // Cut off point: 1/8 of the sum.
+
+  uint64_t accumulate_percent = 0;
+
+  for(auto &el : valid_sig_table_entries) {
+    accumulate_percent += el.last_used;
+
+    if (accumulate_percent > percent_cut_off_point) 
+      el.valid = false; 
+  }
+
+  std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data;
+
+  for (size_t i = 0; i < return_data.size(); i++) {
+    
+    if (i < valid_sig_table_entries.size()) {
+      if (valid_sig_table_entries[i].valid) 
+        return_data[i] = std::make_pair(valid_sig_table_entries[i].last_accessed_page_num, true); 
+      else 
+        return_data[i] = std::make_pair(0, false);    
+    }
+    else 
+      return_data[i] = std::make_pair(0, false);
+  }
+
+  return return_data;
+}

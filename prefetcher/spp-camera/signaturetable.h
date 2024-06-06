@@ -4,6 +4,8 @@
 #include <tuple>
 
 #include <string> // WL
+#include <vector> // WL
+#include <numeric> // WL
 
 namespace spp
 {
@@ -22,7 +24,7 @@ namespace spp
         uint32_t last_offset = 0;
         uint32_t sig = 0;
         uint64_t last_used = 0;
-	uint64_t last_accessed_page_num = 0; // WL: added the page number
+        uint64_t last_accessed_page_num = 0; // WL: added the page number
       };
 
       std::array<sigtable_entry_t, WAY * SET> sigtable;
@@ -37,6 +39,7 @@ namespace spp
       void clear();
       bool get_st_entry(int index, uint32_t &el_last_offet, uint32_t &el_sig, uint64_t &el_last_accessed_page_num);
       std::string record_Signature_Table();
+      std::array<std::pair<uint32_t, bool>, WAY * SET> get_sorted_signature();
       // WL
   };
 }

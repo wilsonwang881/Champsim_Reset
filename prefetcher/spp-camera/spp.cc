@@ -255,7 +255,9 @@ void spp::prefetcher::context_switch_gather_prefetches()
     std::cout << "Too many pages for context switch prefetching" << std::endl;
   }
   */
-  
+
+  std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature();
+
   // Walk the signature table.
   for (size_t index = 0; index < SIGNATURE_TABLE::SET * SIGNATURE_TABLE::WAY; index++)
   {
@@ -268,15 +270,24 @@ void spp::prefetcher::context_switch_gather_prefetches()
 
     if (st_entry_valid)
     {
-      context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + (el_last_offset << LOG2_BLOCK_SIZE), true}); 
+      bool found_in_return_data = false;
 
-      // Use the signature and offset to index into the pattern table.
-      auto pt_query_res = pattern_table.query_pt(el_sig);
-
-      if (pt_query_res.has_value())
-      {
-        context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res->first) << LOG2_BLOCK_SIZE), true});
+      for(auto el : return_data) {
+        if (el.first == el_last_accessed_page_num) 
+          found_in_return_data = true; 
       }
+
+      if (found_in_return_data) {
+        context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + (el_last_offset << LOG2_BLOCK_SIZE), true}); 
+        // Use the signature and offset to index into the pattern table.
+        auto pt_query_res = pattern_table.query_pt(el_sig);
+
+        if (pt_query_res.has_value())
+        {
+          context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res->first) << LOG2_BLOCK_SIZE), true});
+        }
+      }
+
 	// Push to the context switch prefetch queue after checking in the filter.
 	// If c_delta / c_sig >= 1/2
 	//if (auto filter_check_result = filter.check((el_last_accessed_page_num << LOG2_PAGE_SIZE) + el_last_offset); filter_check_result != spp::REJECT) {
