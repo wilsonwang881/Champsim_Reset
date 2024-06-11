@@ -140,6 +140,8 @@ std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE
 
   uint64_t accumulate_percent = 0;
 
+  std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data;
+
   for(auto &el : valid_sig_table_entries) {
     accumulate_percent += el.last_used;
 
@@ -147,19 +149,23 @@ std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE
       el.valid = false; 
   }
 
-  std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data;
+  int page_counter = 0;
 
   for (size_t i = 0; i < return_data.size(); i++) {
     
     if (i < valid_sig_table_entries.size()) {
-      if (valid_sig_table_entries[i].valid) 
+      if (valid_sig_table_entries[i].valid) {
         return_data[i] = std::make_pair(valid_sig_table_entries[i].last_accessed_page_num, true); 
+        page_counter++;
+      } 
       else 
         return_data[i] = std::make_pair(0, false);    
     }
     else 
       return_data[i] = std::make_pair(0, false);
   }
+
+  std::cout << "Prefetching from " << page_counter << " pages." << std::endl;
 
   return return_data;
 }

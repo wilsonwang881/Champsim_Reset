@@ -95,17 +95,27 @@ void spp::PATTERN_TABLE::clear()
 }
 
 // WL
-std::optional<std::pair<unsigned int, unsigned int>> spp::PATTERN_TABLE::query_pt(uint32_t sig)
+std::optional<int> spp::PATTERN_TABLE::query_pt(uint32_t sig, unsigned int &_c_delta, unsigned int &_c_sig)
 {
   auto set_begin = std::begin(pattable[sig % SET].ways);
   auto set_end   = std::end(pattable[sig % SET].ways);
   auto &c_sig    = pattable[sig % SET].c_sig;
 
   // Look for the max delta.
-  auto way = std::max_element(set_begin, set_end, [](auto x, auto y){ return !x.valid || (y.valid && x.c_delta < y.c_delta); });
+  auto way = std::max_element(set_begin, set_end, [](auto x, auto y){ return (y.valid && x.c_delta < y.c_delta); });
 
+  /*std::cout << "=========" << std::endl;
+
+  for (auto i = set_begin; i != set_end; ++i) {
+    std::cout << i->valid << " " << i->delta << " " << (unsigned)i->c_delta << " " << (unsigned)c_sig << std::endl;
+  }
+
+  std::cout << "=========" << std::endl;
+  */
   if (way != set_end) {
-    return std::pair{way->delta, c_sig};
+    _c_delta = way->c_delta;
+    _c_sig = c_sig;
+    return way->delta;
   }
 
   return std::nullopt;

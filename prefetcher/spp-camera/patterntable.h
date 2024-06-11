@@ -44,7 +44,7 @@ namespace spp
 
       // WL 
       void clear();
-      std::optional<std::pair<unsigned int, unsigned int>> query_pt(uint32_t sig);
+      std::optional<int> query_pt(uint32_t sig, unsigned int &_c_delta, unsigned int &_c_sig);
       int get_prefetch_range(uint32_t sig);
       std::string record_Pattern_Table();
       // WL

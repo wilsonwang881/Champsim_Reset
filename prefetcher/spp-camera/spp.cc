@@ -280,52 +280,20 @@ void spp::prefetcher::context_switch_gather_prefetches()
       if (found_in_return_data) {
         context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + (el_last_offset << LOG2_BLOCK_SIZE), true}); 
         // Use the signature and offset to index into the pattern table.
-        auto pt_query_res = pattern_table.query_pt(el_sig);
+        unsigned int c_delta, c_sig;
+        auto pt_query_res = pattern_table.query_pt(el_sig, c_delta, c_sig);
 
         if (pt_query_res.has_value())
         {
-          context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res->first) << LOG2_BLOCK_SIZE), true});
+          uint64_t prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE);
+          //std::cout << std::hex << "0x" << (unsigned)prefetch_address << " " << std::dec << (unsigned)el_last_offset << " " << pt_query_res.value() << " " << (unsigned)c_delta << " " << (unsigned)c_sig  << std::endl;
+          context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE), true});
         }
       }
-
-	// Push to the context switch prefetch queue after checking in the filter.
-	// If c_delta / c_sig >= 1/2
-	//if (auto filter_check_result = filter.check((el_last_accessed_page_num << LOG2_PAGE_SIZE) + el_last_offset); filter_check_result != spp::REJECT) {
-  /*
-	if ((1.0 * pt_query_res->first / pt_query_res->second) >= 0.80) 
-	  context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + el_last_offset, true}); 
-	else
-	  context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + el_last_offset, false}); 
-      }
-      */
-/*
-      int prefetch_range = pattern_table.get_prefetch_range(el_sig);
-      int max_page_limit = std::min(4096 - 64, (signed)el_last_offset + prefetch_range);
-      int min_page_limit = std::max(0, (signed)el_last_offset - prefetch_range);
-      //cout << "Page coverage: " << 1.0 * (max_page_limit - min_page_limit) / 4096 << endl;
-
-      for (int i = min_page_limit; i <= max_page_limit; i += BLOCK_SIZE)
-      {
-	context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + i, false});
-      }
-      */
     }
   }
 
   std::cout << "Gathered " << context_switch_issue_queue.size() << " prefetches." << std::endl;
-
-  // Debug print.
-  //printf("Addresses to be prefetched after a context switch\n");
-
-  //std::deque<std::pair<uint64_t, bool>>::iterator it;
-
-  
-  /*
-  for (it = context_switch_issue_queue.begin(); it != context_switch_issue_queue.end(); ++it)
-  {
-    printf("0x%012lx %d\n", it->first, it->second);
-  }
-  */
 }
 
 // WL
