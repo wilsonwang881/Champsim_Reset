@@ -5,6 +5,10 @@
 
 // WL
 #include <iostream>
+#include <iomanip>
+
+// WL 
+#define DEBUG_PRINT_PATTERN_TABLE 0
 
 namespace spp
 {

@@ -278,7 +278,10 @@ void spp::prefetcher::context_switch_gather_prefetches()
       }
 
       if (found_in_return_data) {
-        context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + (el_last_offset << LOG2_BLOCK_SIZE), true}); 
+        uint64_t current_prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + (el_last_offset << LOG2_BLOCK_SIZE);
+        std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)current_prefetch_address << std::dec << std::endl;
+
+        context_switch_issue_queue.push_back({current_prefetch_address, true}); 
         // Use the signature and offset to index into the pattern table.
         unsigned int c_delta, c_sig;
         auto pt_query_res = pattern_table.query_pt(el_sig, c_delta, c_sig);
@@ -286,11 +289,55 @@ void spp::prefetcher::context_switch_gather_prefetches()
         if (pt_query_res.has_value())
         {
           uint64_t prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE);
-          //std::cout << std::hex << "0x" << (unsigned)prefetch_address << " " << std::dec << (unsigned)el_last_offset << " " << pt_query_res.value() << " " << (unsigned)c_delta << " " << (unsigned)c_sig  << std::endl;
-          context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE), true});
+
+          if ((prefetch_address >= (el_last_accessed_page_num << LOG2_PAGE_SIZE)) && 
+              (prefetch_address <= (el_last_accessed_page_num + 1) << LOG2_PAGE_SIZE)) {
+
+            std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " " << std::dec << (unsigned)el_last_offset << " " << pt_query_res.value() << " " << (unsigned)c_delta << " " << (unsigned)c_sig << std::dec << std::endl;
+            context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE), true});
+
+            // Second level lookahead prefetching.
+            // If the confidence is larger than 50%.
+            if (c_delta >= (c_sig >> 1)) {
+              uint32_t tmpp_sig = ::generate_signature(el_sig, pt_query_res.value());
+              unsigned int tmpp_c_delta, tmpp_c_sig;
+              auto tmpp_pt_query_res = pattern_table.query_pt(tmpp_sig, tmpp_c_delta, tmpp_c_sig);
+
+              if (tmpp_pt_query_res.has_value()) {
+                prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value() + tmpp_pt_query_res.value()) << LOG2_BLOCK_SIZE);
+
+                          if ((prefetch_address >= (el_last_accessed_page_num << LOG2_PAGE_SIZE)) && 
+                              (prefetch_address <= (el_last_accessed_page_num + 1) << LOG2_PAGE_SIZE)) {
+
+                            std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " " << std::dec << (unsigned)el_last_offset << " " << pt_query_res.value() << " xxx " << tmpp_pt_query_res.value() << " " << (unsigned)tmpp_c_delta << " " << (unsigned)tmpp_c_sig << std::dec << std::endl;
+                            context_switch_issue_queue.push_back({prefetch_address, true});
+                          }
+              }
+            }
+          }
         }
       }
     }
+  }
+
+  // Remove duplicate prefetches.
+  std::set<std::pair<uint64_t, bool>> tmpp_set;
+  std::vector<std::pair<uint64_t, bool>> tmpp_issue_queue;
+
+  for(auto var : context_switch_issue_queue) {
+
+    unsigned int size = tmpp_set.size();
+    tmpp_set.insert(var);
+
+    if (tmpp_set.size() != size) {
+      tmpp_issue_queue.push_back(var);
+    }
+  }
+
+  context_switch_issue_queue.clear();
+
+  for(auto var : tmpp_issue_queue) {
+    context_switch_issue_queue.push_back(var); 
   }
 
   std::cout << "Gathered " << context_switch_issue_queue.size() << " prefetches." << std::endl;

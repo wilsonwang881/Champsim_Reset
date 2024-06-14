@@ -104,14 +104,16 @@ std::optional<int> spp::PATTERN_TABLE::query_pt(uint32_t sig, unsigned int &_c_d
   // Look for the max delta.
   auto way = std::max_element(set_begin, set_end, [](auto x, auto y){ return (y.valid && x.c_delta < y.c_delta); });
 
-  /*std::cout << "=========" << std::endl;
+#if DEBUG_PRINT_PATTERN_TABLE
+  std::cout << "==================" << std::endl;
 
-  for (auto i = set_begin; i != set_end; ++i) {
-    std::cout << i->valid << " " << i->delta << " " << (unsigned)i->c_delta << " " << (unsigned)c_sig << std::endl;
-  }
+  for (auto i = set_begin; i != set_end; ++i) 
+    std::cout << i->valid << std::setw(4) << i->delta << std::setw(4) << (unsigned)i->c_delta << std::setw(4) << (unsigned)c_sig << std::endl;
+  
+  std::cout << "==================" << std::endl;
 
-  std::cout << "=========" << std::endl;
-  */
+#endif // DEBUG
+  
   if (way != set_end) {
     _c_delta = way->c_delta;
     _c_sig = c_sig;
