@@ -279,9 +279,10 @@ void spp::prefetcher::context_switch_gather_prefetches()
 
       if (found_in_return_data) {
         uint64_t current_prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + (el_last_offset << LOG2_BLOCK_SIZE);
-        std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)current_prefetch_address << std::dec << std::endl;
+        std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)current_prefetch_address << std::dec << " initial " << std::endl;
 
         context_switch_issue_queue.push_back({current_prefetch_address, true}); 
+
         // Use the signature and offset to index into the pattern table.
         unsigned int c_delta, c_sig;
         auto pt_query_res = pattern_table.query_pt(el_sig, c_delta, c_sig);
@@ -289,29 +290,23 @@ void spp::prefetcher::context_switch_gather_prefetches()
         if (pt_query_res.has_value())
         {
           uint64_t prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE);
+          int32_t _delta = pt_query_res.value();
+          uint32_t _last_offset = el_last_offset + _delta;
 
           if ((prefetch_address >= (el_last_accessed_page_num << LOG2_PAGE_SIZE)) && 
               (prefetch_address <= (el_last_accessed_page_num + 1) << LOG2_PAGE_SIZE)) {
 
-            std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " " << std::dec << (unsigned)el_last_offset << " " << pt_query_res.value() << " " << (unsigned)c_delta << " " << (unsigned)c_sig << std::dec << std::endl;
+            std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " last_offset " << std::dec << (unsigned)el_last_offset << " delta " << pt_query_res.value() << " c_delta " << (unsigned)c_delta << " c_sig " << (unsigned)c_sig << std::dec << std::endl;
             context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE), true});
 
             // Second level lookahead prefetching.
             // If the confidence is larger than 50%.
             if (c_delta >= (c_sig >> 1)) {
-              uint32_t tmpp_sig = ::generate_signature(el_sig, pt_query_res.value());
-              unsigned int tmpp_c_delta, tmpp_c_sig;
-              auto tmpp_pt_query_res = pattern_table.query_pt(tmpp_sig, tmpp_c_delta, tmpp_c_sig);
-
-              if (tmpp_pt_query_res.has_value()) {
-                prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value() + tmpp_pt_query_res.value()) << LOG2_BLOCK_SIZE);
-
-                          if ((prefetch_address >= (el_last_accessed_page_num << LOG2_PAGE_SIZE)) && 
-                              (prefetch_address <= (el_last_accessed_page_num + 1) << LOG2_PAGE_SIZE)) {
-
-                            std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " " << std::dec << (unsigned)el_last_offset << " " << pt_query_res.value() << " xxx " << tmpp_pt_query_res.value() << " " << (unsigned)tmpp_c_delta << " " << (unsigned)tmpp_c_sig << std::dec << std::endl;
-                            context_switch_issue_queue.push_back({prefetch_address, true});
-                          }
+              int depth = 1;
+              float confidence = 1;
+              auto res = context_switch_aux(el_sig, _delta, depth, confidence, el_last_accessed_page_num, _last_offset); 
+              while (res.has_value() && confidence >= 0.3) {
+                res = context_switch_aux(el_sig, _delta, depth, confidence, el_last_accessed_page_num, _last_offset);
               }
             }
           }
@@ -344,22 +339,28 @@ void spp::prefetcher::context_switch_gather_prefetches()
 }
 
 // WL 
-std::optional<uint64_t> context_switch_aux(uint32_t &sig, int32_t delta, int &depth, float &confidence)
+std::optional<uint64_t> spp::prefetcher::context_switch_aux(uint32_t &sig, int32_t delta, int &depth, float &confidence, uint64_t page_num, uint32_t &last_offset)
 {
-  uint32_t tmpp_sig = ::generate_signature(sig, delta);
+  sig = ::generate_signature(sig, delta);
+  depth++;
   unsigned int tmpp_c_delta, tmpp_c_sig;
-  auto tmpp_pt_query_res = pattern_table.query_pt(tmpp_sig, tmpp_c_delta, tmpp_c_sig);
+  auto tmpp_pt_query_res = pattern_table.query_pt(sig, tmpp_c_delta, tmpp_c_sig);
 
   if (tmpp_pt_query_res.has_value()) {
-    prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value() + tmpp_pt_query_res.value()) << LOG2_BLOCK_SIZE);
+    uint64_t prefetch_address = (page_num << LOG2_PAGE_SIZE) + ((last_offset + tmpp_pt_query_res.value()) << LOG2_BLOCK_SIZE);
 
-    if ((prefetch_address >= (el_last_accessed_page_num << LOG2_PAGE_SIZE)) && 
-        (prefetch_address <= (el_last_accessed_page_num + 1) << LOG2_PAGE_SIZE)) {
+    if ((prefetch_address >= (page_num << LOG2_PAGE_SIZE)) && 
+        (prefetch_address <= (page_num + 1) << LOG2_PAGE_SIZE)) {
 
-      std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " " << std::dec << (unsigned)el_last_offset << " " << pt_query_res.value() << " xxx " << tmpp_pt_query_res.value() << " " << (unsigned)tmpp_c_delta << " " << (unsigned)tmpp_c_sig << std::dec << std::endl;
+      confidence = confidence * tmpp_c_delta / tmpp_c_sig * 0.9;
+      std::cout << std::hex << "0x" << (unsigned)(page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " last_offset " << std::dec << (unsigned)last_offset << " delta " << tmpp_pt_query_res.value() << " c_delta " << (unsigned)tmpp_c_delta << " c_sig " << (unsigned)tmpp_c_sig << std::dec << " confidence " << confidence << std::endl;
       context_switch_issue_queue.push_back({prefetch_address, true});
-        }
-      }
+      last_offset += tmpp_pt_query_res.value();
+      return tmpp_pt_query_res.value();
+    }
+  }
+
+  return std::nullopt;
 }
 
 // WL

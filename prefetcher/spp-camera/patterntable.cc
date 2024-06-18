@@ -114,11 +114,15 @@ std::optional<int> spp::PATTERN_TABLE::query_pt(uint32_t sig, unsigned int &_c_d
 
 #endif // DEBUG
   
-  if (way != set_end) {
+  if (way != set_end && way->valid) {
     _c_delta = way->c_delta;
     _c_sig = c_sig;
     return way->delta;
   }
+
+#if DEBUG_PRINT_PATTERN_TABLE
+  std::cout << "!!!" << std::endl;
+#endif
 
   return std::nullopt;
 }
