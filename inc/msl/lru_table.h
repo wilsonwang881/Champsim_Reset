@@ -138,7 +138,7 @@ public:
   // Used in DIB clearing
   void clear_DIB()
   {
-    for(auto var : block) {
+    for(auto &var : block) {
       var.last_used = 0;
       var.data = value_type();
     }

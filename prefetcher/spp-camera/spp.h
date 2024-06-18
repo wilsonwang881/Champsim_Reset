@@ -70,6 +70,7 @@ namespace spp {
 
     void clear_states();
     void context_switch_gather_prefetches();
+    std::optional<uint64_t> context_switch_aux(uint32_t &sig, int32_t delta, int &depth, float &confidence);
     bool context_switch_queue_empty();
     void context_switch_queue_clear();
     void context_switch_issue(CACHE* cache);
