@@ -288,7 +288,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
         auto pt_query_res = pattern_table.query_pt(el_sig, c_delta, c_sig);
         float confidence = 1.0 * c_delta / c_sig;
 
-        if (pt_query_res.has_value() && confidence >= 0.6)
+        if (pt_query_res.has_value() && confidence >= 0.25)
         {
           uint64_t prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE);
           int32_t _delta = pt_query_res.value();
@@ -303,7 +303,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
             // Second level lookahead prefetching.
             // If the confidence is larger than 50%.
             auto res = context_switch_aux(el_sig, _delta, confidence, el_last_accessed_page_num, _last_offset); 
-            while (res.has_value() && confidence >= 0.6) {
+            while (res.has_value() && confidence >= 0.25) {
               res = context_switch_aux(el_sig, _delta, confidence, el_last_accessed_page_num, _last_offset);
             }
           }
@@ -347,11 +347,11 @@ std::optional<uint64_t> spp::prefetcher::context_switch_aux(uint32_t &sig, int32
 
   if (tmpp_pt_query_res.has_value()) {
     uint64_t prefetch_address = (page_num << LOG2_PAGE_SIZE) + ((last_offset + tmpp_pt_query_res.value()) << LOG2_BLOCK_SIZE);
-    confidence = confidence * tmpp_c_delta / tmpp_c_sig * 0.9;
+    confidence = confidence * tmpp_c_delta / tmpp_c_sig * filter.pf_useful / filter.pf_issued;
 
     if ((prefetch_address >= (page_num << LOG2_PAGE_SIZE)) && 
         (prefetch_address <= (page_num + 1) << LOG2_PAGE_SIZE) &&
-        confidence >= 0.6) {
+        confidence >= 0.25) {
 
       std::cout << std::hex << "0x" << (unsigned)(page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " last_offset " << std::dec << (unsigned)last_offset << " delta " << tmpp_pt_query_res.value() << " c_delta " << (unsigned)tmpp_c_delta << " c_sig " << (unsigned)tmpp_c_sig << std::dec << " confidence " << confidence << std::endl;
       context_switch_issue_queue.push_back({prefetch_address, true});
