@@ -131,12 +131,13 @@ std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE
   });
 
   uint64_t percent_sum = 0;
+  uint64_t base = valid_sig_table_entries.back().last_used;
 
   // A machenism should be in place here to prevent summation overflow.
   for(auto el : valid_sig_table_entries) 
-    percent_sum += el.last_used; 
+    percent_sum += (el.last_used - base); 
 
-  uint64_t percent_cut_off_point = percent_sum >> 3; // Cut off point: 1/8 of the sum.
+  uint64_t percent_cut_off_point = percent_sum >> 2; // Cut off point: 1/4 of the sum.
 
   uint64_t accumulate_percent = 0;
 
