@@ -259,7 +259,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
   filter.clear();
   std::cout << "Filter cleared" << std::endl;
 
-  std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature();
+  std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature(filter.pf_useful / filter.pf_issued * 1.0);
 
   // Walk the signature table.
   for (size_t index = 0; index < SIGNATURE_TABLE::SET * SIGNATURE_TABLE::WAY; index++)
