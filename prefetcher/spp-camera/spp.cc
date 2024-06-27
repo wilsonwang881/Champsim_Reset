@@ -306,7 +306,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
             // Second level lookahead prefetching.
             // If the confidence is larger than 50%.
             auto res = context_switch_aux(el_sig, _delta, confidence, el_last_accessed_page_num, _last_offset); 
-            while (res.has_value() && confidence >= 0.25) {
+            while (res.has_value() && confidence >= 0.1) {
               res = context_switch_aux(el_sig, _delta, confidence, el_last_accessed_page_num, _last_offset);
             }
           }

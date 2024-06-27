@@ -137,7 +137,7 @@ std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE
   for(auto el : valid_sig_table_entries) 
     percent_sum += (el.last_used - base); 
 
-  uint64_t percent_cut_off_point = static_cast<uint64_t>(percent_sum * threshold * 2); // Cut off point: 1/4 of the sum.
+  uint64_t percent_cut_off_point = static_cast<uint64_t>(percent_sum * threshold * 3); // Cut off point: 1/4 of the sum.
 
   uint64_t accumulate_percent = 0;
 
