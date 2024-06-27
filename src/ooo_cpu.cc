@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "ooo_cpu.h"
 
 #include <algorithm>
@@ -87,6 +86,7 @@ void O3_CPU::initialize()
   after_reset_data_access_file.open("after_reset_data_accesses.txt", std::ios::out);
   reset_misc::before_reset_on_demand_data_access_index = 0;
   reset_misc::after_reset_on_demand_data_access_index = 0;
+  //reset_misc::knn_can_predict=0;
   // WL
 }
 
@@ -200,6 +200,11 @@ void O3_CPU::initialize_instruction()
       reset_misc::after_reset_on_demand_ins_access[reset_misc::after_reset_on_demand_ins_access_index].cycle = current_cycle;
       reset_misc::after_reset_on_demand_ins_access[reset_misc::after_reset_on_demand_ins_access_index].ip = input_queue.front().ip;
       reset_misc::after_reset_on_demand_ins_access_index++;
+      //std::cout<<"The index inside the reset_misc is"<< reset_misc::after_reset_on_demand_ins_access_index<<std::endl;
+      if(reset_misc::after_reset_on_demand_ins_access_index==999)
+      {
+        champsim::operable::knn_can_predict = true;
+      }
     }
 
     // Write the first 1000 accesses after the context switch to file.
@@ -207,6 +212,8 @@ void O3_CPU::initialize_instruction()
       have_recorded_on_demand_ins_accesses = false;
       reset_misc::after_reset_on_demand_ins_access_index = 0;
       std::cout << "Dumping 1st 1000 on demand instruction accesses after context switch." << std::endl;
+      //Update the KNN value
+      //champsim::operable::knn_can_predict = true;
       dump_after_reset_ins_accesses();
       /*
       have_recorded_before_reset_hit_miss_number_L1I = true;

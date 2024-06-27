@@ -5,8 +5,19 @@
 #include <errno.h>
 #include <time.h>
 //#include <vector>
+#include <operable.h>
+#include "cache.h"
 
-#define ON_DEMAND_ACCESS_RECORD_SIZE 1000
+int trainDataSize=15;
+int testDataSize=985;
+int totalDataSize=1000;
+int K=3;
+
+
+//#define ON_DEMAND_ACCESS_RECORD_SIZE 1000
+
+ClassifiedPoint * previous_train= malloc(sizeof(ClassifiedPoint)* trainDataSize);
+float final_accuracy=0;
 
 long saved=0;
 int special_page=0;
@@ -23,13 +34,13 @@ typedef struct{
   u_int64_t distance;
 } ClassifiedDistance;
 
-typedef struct {
-  u_int64_t cycle;
-  u_int64_t ip;
-} on_demand_ins_access;
+//typedef struct {
+  //u_int64_t cycle;
+  //u_int64_t ip;
+//} on_demand_ins_access;
 
-on_demand_ins_access before_reset_on_demand_ins_access [ON_DEMAND_ACCESS_RECORD_SIZE];
-on_demand_ins_access after_reset_on_demand_ins_access[ON_DEMAND_ACCESS_RECORD_SIZE];
+//on_demand_ins_access before_reset_on_demand_ins_access [ON_DEMAND_ACCESS_RECORD_SIZE];
+//on_demand_ins_access after_reset_on_demand_ins_access[ON_DEMAND_ACCESS_RECORD_SIZE];
 
 ClassifiedPoint*train_save;
 
@@ -143,9 +154,9 @@ ClassifiedPoint* convertToIrisPoint(int x){
   ClassifiedPoint* point = malloc(sizeof(ClassifiedPoint));
   u_int64_t * pos = malloc(2 * sizeof(u_int64_t));
   //before clk
-  pos[0] = before_reset_on_demand_ins_access[x].cycle;
+  pos[0] = reset_misc::before_reset_on_demand_ins_access[x].cycle;
   //before adr
-  pos[1] = before_reset_on_demand_ins_access[x].ip;
+  pos[1] = reset_misc::before_reset_on_demand_ins_access[x].ip;
   //Septal Length
   //pos[2] = strtof(strtok(NULL, ","),NULL);
   //Septal Width
@@ -153,7 +164,7 @@ ClassifiedPoint* convertToIrisPoint(int x){
   
   point->point = pos;
   //Target
-  u_int64_t page_num= (after_reset_on_demand_ins_access[x].ip)>>12;
+  u_int64_t page_num= (reset_misc::after_reset_on_demand_ins_access[x].ip)>>12;
   point->classification = page_num;
   return point;
 }
@@ -351,21 +362,24 @@ int classify_1(int dimensions, const ClassifiedPoint* trainedData, int trainedSi
 
 }
 
-int main(int argc, char const *argv[])
+int main_reference (int argc, char const *argv[])
 {
   //std::vector<ClassifiedPoint> test_points {};
 
 
   //Size of the Dataset to Train
-  int trainDataSize = 15;
-  int testDataSize = 985;
-  int totalDataSize =1000;
+  
+  //int trainDataSize = 15;
+  //int testDataSize = 985;
+  //int totalDataSize =1000;
+  
   //Definition of the Meaning of Classes
 
   //Point that should be Classified
   //float toClassify[2] = {3995210,4207603}; //correct result 1027
   //The K of KNN
-  int K = 3;
+  
+  //int K = 3;
   
   //Allocate Array to Store trained Data
   ClassifiedPoint *  trainData = malloc(sizeof(ClassifiedPoint) * trainDataSize);
@@ -507,6 +521,65 @@ int main(int argc, char const *argv[])
   }
 
   return errno;
-
-  
 }
+
+void CACHE::prefetcher_initialize() {}
+
+uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
+{
+  if(champsim::operable::knn_can_predict == true)
+  {
+  
+  ClassifiedPoint *  trainData = malloc(sizeof(ClassifiedPoint) * trainDataSize);
+  //Allocate the array to store the test Data
+  ClassifiedPoint * testData= malloc (sizeof(ClassifiedPoint)* testDataSize);
+  ClassifiedPoint * finalData= malloc(sizeof(ClassifiedPoint)* testDataSize);
+  //ClassifiedPoint * previous_train= malloc(sizeof(ClassifiedPoint)* trainDataSize);
+  ClassifiedPoint * current_train= malloc(sizeof(ClassifiedPoint)* trainDataSize);
+
+  //Read the Trained Data from CSV- File and Store it into TrainData Array
+  current_train= readTrainingData(totalDataSize, trainData,testData,trainDataSize,totalDataSize);
+
+  //Finding the after page number
+  for(size_t j=0;j<testDataSize;j++)
+  {
+    finalData[j].classification= classify_1(2, current_train, trainDataSize, testData[j].point,K);
+    for(int x=1;x<=(1<<(LOG2_PAGE_SIZE-LOG2_BLOCK_SIZE));x++)
+    {
+      uint64_t pf_addr = ((finalData[j].classification)<<LOG2_PAGE_SIZE)+x*64;
+      prefetch_line(pf_addr, true, metadata_in);
+    }
+  }
+  //accuracy check
+  float count_success=0; 
+  for(size_t i=0;i<testDataSize;i++)
+  {
+    if(finalData[i].classification==testData[i].classification)
+    {
+      //printf("The classification is successful\n");
+      count_success++;
+    }
+  }
+  final_accuracy=count_success/testDataSize;
+  printf("The count_success is:%f\n",count_success);
+  printf("The testDataSize is:%d\n",testDataSize);
+  printf("The final accuracy is:%f \n",final_accuracy);
+  
+  //previous_train=current_train;
+  }
+
+  //accuracy counting
+
+  //uint64_t pf_addr = addr + (1 << LOG2_BLOCK_SIZE);
+  //prefetch_line(pf_addr, true, metadata_in);
+  //return metadata_in;
+}
+
+uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
+{
+  return metadata_in;
+}
+
+void CACHE::prefetcher_cycle_operate() {}
+
+void CACHE::prefetcher_final_stats() {}

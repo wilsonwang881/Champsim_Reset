@@ -65,7 +65,7 @@ class operable
 {
 public:
   const double CLOCK_SCALE;
-
+  static bool knn_can_predict;
   // WL
   static bool context_switch_mode;
   static bool have_recorded_on_demand_ins_accesses;

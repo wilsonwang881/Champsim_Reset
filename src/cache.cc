@@ -843,7 +843,7 @@ void CACHE::reset_components()
   // Record prefetcher states.
   if (have_recorded_prefetcher_states) {
     if (L2C_name.compare(NAME) == 0) {
-      record_spp_camera_states(); 
+      //record_spp_camera_states(); 
       have_recorded_prefetcher_states = false;
     }
   }

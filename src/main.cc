@@ -36,7 +36,8 @@ namespace champsim
 {
 std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases, std::vector<tracereader>& traces, std::vector<uint64_t>& reset_ins_count);
 }
-
+//KNN predict
+bool champsim::operable::knn_can_predict = false;
 // WL
 bool champsim::operable::context_switch_mode = false;
 bool champsim::operable::have_recorded_on_demand_ins_accesses = false;
