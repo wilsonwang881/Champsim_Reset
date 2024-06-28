@@ -19,6 +19,7 @@
 #include <iostream>
 #include <fstream>
 #include <set>
+#include <bitset>
 // WL 
 
 class CACHE;
@@ -75,6 +76,7 @@ namespace spp {
     void context_switch_queue_clear();
     void context_switch_issue(CACHE* cache);
     void record_spp_states();
+    float CUTOFF_THRESHOLD = 0.15;
     // WL 
   };
 } // namespace spp

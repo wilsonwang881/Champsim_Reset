@@ -137,14 +137,15 @@ std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE
   for(auto el : valid_sig_table_entries) 
     percent_sum += (el.last_used - base); 
 
-  uint64_t percent_cut_off_point = static_cast<uint64_t>(percent_sum * threshold * 3); // Cut off point: 1/4 of the sum.
+  uint64_t percent_cut_off_point = static_cast<uint64_t>(percent_sum * threshold * threshold); // Cut off point: 1/4 of the sum.
+  std::cout << "Walking SPP signature table threshold = " << threshold << " ^ 2" << std::endl; 
 
   uint64_t accumulate_percent = 0;
 
   std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data;
 
   for(auto &el : valid_sig_table_entries) {
-    accumulate_percent += el.last_used;
+    accumulate_percent += (el.last_used - base);
 
     if (accumulate_percent > percent_cut_off_point) 
       el.valid = false; 

@@ -259,7 +259,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
   filter.clear();
   std::cout << "Filter cleared" << std::endl;
 
-  std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature(filter.pf_useful / filter.pf_issued * 1.0);
+  std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature(1.0 * filter.pf_useful / filter.pf_issued);
 
   // Walk the signature table.
   for (size_t index = 0; index < SIGNATURE_TABLE::SET * SIGNATURE_TABLE::WAY; index++)
@@ -284,6 +284,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
         uint64_t current_prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + (el_last_offset << LOG2_BLOCK_SIZE);
         std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)current_prefetch_address << std::dec << " initial " << std::endl;
 
+        std::cout << std::bitset<16>((el_sig << 12) >> 12) << std::dec << std::endl;
         context_switch_issue_queue.push_back({current_prefetch_address, true}); 
 
         // Use the signature and offset to index into the pattern table.
@@ -291,7 +292,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
         auto pt_query_res = pattern_table.query_pt(el_sig, c_delta, c_sig);
         float confidence = 1.0 * c_delta / c_sig;
 
-        if (pt_query_res.has_value() && confidence >= 0.25)
+        if (pt_query_res.has_value() && confidence >= CUTOFF_THRESHOLD)
         {
           uint64_t prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE);
           int32_t _delta = pt_query_res.value();
@@ -306,7 +307,7 @@ void spp::prefetcher::context_switch_gather_prefetches()
             // Second level lookahead prefetching.
             // If the confidence is larger than 50%.
             auto res = context_switch_aux(el_sig, _delta, confidence, el_last_accessed_page_num, _last_offset); 
-            while (res.has_value() && confidence >= 0.1) {
+            while (res.has_value() && confidence >= CUTOFF_THRESHOLD) {
               res = context_switch_aux(el_sig, _delta, confidence, el_last_accessed_page_num, _last_offset);
             }
           }
@@ -354,7 +355,7 @@ std::optional<uint64_t> spp::prefetcher::context_switch_aux(uint32_t &sig, int32
 
     if ((prefetch_address >= (page_num << LOG2_PAGE_SIZE)) && 
         (prefetch_address <= (page_num + 1) << LOG2_PAGE_SIZE) &&
-        confidence >= 0.25) {
+        confidence >= CUTOFF_THRESHOLD) {
 
       std::cout << std::hex << "0x" << (unsigned)(page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " last_offset " << std::dec << (unsigned)last_offset << " delta " << tmpp_pt_query_res.value() << " c_delta " << (unsigned)tmpp_c_delta << " c_sig " << (unsigned)tmpp_c_sig << std::dec << " confidence " << confidence << std::endl;
       context_switch_issue_queue.push_back({prefetch_address, true});
