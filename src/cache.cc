@@ -845,6 +845,12 @@ void CACHE::reset_components()
     if (L2C_name.compare(NAME) == 0) {
       record_spp_camera_states(); 
       have_recorded_prefetcher_states = false;
+      internal_PQ.clear();
+      std::cout << "L2C internal_PQ cleared." << std::endl;
+    }
+    else if (!LLC_name.compare(NAME)) {
+      std::cout << "LLC internal_PQ cleared." << std::endl;
+      champsim::operable::cache_clear_counter++;
     }
   }
 
@@ -881,8 +887,6 @@ void CACHE::reset_components()
     {
       have_cleared_L2C = false;
       CACHE::invalidate_all_cache_blocks();
-      internal_PQ.clear();
-      std::cout << "L2C internal_PQ cleared." << std::endl;
       champsim::operable::cache_clear_counter++;
     }
 
@@ -891,8 +895,6 @@ void CACHE::reset_components()
       have_cleared_LLC = false;
       CACHE::invalidate_all_cache_blocks();
       internal_PQ.clear();
-      std::cout << "LLC internal_PQ cleared." << std::endl;
-      champsim::operable::cache_clear_counter++;
     }
 
     if (have_cleared_ITLB && !ITLB_name.compare(NAME) && champsim::operable::cpu_side_reset_ready)
