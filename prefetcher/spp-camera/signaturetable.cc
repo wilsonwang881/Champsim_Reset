@@ -95,6 +95,9 @@ std::string spp::SIGNATURE_TABLE::record_Signature_Table()
 // WL 
 std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> spp::SIGNATURE_TABLE::get_sorted_signature(float threshold)
 {
+  if (threshold >= 0.99) {
+    threshold = 0.9;
+  }
   std::vector<sigtable_entry_t> valid_sig_table_entries;
 
   for (auto el : sigtable) {
@@ -113,8 +116,8 @@ std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE
   for(auto el : valid_sig_table_entries) 
     percent_sum += (el.last_used - base); 
 
-  uint64_t percent_cut_off_point = static_cast<uint64_t>(percent_sum * threshold * threshold); // Cut off point: 1/4 of the sum.
-  std::cout << "Walking SPP signature table threshold = " << threshold << " ^ 2" << std::endl; 
+  uint64_t percent_cut_off_point = static_cast<uint64_t>(percent_sum * threshold * threshold * 0.7); // Cut off point: 1/4 of the sum.
+  std::cout << "Walking SPP signature table threshold = " << threshold << " ^ 2 * 0.7" << std::endl; 
 
   uint64_t accumulate_percent = 0;
 
