@@ -56,42 +56,20 @@ std::optional<std::pair<int, int>> spp::PATTERN_TABLE::lookahead_step(uint32_t s
 // WL
 void spp::PATTERN_TABLE::clear()
 {
-	// bool toggle_valid = false;
-	// bool toggle_delta = false;
-	// bool toggle_c_delta = false;
-	// bool toggle_c_sig = false;
-
 	for(size_t i = 0; i < SET; i++)
 	{
 		for(size_t j = 0; j < WAY; j++)
 		{
-			// if (pattable[i].ways[j].valid)
-			// 	toggle_valid = true;
-			// if (pattable[i].ways[j].delta != 0)
-			// 	toggle_delta = true;
-			// if (pattable[i].ways[j].c_delta != 1)
-			// 	toggle_c_delta = true;
-
 			pattable[i].ways[j].valid = false;
 			pattable[i].ways[j].delta = 0;
 			pattable[i].ways[j].c_delta = 1;
 		}
-
-		// if (pattable[i].c_sig != 0)
-		// 	toggle_c_sig = true;
 
 		pattable[i].c_sig = 0;
 	}
 
 	global_accuracy = 0.9;
 	fill_threshold = 25;
-
-  /*
-	std::cout << "Cleared PATTERN_TABLE " \
-		<< toggle_valid << " " << toggle_delta << " " \
-		<< toggle_c_delta << " " << toggle_c_sig << \
-		std::endl;
-  */
 }
 
 // WL

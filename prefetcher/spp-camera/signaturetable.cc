@@ -52,25 +52,8 @@ void spp::SIGNATURE_TABLE::update(uint64_t addr, uint32_t sig)
 // WL
 void spp::SIGNATURE_TABLE::clear()
 {
-	// bool toggle_valid = false;
-	// bool toggle_partial_page = false;
-	// bool toggle_last_offset = false;
-	// bool toggle_sig = false;
-	// bool toggle_last_used = false;
-
 	for(size_t i = 0; i < WAY * SET; i++)
 	{
-		// if (sigtable[i].valid)
-		// 	toggle_valid = true;
-		// if (sigtable[i].partial_page != 0)
-		// 	toggle_partial_page = true;
-		// if (sigtable[i].last_offset != 0)
-		// 	toggle_last_offset = true;
-		// if (sigtable[i].sig != 0)
-		// 	toggle_sig = true;
-		// if (sigtable[i].last_used != 0)
-		// 	toggle_last_used = true;
-
 		sigtable[i].valid = false;
 		sigtable[i].partial_page = 0;
 		sigtable[i].last_offset = 0;
@@ -78,13 +61,6 @@ void spp::SIGNATURE_TABLE::clear()
 		sigtable[i].last_used = 0;
 		sigtable[i].last_accessed_page_num = 0;
 	}
-
-	/*
-	std::cout << "Cleared SIGNATURE_TABLE " \
-		<< toggle_valid << " " << toggle_partial_page << " " \
-		<< toggle_last_offset << " " << toggle_sig << " " \
-		<< toggle_last_used << " " << access_count << std::endl;
-	*/
 
 	access_count = 0;
 }

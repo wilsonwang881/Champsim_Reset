@@ -40,37 +40,14 @@ void spp::BOOTSTRAP_TABLE::update(uint64_t addr, uint32_t sig, int confidence, i
 // WL
 void spp::BOOTSTRAP_TABLE::clear()
 {
-	// bool toggled_valid = false;
-	// bool toggled_sig = false;
-	// bool toggled_confidence = false;
-	// bool toggled_offset = false;
-	// bool toggled_delta = false;
-	
 	for(size_t i = 0; i < MAX_GHR_ENTRY; i++)
 	{
-		// if (page_bootstrap_table[i].valid)
-		// 	toggled_valid = true;
-		// if (page_bootstrap_table[i].sig != 0)
-		// 	toggled_sig = true;
-		// if (page_bootstrap_table[i].confidence != 0)
-		// 	toggled_confidence = true;
-		// if (page_bootstrap_table[i].offset != 0)
-		// 	toggled_offset = true;
-		// if (page_bootstrap_table[i].delta != 0)
-		// 	toggled_delta = true;
-
-		page_bootstrap_table[i].valid = false;
+    page_bootstrap_table[i].valid = false;
 		page_bootstrap_table[i].sig = 0;
 		page_bootstrap_table[i].confidence = 0;
 		page_bootstrap_table[i].offset = 0;
 		page_bootstrap_table[i].delta = 0;
 	}
-
-	/*
-	std::cout << "Cleared BOOTSTRAP_TABLE " << toggled_valid << " " << toggled_sig << " " \
-		<< toggled_confidence << " " << toggled_offset << " " \
-		<< toggled_delta << std::endl;
-	*/
 }
 
 // WL 
