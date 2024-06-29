@@ -881,6 +881,8 @@ void CACHE::reset_components()
     {
       have_cleared_L2C = false;
       CACHE::invalidate_all_cache_blocks();
+      internal_PQ.clear();
+      std::cout << "L2C internal_PQ cleared." << std::endl;
       champsim::operable::cache_clear_counter++;
     }
 
@@ -888,6 +890,8 @@ void CACHE::reset_components()
     {
       have_cleared_LLC = false;
       CACHE::invalidate_all_cache_blocks();
+      internal_PQ.clear();
+      std::cout << "LLC internal_PQ cleared." << std::endl;
       champsim::operable::cache_clear_counter++;
     }
 
