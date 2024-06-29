@@ -271,6 +271,7 @@ public:
   void record_hit_miss_update(uint64_t tag_checks);
   void record_hit_miss_select_cache();
   void record_hit_miss_write_to_file(bool before_or_after_reset);
+  void clear_internal_PQ();
   // WL
 
   template <unsigned long long P_FLAG, unsigned long long R_FLAG>

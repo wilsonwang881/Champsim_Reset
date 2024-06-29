@@ -59,7 +59,7 @@ void CACHE::prefetcher_cycle_operate()
       // Gather prefetches via the signature and pattern tables.
       if (!pref.context_switch_prefetch_gathered)
       {
-        pref.context_switch_gather_prefetches();
+        pref.context_switch_gather_prefetches(this);
         pref.context_switch_prefetch_gathered = true;
       }
      

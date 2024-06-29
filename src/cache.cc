@@ -837,6 +837,12 @@ void CACHE::print_deadlock()
   }
 }
 
+// WL 
+void CACHE::clear_internal_PQ()
+{
+  internal_PQ.clear();
+}
+
 // WL
 void CACHE::reset_components()
 {
@@ -845,13 +851,15 @@ void CACHE::reset_components()
     if (L2C_name.compare(NAME) == 0) {
       record_spp_camera_states(); 
       have_recorded_prefetcher_states = false;
-      internal_PQ.clear();
-      std::cout << "L2C internal_PQ cleared." << std::endl;
+     // internal_PQ.clear();
+     // std::cout << "L2C internal_PQ cleared." << std::endl;
     }
+    /*
     else if (!LLC_name.compare(NAME)) {
       std::cout << "LLC internal_PQ cleared." << std::endl;
       champsim::operable::cache_clear_counter++;
     }
+    */
   }
 
   // Record L1 cache states.
