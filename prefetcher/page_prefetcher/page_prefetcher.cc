@@ -22,13 +22,14 @@ namespace {
       uniq_page_address.clear();
       context_switch_issue_queue.clear();
 
-      for (size_t i = reset_misc::before_reset_on_demand_data_access_index - 1; i >= 0; i--) {
+      for (int i = reset_misc::before_reset_on_demand_data_access_index - 1; i >= 0; i--) {
          if (uniq_page_address.size() <= 7) {
           uniq_page_address.insert(reset_misc::before_reset_on_demand_data_access[i].ip >> 10); // Half page prefetching
-        }
+          std::cout << "Adding address 0x" << std::hex reset_misc::before_reset_on_demand_data_access[i].ip >> 10 << std::dec << std::endl;       
+         }
       }
 
-      for (size_t i = ON_DEMAND_ACCESS_RECORD_SIZE - 1; i >= reset_misc::before_reset_on_demand_data_access_index; i--) {
+      for (int i = ON_DEMAND_ACCESS_RECORD_SIZE - 1; i >= reset_misc::before_reset_on_demand_data_access_index; i--) {
          if (uniq_page_address.size() <= 7) {
           uniq_page_address.insert(reset_misc::before_reset_on_demand_data_access[i].ip >> 10); // Half page prefetching
         }
