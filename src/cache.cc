@@ -459,7 +459,6 @@ long CACHE::operate()
   reset_components();
 
   //clean_components();
-
   record_hit_miss_select_cache();
 
   if ((L1I_name.compare(NAME) == 0 ||
@@ -1046,6 +1045,7 @@ void CACHE::record_hit_miss_update(uint64_t tag_checks)
     }
     else if (LLC_name.compare(NAME) == 0 && have_recorded_after_reset_hit_miss_number_LLC)
     {
+
         after_reset_updates++;    
     }
   
@@ -1157,9 +1157,8 @@ void CACHE::record_hit_miss_select_cache()
     have_recorded_after_reset_hit_miss_number_L2C = true;
   }
   else if (LLC_name.compare(NAME) == 0 && have_recorded_before_reset_hit_miss_number_LLC) {
-
-   after_reset_updates = 0;
-   record_hit_miss_write_to_file(true);
+    after_reset_updates = 0;
+    record_hit_miss_write_to_file(true);
     have_recorded_before_reset_hit_miss_number_LLC = false;
     have_recorded_after_reset_hit_miss_number_LLC = true;
   }

@@ -3,7 +3,7 @@
 
 #include <map>
 
-#define L1D_PREFETCHER_IN_USE 0
+#define L1D_PREFETCHER_IN_USE 1
 #define CONTEXT_SWITCH_PREFETCH_IN_USE 1
 
 using unique_key = std::pair<CACHE*, uint32_t>;

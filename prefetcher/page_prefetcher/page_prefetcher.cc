@@ -22,15 +22,25 @@ namespace {
       uniq_page_address.clear();
       context_switch_issue_queue.clear();
 
-      for(auto var : reset_misc::before_reset_on_demand_access_records) {
-        uniq_page_address.insert(var.ip >> 12);
+      for (size_t i = reset_misc::before_reset_on_demand_data_access_index - 1; i >= 0; i--) {
+         if (uniq_page_address.size() <= 7) {
+          uniq_page_address.insert(reset_misc::before_reset_on_demand_data_access[i].ip >> 10); // Half page prefetching
+        }
+      }
+
+      for (size_t i = ON_DEMAND_ACCESS_RECORD_SIZE - 1; i >= reset_misc::before_reset_on_demand_data_access_index; i--) {
+         if (uniq_page_address.size() <= 7) {
+          uniq_page_address.insert(reset_misc::before_reset_on_demand_data_access[i].ip >> 10); // Half page prefetching
+        }
+      }
+      for(auto var : reset_misc::before_reset_on_demand_data_access) {
         //uniq_page_address.insert((var.ip >> 12) - 1);
       }
 
       if (uniq_page_address.size() <= 8) {
         for(auto var : uniq_page_address) {
-          for (size_t page_offset = 0; page_offset < (4096 - 64); page_offset += 64)
-            context_switch_issue_queue.push_back({(var << 12) + page_offset, true});
+          for (size_t page_offset = 0; page_offset < (1024 - 64); page_offset += 64) // Half page prefetching
+            context_switch_issue_queue.push_back({(var << 10) + page_offset, true});
         }
       }
 
@@ -39,6 +49,7 @@ namespace {
       }
 
       std::cout << "Ready to issue prefetches for " << uniq_page_address.size() << " page(s)" << std::endl;
+      std::cout << "Ready to issue prefetches for " << context_switch_issue_queue.size() << " prefetch(es)" << std::endl;
     }
 
     bool context_switch_queue_empty()
@@ -49,13 +60,12 @@ namespace {
     void context_switch_issue(CACHE* cache)
     {
       // Issue eligible outstanding prefetches
-      if (!std::empty(context_switch_issue_queue)
-          && champsim::operable::cpu_side_reset_ready
-          && champsim::operable::cache_clear_counter == 7) {
+      if (!std::empty(context_switch_issue_queue)) {//&& champsim::operable::cache_clear_counter == 7
         auto [addr, priority] = context_switch_issue_queue.front();
 
         // If this fails, the queue was full.
         bool prefetched = cache->prefetch_line(addr, priority, 0);
+
         if (prefetched) {
           context_switch_issue_queue.pop_front();
           context_switch_prefetching_timing.push_back({addr, cache->current_cycle, 0});
@@ -95,7 +105,7 @@ void CACHE::prefetcher_cycle_operate()
     // Gather prefetches
     if (!::trackers[this].context_switch_prefetch_gathered)
     {
-
+      this->clear_internal_PQ();
       ::trackers[this].gather_context_switch_prefetches(); 
       ::trackers[this].context_switch_prefetch_gathered = true;
       ::trackers[this].context_switch_prefetching_timing.clear();
@@ -105,16 +115,19 @@ void CACHE::prefetcher_cycle_operate()
     // Issue prefetches until the queue is empty.
     if (!::trackers[this].context_switch_queue_empty())
     {
-      ::trackers[this].context_switch_issue(this);
+      if (champsim::operable::cpu_side_reset_ready) {
+       ::trackers[this].context_switch_issue(this);
 
-      for(auto [addr, issued_at, received_at] : ::trackers[this].context_switch_prefetching_timing) {
-        if (received_at == 0) {
-          for(auto var : block) {
-            if (var.valid && var.address == addr) {
-              received_at == current_cycle; 
-            }
+       
+        for(auto &[addr, issued_at, received_at] : ::trackers[this].context_switch_prefetching_timing) {
+          if (received_at == 0) {
+            for(auto var : block) {
+              if (var.valid && var.address == addr) {
+                received_at = this->current_cycle; 
+              }
+            } 
           } 
-        } 
+        }
       }
     }
     // Toggle switches after all prefetches are issued.
@@ -133,7 +146,8 @@ void CACHE::prefetcher_cycle_operate()
       if (!champsim::operable::have_cleared_BTB
           && !champsim::operable::have_cleared_BP
           && champsim::operable::cpu_side_reset_ready
-          && champsim::operable::cache_clear_counter == 7) {
+          && !champsim::operable::have_cleared_prefetcher
+          ) {//&& champsim::operable::cache_clear_counter == 7
         champsim::operable::context_switch_mode = false;
         champsim::operable::cpu_side_reset_ready = false;
         champsim::operable::cache_clear_counter = 0;
