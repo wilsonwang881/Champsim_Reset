@@ -1,0 +1,6 @@
+=================================
+Current cycle = 4000000
+1000 accesses before this moment:
+hit = 0
+miss = 1000
+cycles taken = 2732237

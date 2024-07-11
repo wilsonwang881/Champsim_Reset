@@ -204,6 +204,7 @@ void O3_CPU::initialize_instruction()
       if(reset_misc::after_reset_on_demand_ins_access_index==999)
       {
         champsim::operable::knn_can_predict = true;
+        champsim::operable::reset_count++;
       }
     }
 
@@ -211,6 +212,7 @@ void O3_CPU::initialize_instruction()
     if (reset_misc::after_reset_on_demand_ins_access_index >= ON_DEMAND_ACCESS_RECORD_SIZE) {
       have_recorded_on_demand_ins_accesses = false;
       reset_misc::after_reset_on_demand_ins_access_index = 0;
+      std::cout<<"at round"<<champsim::operable::reset_count<<std::endl;
       std::cout << "Dumping 1st 1000 on demand instruction accesses after context switch." << std::endl;
       //Update the KNN value
       //champsim::operable::knn_can_predict = true;
@@ -625,6 +627,7 @@ long O3_CPU::operate_lsq()
 
     // Write the first 1000 accesses after the context switch to file.
     if (reset_misc::after_reset_on_demand_data_access_index >= ON_DEMAND_ACCESS_RECORD_SIZE) {
+      //champsim::operable::knn_can_predict = true;
       have_recorded_on_demand_data_accesses = false;
       reset_misc::after_reset_on_demand_data_access_index = 0;
       std::cout << "Dumping 1st 1000 on demand data accesses after context switch." << std::endl;
@@ -672,6 +675,7 @@ long O3_CPU::operate_lsq()
 
       // Write the first 1000 accesses after the context switch to file.
       if (reset_misc::after_reset_on_demand_data_access_index >= ON_DEMAND_ACCESS_RECORD_SIZE) {
+        //champsim::operable::knn_can_predict = true;
         have_recorded_on_demand_data_accesses = false;
         reset_misc::after_reset_on_demand_data_access_index = 0;
         std::cout << "Dumping 1st 1000 on demand data accesses after context switch." << std::endl;
