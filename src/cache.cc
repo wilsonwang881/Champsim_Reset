@@ -362,7 +362,6 @@ long CACHE::operate()
   std::for_each(std::cbegin(lower_level->returned), std::cend(lower_level->returned), [this](const auto& pkt) { this->finish_packet(pkt); });
   long tmpp_progress{0};
   tmpp_progress = std::distance(std::cbegin(lower_level->returned), std::cend(lower_level->returned));
-  //std::cout << "A tmpp_progress = " << tmpp_progress << std::endl;
   progress += tmpp_progress;
   lower_level->returned.clear();
 
@@ -370,7 +369,6 @@ long CACHE::operate()
   if (lower_translate != nullptr) {
     std::for_each(std::cbegin(lower_translate->returned), std::cend(lower_translate->returned), [this](const auto& pkt) { this->finish_translation(pkt); });
     tmpp_progress = std::distance(std::cbegin(lower_translate->returned), std::cend(lower_translate->returned));
-    //std::cout << "B tmpp_progress = " << tmpp_progress << std::endl;
     progress += tmpp_progress;
     lower_translate->returned.clear();
   }
@@ -385,7 +383,6 @@ long CACHE::operate()
     q.get().erase(fill_begin, complete_end);
   }
   tmpp_progress = MAX_FILL - fill_bw;
-  //std::cout << "C tmpp_progress = " << tmpp_progress << std::endl;
   progress += tmpp_progress;
 
   // Initiate tag checks
@@ -396,7 +393,6 @@ long CACHE::operate()
   auto stash_bandwidth_consumed = champsim::transform_while_n(
       translation_stash, std::back_inserter(inflight_tag_check), tag_bw, [](const auto& entry) { return entry.is_translated; }, initiate_tag_check<false>());
   tag_bw -= stash_bandwidth_consumed;
-  //std::cout << "D tmpp_progress = " << stash_bandwidth_consumed << std::endl;
   progress += stash_bandwidth_consumed;
   std::vector<long long> channels_bandwidth_consumed{};
   for (auto* ul : upper_levels) {
@@ -404,13 +400,11 @@ long CACHE::operate()
       auto bandwidth_consumed = champsim::transform_while_n(q.get(), std::back_inserter(inflight_tag_check), tag_bw, can_translate, initiate_tag_check<true>(ul));
       channels_bandwidth_consumed.push_back(bandwidth_consumed);
       tag_bw -= bandwidth_consumed;
-      //std::cout << "E tmpp_progress = " << bandwidth_consumed << std::endl;
       progress += bandwidth_consumed;
     }
   }
   auto pq_bandwidth_consumed = champsim::transform_while_n(internal_PQ, std::back_inserter(inflight_tag_check), tag_bw, can_translate, initiate_tag_check<false>());
   tag_bw -= pq_bandwidth_consumed;
-  //std::cout << "F tmpp_progress = " << pq_bandwidth_consumed << std::endl;
   progress += pq_bandwidth_consumed;
 
   // Issue translations
@@ -421,7 +415,6 @@ long CACHE::operate()
       champsim::extract_if(std::begin(inflight_tag_check), std::end(inflight_tag_check), std::back_inserter(translation_stash),
                            [cycle = current_cycle](const auto& x) { return x.event_cycle < cycle && !x.is_translated; });
   tmpp_progress = std::distance(last_not_missed, std::end(inflight_tag_check));
-  //std::cout << "G tmpp_progress = " << tmpp_progress << std::endl;
   progress += tmpp_progress;
   inflight_tag_check.erase(last_not_missed, std::end(inflight_tag_check));
 
@@ -440,7 +433,6 @@ long CACHE::operate()
   auto finish_tag_check_end = std::find_if_not(tag_check_ready_begin, tag_check_ready_end, do_tag_check);
   auto tag_bw_consumed = std::distance(tag_check_ready_begin, finish_tag_check_end);
   tmpp_progress = std::distance(tag_check_ready_begin, finish_tag_check_end);
-  //std::cout << "H tmpp_progress = " << tmpp_progress << std::endl;
   progress += tmpp_progress;
   inflight_tag_check.erase(tag_check_ready_begin, finish_tag_check_end);
 
@@ -597,6 +589,7 @@ void CACHE::finish_translation(const response_type& packet)
     entry.address = champsim::splice_bits(p_page, entry.v_address, LOG2_PAGE_SIZE); // translated address
     entry.is_translated = true;                                                     // This entry is now translated
 
+    // WL: capture the translated address, the physical address, here 
     if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
       fmt::print("[{}_TRANSLATE] finish_translation paddr: {:#x} vaddr: {:#x} cycle: {}\n", this->NAME, entry.address, entry.v_address, this->current_cycle);
     }

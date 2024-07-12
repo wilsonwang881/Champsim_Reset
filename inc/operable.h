@@ -28,8 +28,10 @@
 #define SIMULATE_WITH_BRANCH_PREDICTOR_RESET 0
 #define RESET_INTERVAL 4000000
 #define ON_DEMAND_ACCESS_RECORD_SIZE 1000
+#define DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE 3000
 
 #include <string>
+#include <deque>
 // WL
 
 // WL 
@@ -55,6 +57,11 @@ namespace reset_misc {
 
   extern on_demand_data_access after_reset_on_demand_data_access[ON_DEMAND_ACCESS_RECORD_SIZE];
   extern size_t after_reset_on_demand_data_access_index;
+
+  extern std::deque<on_demand_ins_access> dq_before_ins_access;
+  extern std::deque<on_demand_ins_access> dq_after_ins_access;
+  extern std::deque<on_demand_data_access> dq_before_data_access;
+  extern std::deque<on_demand_data_access> dq_after_data_access;
 }
 // WL
 

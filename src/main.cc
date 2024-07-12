@@ -94,6 +94,11 @@ namespace reset_misc {
 
   on_demand_data_access after_reset_on_demand_data_access[ON_DEMAND_ACCESS_RECORD_SIZE];
   size_t after_reset_on_demand_data_access_index;
+
+  std::deque<on_demand_ins_access> dq_before_ins_access;
+  std::deque<on_demand_ins_access> dq_after_ins_access;
+  std::deque<on_demand_data_access> dq_before_data_access;
+  std::deque<on_demand_data_access> dq_after_data_access;
 }
 // WL
 
