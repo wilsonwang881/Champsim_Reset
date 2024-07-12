@@ -52,25 +52,8 @@ void spp::SIGNATURE_TABLE::update(uint64_t addr, uint32_t sig)
 // WL
 void spp::SIGNATURE_TABLE::clear()
 {
-	// bool toggle_valid = false;
-	// bool toggle_partial_page = false;
-	// bool toggle_last_offset = false;
-	// bool toggle_sig = false;
-	// bool toggle_last_used = false;
-
 	for(size_t i = 0; i < WAY * SET; i++)
 	{
-		// if (sigtable[i].valid)
-		// 	toggle_valid = true;
-		// if (sigtable[i].partial_page != 0)
-		// 	toggle_partial_page = true;
-		// if (sigtable[i].last_offset != 0)
-		// 	toggle_last_offset = true;
-		// if (sigtable[i].sig != 0)
-		// 	toggle_sig = true;
-		// if (sigtable[i].last_used != 0)
-		// 	toggle_last_used = true;
-
 		sigtable[i].valid = false;
 		sigtable[i].partial_page = 0;
 		sigtable[i].last_offset = 0;
@@ -78,13 +61,6 @@ void spp::SIGNATURE_TABLE::clear()
 		sigtable[i].last_used = 0;
 		sigtable[i].last_accessed_page_num = 0;
 	}
-
-	/*
-	std::cout << "Cleared SIGNATURE_TABLE " \
-		<< toggle_valid << " " << toggle_partial_page << " " \
-		<< toggle_last_offset << " " << toggle_sig << " " \
-		<< toggle_last_used << " " << access_count << std::endl;
-	*/
 
 	access_count = 0;
 }
@@ -117,8 +93,11 @@ std::string spp::SIGNATURE_TABLE::record_Signature_Table()
 }
 
 // WL 
-std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> spp::SIGNATURE_TABLE::get_sorted_signature()
+std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> spp::SIGNATURE_TABLE::get_sorted_signature(float threshold)
 {
+  if (threshold >= 0.99) {
+    threshold = 0.9;
+  }
   std::vector<sigtable_entry_t> valid_sig_table_entries;
 
   for (auto el : sigtable) {
@@ -131,19 +110,21 @@ std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE
   });
 
   uint64_t percent_sum = 0;
+  uint64_t base = valid_sig_table_entries.back().last_used;
 
   // A machenism should be in place here to prevent summation overflow.
   for(auto el : valid_sig_table_entries) 
-    percent_sum += el.last_used; 
+    percent_sum += (el.last_used - base); 
 
-  uint64_t percent_cut_off_point = percent_sum >> 3; // Cut off point: 1/8 of the sum.
+  uint64_t percent_cut_off_point = static_cast<uint64_t>(percent_sum >> 2); // Cut off point: 1/4 of the sum.
+  std::cout << "Walking SPP signature table threshold = " << threshold << " not in use but percent_sum >> 2" << std::endl; 
 
   uint64_t accumulate_percent = 0;
 
   std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data;
 
   for(auto &el : valid_sig_table_entries) {
-    accumulate_percent += el.last_used;
+    accumulate_percent += (el.last_used - base);
 
     if (accumulate_percent > percent_cut_off_point) 
       el.valid = false; 

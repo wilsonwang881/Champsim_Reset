@@ -19,6 +19,7 @@
 #include <iostream>
 #include <fstream>
 #include <set>
+#include <bitset>
 // WL 
 
 class CACHE;
@@ -69,11 +70,13 @@ namespace spp {
     uint64_t cache_cycle;
 
     void clear_states();
-    void context_switch_gather_prefetches();
+    void context_switch_gather_prefetches(CACHE* cache);
+    std::optional<uint64_t> context_switch_aux(uint32_t &sig, int32_t delta, float &confidence, uint64_t page_num, uint32_t &last_offset);
     bool context_switch_queue_empty();
     void context_switch_queue_clear();
     void context_switch_issue(CACHE* cache);
     void record_spp_states();
+    float CUTOFF_THRESHOLD = 0.2;
     // WL 
   };
 } // namespace spp

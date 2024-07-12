@@ -216,7 +216,7 @@ void spp::prefetcher::clear_states()
 }
 
 // WL
-void spp::prefetcher::context_switch_gather_prefetches()
+void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 {
   // Gather unique page addresses.
   /*
@@ -256,7 +256,12 @@ void spp::prefetcher::context_switch_gather_prefetches()
   }
   */
 
-  std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature();
+  cache->clear_internal_PQ();
+  std::cout << cache->NAME << " internal_PQ cleared" << std::endl;
+  filter.clear();
+  std::cout << "Filter cleared" << std::endl;
+
+  std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature(1.0 * filter.pf_useful / filter.pf_issued);
 
   // Walk the signature table.
   for (size_t index = 0; index < SIGNATURE_TABLE::SET * SIGNATURE_TABLE::WAY; index++)
@@ -279,41 +284,37 @@ void spp::prefetcher::context_switch_gather_prefetches()
 
       if (found_in_return_data) {
         uint64_t current_prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + (el_last_offset << LOG2_BLOCK_SIZE);
-        std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)current_prefetch_address << std::dec << std::endl;
+        std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)current_prefetch_address << std::dec << " initial " << std::endl;
 
+        std::cout << std::bitset<16>((el_sig << 12) >> 12) << std::dec << std::endl;
         context_switch_issue_queue.push_back({current_prefetch_address, true}); 
+
         // Use the signature and offset to index into the pattern table.
         unsigned int c_delta, c_sig;
         auto pt_query_res = pattern_table.query_pt(el_sig, c_delta, c_sig);
+        float confidence = 1.0 * c_delta / c_sig;
 
-        if (pt_query_res.has_value())
+        if (pt_query_res.has_value() && confidence >= CUTOFF_THRESHOLD)
         {
           uint64_t prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE);
+          int32_t _delta = pt_query_res.value();
+          uint32_t _last_offset = el_last_offset + _delta;
 
           if ((prefetch_address >= (el_last_accessed_page_num << LOG2_PAGE_SIZE)) && 
               (prefetch_address <= (el_last_accessed_page_num + 1) << LOG2_PAGE_SIZE)) {
 
-            std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " " << std::dec << (unsigned)el_last_offset << " " << pt_query_res.value() << " " << (unsigned)c_delta << " " << (unsigned)c_sig << std::dec << std::endl;
+            std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " last_offset " << std::dec << (unsigned)el_last_offset << " delta " << pt_query_res.value() << " c_delta " << (unsigned)c_delta << " c_sig " << (unsigned)c_sig << std::dec << " confidence " << confidence << std::endl;
             context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE), true});
 
             // Second level lookahead prefetching.
             // If the confidence is larger than 50%.
-            if (c_delta >= (c_sig >> 1)) {
-              uint32_t tmpp_sig = ::generate_signature(el_sig, pt_query_res.value());
-              unsigned int tmpp_c_delta, tmpp_c_sig;
-              auto tmpp_pt_query_res = pattern_table.query_pt(tmpp_sig, tmpp_c_delta, tmpp_c_sig);
-
-              if (tmpp_pt_query_res.has_value()) {
-                prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value() + tmpp_pt_query_res.value()) << LOG2_BLOCK_SIZE);
-
-                          if ((prefetch_address >= (el_last_accessed_page_num << LOG2_PAGE_SIZE)) && 
-                              (prefetch_address <= (el_last_accessed_page_num + 1) << LOG2_PAGE_SIZE)) {
-
-                            std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " " << std::dec << (unsigned)el_last_offset << " " << pt_query_res.value() << " xxx " << tmpp_pt_query_res.value() << " " << (unsigned)tmpp_c_delta << " " << (unsigned)tmpp_c_sig << std::dec << std::endl;
-                            context_switch_issue_queue.push_back({prefetch_address, true});
-                          }
-              }
+            auto res = context_switch_aux(el_sig, _delta, confidence, el_last_accessed_page_num, _last_offset); 
+            while (res.has_value() && confidence >= CUTOFF_THRESHOLD) {
+              res = context_switch_aux(el_sig, _delta, confidence, el_last_accessed_page_num, _last_offset);
             }
+          }
+          else {
+            std::cout << "Cross page boundary place 1" << std::endl;
           }
         }
       }
@@ -343,6 +344,34 @@ void spp::prefetcher::context_switch_gather_prefetches()
   std::cout << "Gathered " << context_switch_issue_queue.size() << " prefetches." << std::endl;
 }
 
+// WL 
+std::optional<uint64_t> spp::prefetcher::context_switch_aux(uint32_t &sig, int32_t delta, float &confidence, uint64_t page_num, uint32_t &last_offset)
+{
+  sig = ::generate_signature(sig, delta);
+  unsigned int tmpp_c_delta, tmpp_c_sig;
+  auto tmpp_pt_query_res = pattern_table.query_pt(sig, tmpp_c_delta, tmpp_c_sig);
+
+  if (tmpp_pt_query_res.has_value()) {
+    uint64_t prefetch_address = (page_num << LOG2_PAGE_SIZE) + ((last_offset + tmpp_pt_query_res.value()) << LOG2_BLOCK_SIZE);
+    confidence = confidence * tmpp_c_delta / tmpp_c_sig * filter.pf_useful / filter.pf_issued;
+
+    if ((prefetch_address >= (page_num << LOG2_PAGE_SIZE)) && 
+        (prefetch_address <= (page_num + 1) << LOG2_PAGE_SIZE) &&
+        confidence >= CUTOFF_THRESHOLD) {
+
+      std::cout << std::hex << "0x" << (unsigned)(page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " last_offset " << std::dec << (unsigned)last_offset << " delta " << tmpp_pt_query_res.value() << " c_delta " << (unsigned)tmpp_c_delta << " c_sig " << (unsigned)tmpp_c_sig << std::dec << " confidence " << confidence << std::endl;
+      context_switch_issue_queue.push_back({prefetch_address, true});
+      last_offset += tmpp_pt_query_res.value();
+      return tmpp_pt_query_res.value();
+    }
+  }
+  else {
+    std::cout << "Cross page boundary place 2" << std::endl;
+  }
+
+  return std::nullopt;
+}
+
 // WL
 bool spp::prefetcher::context_switch_queue_empty()
 {
@@ -365,6 +394,7 @@ void spp::prefetcher::context_switch_issue(CACHE* cache)
     // If this fails, the queue was full.
     bool prefetched = cache->prefetch_line(addr, priority, 0);
     if (prefetched) {
+      filter.update_issue(addr, cache->get_set(addr)); // Update the filter
       context_switch_issue_queue.pop_front();
     }
     else {
@@ -372,6 +402,7 @@ void spp::prefetcher::context_switch_issue(CACHE* cache)
       bool prefetched_retry = cache->prefetch_line(addr, !priority, 0);
 
       if (prefetched_retry) {
+        filter.update_issue(addr, cache->get_set(addr)); // Update the filter
         context_switch_issue_queue.pop_front();
       }
     }

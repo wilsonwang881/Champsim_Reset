@@ -3,7 +3,7 @@
 
 #include <map>
 
-#define L1D_PREFETCHER_IN_USE 0
+#define L1D_PREFETCHER_IN_USE 1
 #define CONTEXT_SWITCH_PREFETCH_IN_USE 1
 
 using unique_key = std::pair<CACHE*, uint32_t>;
@@ -59,7 +59,7 @@ void CACHE::prefetcher_cycle_operate()
       // Gather prefetches via the signature and pattern tables.
       if (!pref.context_switch_prefetch_gathered)
       {
-        pref.context_switch_gather_prefetches();
+        pref.context_switch_gather_prefetches(this);
         pref.context_switch_prefetch_gathered = true;
       }
      

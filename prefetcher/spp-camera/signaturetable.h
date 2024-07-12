@@ -39,7 +39,7 @@ namespace spp
       void clear();
       bool get_st_entry(int index, uint32_t &el_last_offet, uint32_t &el_sig, uint64_t &el_last_accessed_page_num);
       std::string record_Signature_Table();
-      std::array<std::pair<uint32_t, bool>, WAY * SET> get_sorted_signature();
+      std::array<std::pair<uint32_t, bool>, WAY * SET> get_sorted_signature(float threshold);
       // WL
   };
 }

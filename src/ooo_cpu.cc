@@ -161,26 +161,29 @@ void O3_CPU::dump_after_reset_data_accesses()
 // WL 
 uint16_t O3_CPU::calculate_asid(uint64_t instr_id)
 {
+  uint16_t asid;
+
   for (size_t i = 0; i <= champsim::operable::reset_ins_count_global.size(); i++) {
+
+    asid = i;
 
     // Case A: i == 0 
     if (i == 0 && instr_id <= champsim::operable::reset_ins_count_global[i]) {
-
-       return i;
+      break;
     }
     // Case B: 0 < i < max
     else if (i > 0 && i < champsim::operable::reset_ins_count_global.size() &&
         (champsim::operable::reset_ins_count_global[i] >= instr_id) &&
         (champsim::operable::reset_ins_count_global[i - 1] <= instr_id)) {
-      
-       return i;
+      break;  
     }
     // Case C: i == max
     else if (i == champsim::operable::reset_ins_count_global.size()) {
-
-       return i;
+      break;
     }
   }
+
+  return asid;
 }
 
 void O3_CPU::initialize_instruction()

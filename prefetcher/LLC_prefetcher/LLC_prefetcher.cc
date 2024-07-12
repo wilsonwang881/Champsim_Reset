@@ -5,8 +5,10 @@
 #include <cassert>
 
 #define PREFETCH_UNIT_SHIFT 8
-#define PREFETCH_UNIT_SIZE 64
+#define PREFETCH_UNIT_SIZE 256 
 #define NUMBER_OF_PREFETCH_UNIT 400
+#define HISTORY_SIZE 2000
+#define CUTOFF 1
 
 namespace {
 
@@ -14,6 +16,7 @@ namespace {
 
     std::unordered_set<uint64_t> uniq_page_address;
     std::unordered_set<uint64_t> uniq_prefetched_page_address;
+    std::deque<std::pair<uint64_t, uint64_t>> past_accesses;
  
     public:
 
@@ -22,26 +25,41 @@ namespace {
     std::deque<std::pair<uint64_t, bool>> context_switch_issue_queue;
     std::deque<std::tuple<uint64_t, uint64_t, uint64_t>> context_switch_prefetching_timing; 
 
+    bool check_within_block(uint64_t ref, uint64_t addr)
+    {
+
+      if (addr >= ref &&
+          addr < (ref + PREFETCH_UNIT_SIZE)) {
+
+          return true;
+      }
+
+      return false;
+    }
+
     void gather_context_switch_prefetches()
     {
       uniq_page_address.clear();
       context_switch_issue_queue.clear();
 
-      for (size_t i = reset_misc::before_reset_on_demand_data_access_index - 1; i > 0; i--) {
-         if (uniq_page_address.size() <= NUMBER_OF_PREFETCH_UNIT - 1) {
-          uniq_page_address.insert(reset_misc::before_reset_on_demand_data_access[i].ip >> PREFETCH_UNIT_SHIFT); // Half page prefetching
-         }
-      }
+      std::deque<reset_misc::on_demand_data_access> dq_cpy(reset_misc::dq_before_data_access.size());
+      std::copy(reset_misc::dq_before_data_access.begin(), reset_misc::dq_before_data_access.end(), dq_cpy.begin());
 
-      for (size_t i = ON_DEMAND_ACCESS_RECORD_SIZE - 1; i >= reset_misc::before_reset_on_demand_data_access_index; i--) {
+      for (size_t i = HISTORY_SIZE - 1; i > 0; i--) {
          if (uniq_page_address.size() <= NUMBER_OF_PREFETCH_UNIT - 1) {
-          uniq_page_address.insert(reset_misc::before_reset_on_demand_data_access[i].ip >> PREFETCH_UNIT_SHIFT); // Half page prefetching
-        }
+           //std::cout << std::hex << past_accesses[i].first << std::dec << " " << past_accesses[i].second << std::endl;
+           if (dq_cpy.back().load_or_store) {
+            //uniq_page_address.insert(past_accesses[i].first >> PREFETCH_UNIT_SHIFT); 
+            uniq_page_address.insert(reset_misc::dq_before_data_access.back().ip >> PREFETCH_UNIT_SHIFT); 
+           }
+
+           dq_cpy.pop_back();
+         }
       }
 
       if (uniq_page_address.size() <= NUMBER_OF_PREFETCH_UNIT) {
         for(auto var : uniq_page_address) {
-          for (size_t page_offset = 0; page_offset < (PREFETCH_UNIT_SIZE); page_offset = (page_offset + 64)) // Half page prefetching
+          for (size_t page_offset = 0; page_offset < PREFETCH_UNIT_SIZE; page_offset = (page_offset + 64)) // Half page prefetching
           {
             context_switch_issue_queue.push_back({(var << PREFETCH_UNIT_SHIFT) + page_offset, true});
           }
@@ -50,11 +68,11 @@ namespace {
 
       std::cout << "PREFETCH_UNIT_SHIFT = " << PREFETCH_UNIT_SHIFT << " PREFETCH_UNIT_SIZE = " << PREFETCH_UNIT_SIZE << " NUMBER_OF_PREFETCH_UNIT = " << NUMBER_OF_PREFETCH_UNIT << std::endl; 
 
-      /*
+      
       for(auto var : uniq_page_address) {
         std::cout << "Base address of page to be prefetched: " << std::hex << (var << PREFETCH_UNIT_SHIFT) << std::dec << std::endl;  
       }
-
+/*
       for(auto var : context_switch_issue_queue) {
         std::cout << std::hex << var.first << std::dec << std::endl; 
       }
@@ -96,11 +114,32 @@ namespace {
 
 void CACHE::prefetcher_initialize()
 {
-  std::cout << NAME << " -> Prefetcher initialized @ " << current_cycle << " cycles." << std::endl;
+  std::cout << NAME << " -> Prefetcher LLC Prefetcher initialized @ " << current_cycle << " cycles." << std::endl;
 }
 
 uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
 {
+  if (::trackers[this].past_accesses.size() >= HISTORY_SIZE) {
+    if (::trackers[this].check_within_block(::trackers[this].past_accesses.back().first, addr)) {
+      ::trackers[this].past_accesses.back().second++; 
+    }
+    else {
+      ::trackers[this].past_accesses.pop_front();
+      ::trackers[this].past_accesses.push_back(std::make_pair(addr, 1));
+    }
+  }
+  else if (::trackers[this].past_accesses.size() == 0) {
+    ::trackers[this].past_accesses.push_back(std::make_pair(addr, 1));
+  }
+  else {
+    if (::trackers[this].check_within_block(::trackers[this].past_accesses.back().first, addr)) {
+      ::trackers[this].past_accesses.back().second++; 
+    }
+    else {
+      ::trackers[this].past_accesses.push_back(std::make_pair(addr, 1));
+    }
+  }
+
   return metadata_in;
 }
 
