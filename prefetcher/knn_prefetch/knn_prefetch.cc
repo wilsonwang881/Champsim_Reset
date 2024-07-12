@@ -68,6 +68,7 @@ std::vector<uint64_t> distinct_page ( uint64_t* arr ,int n) //finding distinct p
       i++;  
     }
     special_page.push_back(arr[i]);
+    std::cout<<"The special pages are"<<arr[i]<<std::endl;
   }
   return special_page;
    //printf("The number of distinct page is:%d\n",special_page);
@@ -413,8 +414,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   float count_success=0; 
   for(size_t i=0;i<testDataSize;i++)
   {
-    //std::cout<<"The estimated classification at "<<i<< "are"<<finalData[i].classification<<std::endl;
-    //std::cout<<"The real classification are at "<<i<<"are"<<testData[i].classification<<std::endl;
+    std::cout<<"The estimated classification at "<<i<< "are"<<finalData[i].classification<<std::endl;
+    std::cout<<"The real classification are at "<<i<<"are"<<testData[i].classification<<std::endl;
     if(finalData[i].classification==testData[i].classification)
     {
       //printf("The classification is successful\n");
@@ -431,16 +432,20 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 
   std::vector<uint64_t> actual_prefetch;
   actual_prefetch= distinct_page (prefetch_candidate,testDataSize);
+  std::cout << "actual_prefetch = " << actual_prefetch.size() << std::endl;
   for(int i=0;i<actual_prefetch.size();i++)
   {
     for(int x=1;x<=(1<<(LOG2_PAGE_SIZE-LOG2_BLOCK_SIZE));x++)
     {
       //std::cout<<"The page we tend to prefetch is"<< actual_prefetch[i]<<std::endl;
       uint64_t pf_addr = (actual_prefetch[i]<<LOG2_PAGE_SIZE)+x*64;
+      prefetch_line(pf_addr, true, metadata_in);
+      /*
       if (!prefetch_line(pf_addr, true, metadata_in)){
-        x--;
-        std::cout<<"It is full "<<"The address is"<<pf_addr<<"at"<<x<<std::endl;
+        //x--;
+        //std::cout<<"It is full "<<"The address is"<<pf_addr<<"at"<<x<<std::endl;
       }
+      */
     }
   }
   //if(actual_prefetch.size()!=1)
@@ -519,6 +524,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
     if(finalData[i].classification==testData[i].classification)
     {
       //printf("The classification is successful\n");
+      std::cout<<"The classification is successful at"<<testData[i].classification<<std::endl;
       count_success++;
     }
   }

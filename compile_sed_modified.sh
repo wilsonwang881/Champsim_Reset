@@ -29,6 +29,7 @@ do
 
 	# Get the name of the binary.
  	tmpp_base_name=${bin_names[i]}
+  echo "Compiling $tmpp_base_name"
 
 	# Update macros.
  	sed -i "s/#define SIMULATE_WITH_CACHE_RESET 0/#define SIMULATE_WITH_CACHE_RESET ${cache_setting[i]}/g" inc/operable.h

@@ -16,3 +16,5 @@ tracer/pin/obj-intel64/
 vcpkg_installed/
 
 **/*.DS_Store
+
+.vscode/

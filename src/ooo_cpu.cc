@@ -245,6 +245,7 @@ void O3_CPU::initialize_instruction()
     // Before push_back to IFETCH_BUFFER, need to change the ASID first
     // But exclude ASID calculation in the baseline
     // where the reset instruction numbers need to be recorded
+    std::cout << DUMP_INS_NUMBER_EVERY_4M_CYCLES << std::endl;
     if (DUMP_INS_NUMBER_EVERY_4M_CYCLES == 0) 
       input_queue.front().asid[0] = calculate_asid(input_queue.front().instr_id);
 
