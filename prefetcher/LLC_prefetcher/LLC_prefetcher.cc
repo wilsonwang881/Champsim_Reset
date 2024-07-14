@@ -5,7 +5,7 @@
 #include <cassert>
 
 #define PREFETCH_UNIT_SHIFT 8
-#define PREFETCH_UNIT_SIZE 512
+#define PREFETCH_UNIT_SIZE 128
 #define NUMBER_OF_PREFETCH_UNIT 2000
 #define HISTORY_SIZE 9000
 #define CUTOFF 1
@@ -48,7 +48,7 @@ namespace {
       for (size_t i = 0; i < dq_cpy.size(); i++) {
          if (uniq_page_address.size() <= NUMBER_OF_PREFETCH_UNIT - 1) {
            if (dq_cpy.back().load_or_store && 
-               dq_cpy.back().occurance > 0) {
+               dq_cpy.back().occurance > 1) {
             uniq_page_address.insert(dq_cpy.back().ip >> PREFETCH_UNIT_SHIFT); 
            }
 
@@ -60,14 +60,17 @@ namespace {
         for(auto var : uniq_page_address) {
           for (size_t page_offset = 0; page_offset < PREFETCH_UNIT_SIZE; page_offset = (page_offset + 64)) // Half page prefetching
           {
-            context_switch_issue_queue.push_back({(var << PREFETCH_UNIT_SHIFT) + page_offset, true});
+            auto prefetch_target = std::make_pair((var << PREFETCH_UNIT_SHIFT) + page_offset, true);
+            if (std::find(context_switch_issue_queue.begin(), context_switch_issue_queue.end(), prefetch_target) == context_switch_issue_queue.end() &&
+                prefetch_target.first < (((prefetch_target.first >> LOG2_PAGE_SIZE) << LOG2_PAGE_SIZE) + 4096)) {
+              context_switch_issue_queue.push_back(prefetch_target);
+            }
           }
         }
       }
 
       std::cout << "PREFETCH_UNIT_SHIFT = " << PREFETCH_UNIT_SHIFT << " PREFETCH_UNIT_SIZE = " << PREFETCH_UNIT_SIZE << " NUMBER_OF_PREFETCH_UNIT = " << NUMBER_OF_PREFETCH_UNIT << std::endl; 
 
-      
       for(auto var : uniq_page_address) {
         //std::cout << "Base address of page to be prefetched: " << std::hex << (var << PREFETCH_UNIT_SHIFT) << std::dec << std::endl;  
       }
@@ -77,7 +80,7 @@ namespace {
       }
       */ 
 
-      std::cout << "Ready to issue prefetches for " << uniq_page_address.size() << " page(s) and " << context_switch_issue_queue.size() << " prefetch(es)" << std::endl;
+      std::cout << "LLC Prefetcher: ready to issue prefetches for " << uniq_page_address.size() << " page(s) and " << context_switch_issue_queue.size() << " prefetch(es)" << std::endl;
     }
 
     bool context_switch_queue_empty()
@@ -198,6 +201,7 @@ void CACHE::prefetcher_cycle_operate()
           && !champsim::operable::have_cleared_BP
           && champsim::operable::cpu_side_reset_ready
           && !champsim::operable::have_cleared_prefetcher
+          && champsim::operable::L2C_have_issued_context_switch_prefetches
           ) {//&& champsim::operable::cache_clear_counter == 7
         champsim::operable::context_switch_mode = false;
         champsim::operable::cpu_side_reset_ready = false;

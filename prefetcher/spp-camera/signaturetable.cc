@@ -117,7 +117,7 @@ std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE
     percent_sum += (el.last_used - base); 
 
   uint64_t percent_cut_off_point = static_cast<uint64_t>(percent_sum >> 2); // Cut off point: 1/4 of the sum.
-  std::cout << "Walking SPP signature table threshold = " << threshold << " not in use but percent_sum >> 2" << std::endl; 
+  //std::cout << "Walking SPP signature table threshold = " << threshold << " not in use but percent_sum >> 2" << std::endl; 
 
   uint64_t accumulate_percent = 0;
 

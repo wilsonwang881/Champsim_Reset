@@ -284,9 +284,9 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 
       if (found_in_return_data) {
         uint64_t current_prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + (el_last_offset << LOG2_BLOCK_SIZE);
-        std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)current_prefetch_address << std::dec << " initial " << std::endl;
+        //std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)current_prefetch_address << std::dec << " initial " << std::endl;
 
-        std::cout << std::bitset<16>((el_sig << 12) >> 12) << std::dec << std::endl;
+        //std::cout << std::bitset<16>((el_sig << 12) >> 12) << std::dec << std::endl;
         context_switch_issue_queue.push_back({current_prefetch_address, true}); 
 
         // Use the signature and offset to index into the pattern table.
@@ -303,7 +303,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
           if ((prefetch_address >= (el_last_accessed_page_num << LOG2_PAGE_SIZE)) && 
               (prefetch_address <= (el_last_accessed_page_num + 1) << LOG2_PAGE_SIZE)) {
 
-            std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " last_offset " << std::dec << (unsigned)el_last_offset << " delta " << pt_query_res.value() << " c_delta " << (unsigned)c_delta << " c_sig " << (unsigned)c_sig << std::dec << " confidence " << confidence << std::endl;
+            //std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " last_offset " << std::dec << (unsigned)el_last_offset << " delta " << pt_query_res.value() << " c_delta " << (unsigned)c_delta << " c_sig " << (unsigned)c_sig << std::dec << " confidence " << confidence << std::endl;
             context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE), true});
 
             // Second level lookahead prefetching.
@@ -341,7 +341,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
     context_switch_issue_queue.push_back(var); 
   }
 
-  std::cout << "Gathered " << context_switch_issue_queue.size() << " prefetches." << std::endl;
+  std::cout << "L2C SPP Gathered " << context_switch_issue_queue.size() << " prefetches." << std::endl;
 }
 
 // WL 
@@ -359,7 +359,7 @@ std::optional<uint64_t> spp::prefetcher::context_switch_aux(uint32_t &sig, int32
         (prefetch_address <= (page_num + 1) << LOG2_PAGE_SIZE) &&
         confidence >= CUTOFF_THRESHOLD) {
 
-      std::cout << std::hex << "0x" << (unsigned)(page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " last_offset " << std::dec << (unsigned)last_offset << " delta " << tmpp_pt_query_res.value() << " c_delta " << (unsigned)tmpp_c_delta << " c_sig " << (unsigned)tmpp_c_sig << std::dec << " confidence " << confidence << std::endl;
+      //std::cout << std::hex << "0x" << (unsigned)(page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " last_offset " << std::dec << (unsigned)last_offset << " delta " << tmpp_pt_query_res.value() << " c_delta " << (unsigned)tmpp_c_delta << " c_sig " << (unsigned)tmpp_c_sig << std::dec << " confidence " << confidence << std::endl;
       context_switch_issue_queue.push_back({prefetch_address, true});
       last_offset += tmpp_pt_query_res.value();
       return tmpp_pt_query_res.value();

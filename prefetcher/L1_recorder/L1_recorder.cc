@@ -6,6 +6,7 @@
 #define PREFETCH_UNIT_SHIFT 8
 #define PREFETCH_UNIT_SIZE 64
 #define NUMBER_OF_PREFETCH_UNIT 400
+#define OBSERVATION_WINDOW 10
 
 namespace {
 
@@ -35,6 +36,15 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   if (reset_misc::dq_before_data_access.size() == 0) {
      reset_misc::dq_before_data_access.push_back(acc); 
      return metadata_in;  
+  }
+
+  // Check the past n accesses
+  size_t limit = (reset_misc::dq_before_data_access.size() > OBSERVATION_WINDOW) ? reset_misc::dq_before_data_access.size() : 0;
+  for (size_t i = reset_misc::dq_before_data_access.size() - 1; i > limit ; i--) {
+    if (reset_misc::dq_before_data_access[i].ip == addr) {
+      reset_misc::dq_before_data_access[i].occurance++;
+      return metadata_in;
+    }
   }
 
   // Check if addr same as the last one.

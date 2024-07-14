@@ -79,6 +79,7 @@ public:
   static uint64_t reset_count;
   // WL
   static bool context_switch_mode;
+  static bool L2C_have_issued_context_switch_prefetches;
   static bool have_recorded_on_demand_ins_accesses;
   static bool have_recorded_on_demand_data_accesses;
   static bool have_recorded_before_reset_on_demand_ins_accesses;

@@ -3,7 +3,7 @@
 
 #include <map>
 
-#define L1D_PREFETCHER_IN_USE 1
+#define L1D_PREFETCHER_IN_USE 0
 #define CONTEXT_SWITCH_PREFETCH_IN_USE 1
 
 using unique_key = std::pair<CACHE*, uint32_t>;
@@ -54,7 +54,7 @@ void CACHE::prefetcher_cycle_operate()
 
   // Gather and issue prefetches after a context switch.
   if (!L1D_PREFETCHER_IN_USE) {
-    if (champsim::operable::context_switch_mode)
+    if (champsim::operable::context_switch_mode && !champsim::operable::L2C_have_issued_context_switch_prefetches)
     {
       // Gather prefetches via the signature and pattern tables.
       if (!pref.context_switch_prefetch_gathered)
@@ -85,7 +85,8 @@ void CACHE::prefetcher_cycle_operate()
             && !champsim::operable::have_cleared_prefetcher
             && champsim::operable::cpu_side_reset_ready) {
             //&& champsim::operable::cache_clear_counter == 7) {
-          champsim::operable::context_switch_mode = false;
+          //champsim::operable::context_switch_mode = false;
+          champsim::operable::L2C_have_issued_context_switch_prefetches = true;
           champsim::operable::cpu_side_reset_ready = false;
           champsim::operable::cache_clear_counter = 0;
           pref.context_switch_prefetch_gathered = false;
