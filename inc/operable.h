@@ -28,7 +28,7 @@
 #define SIMULATE_WITH_BRANCH_PREDICTOR_RESET 0
 #define RESET_INTERVAL 4000000
 #define ON_DEMAND_ACCESS_RECORD_SIZE 1000
-#define DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE 3000
+#define DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE 12000
 
 #include <string>
 #include <deque>
@@ -44,6 +44,7 @@ namespace reset_misc {
   
   struct on_demand_data_access : on_demand_ins_access {
     bool load_or_store; 
+    uint64_t occurance;
   };
 
   extern on_demand_ins_access before_reset_on_demand_ins_access[ON_DEMAND_ACCESS_RECORD_SIZE];

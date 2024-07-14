@@ -5,9 +5,9 @@
 #include <cassert>
 
 #define PREFETCH_UNIT_SHIFT 8
-#define PREFETCH_UNIT_SIZE 256 
-#define NUMBER_OF_PREFETCH_UNIT 400
-#define HISTORY_SIZE 2000
+#define PREFETCH_UNIT_SIZE 512
+#define NUMBER_OF_PREFETCH_UNIT 2000
+#define HISTORY_SIZE 9000
 #define CUTOFF 1
 
 namespace {
@@ -45,12 +45,11 @@ namespace {
       std::deque<reset_misc::on_demand_data_access> dq_cpy(reset_misc::dq_before_data_access.size());
       std::copy(reset_misc::dq_before_data_access.begin(), reset_misc::dq_before_data_access.end(), dq_cpy.begin());
 
-      for (size_t i = HISTORY_SIZE - 1; i > 0; i--) {
+      for (size_t i = 0; i < dq_cpy.size(); i++) {
          if (uniq_page_address.size() <= NUMBER_OF_PREFETCH_UNIT - 1) {
-           //std::cout << std::hex << past_accesses[i].first << std::dec << " " << past_accesses[i].second << std::endl;
-           if (dq_cpy.back().load_or_store) {
-            //uniq_page_address.insert(past_accesses[i].first >> PREFETCH_UNIT_SHIFT); 
-            uniq_page_address.insert(reset_misc::dq_before_data_access.back().ip >> PREFETCH_UNIT_SHIFT); 
+           if (dq_cpy.back().load_or_store && 
+               dq_cpy.back().occurance > 0) {
+            uniq_page_address.insert(dq_cpy.back().ip >> PREFETCH_UNIT_SHIFT); 
            }
 
            dq_cpy.pop_back();
@@ -70,7 +69,7 @@ namespace {
 
       
       for(auto var : uniq_page_address) {
-        std::cout << "Base address of page to be prefetched: " << std::hex << (var << PREFETCH_UNIT_SHIFT) << std::dec << std::endl;  
+        //std::cout << "Base address of page to be prefetched: " << std::hex << (var << PREFETCH_UNIT_SHIFT) << std::dec << std::endl;  
       }
 /*
       for(auto var : context_switch_issue_queue) {

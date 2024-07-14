@@ -27,15 +27,27 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 {
   reset_misc::on_demand_data_access acc;
   acc.cycle = current_cycle;
-  acc.ip = addr;
+  acc.ip = (addr >> LOG2_BLOCK_SIZE) << LOG2_BLOCK_SIZE;
   acc.load_or_store = (type == 0) ? true : false;
+  acc.occurance = 1;
 
-  if (reset_misc::dq_before_data_access.size() < DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE) {
-    reset_misc::dq_before_data_access.push_back(acc); 
+  // Check if deque empty
+  if (reset_misc::dq_before_data_access.size() == 0) {
+     reset_misc::dq_before_data_access.push_back(acc); 
+     return metadata_in;  
+  }
+
+  // Check if addr same as the last one.
+  if (reset_misc::dq_before_data_access.back().ip == addr) {
+    reset_misc::dq_before_data_access.back().occurance++;
   }
   else {
+    reset_misc::dq_before_data_access.push_back(acc); 
+  }
+
+  // Check if length exceeds the limit
+  if (reset_misc::dq_before_data_access.size() > DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE) {
     reset_misc::dq_before_data_access.pop_front();
-    reset_misc::dq_before_data_access.push_back(acc);
   }
 
   return metadata_in;
