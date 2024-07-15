@@ -40,11 +40,11 @@ namespace reset_misc {
   struct on_demand_ins_access {
     uint64_t cycle;
     uint64_t ip;
+    uint64_t occurance;
   };
   
   struct on_demand_data_access : on_demand_ins_access {
     bool load_or_store; 
-    uint64_t occurance;
   };
 
   extern on_demand_ins_access before_reset_on_demand_ins_access[ON_DEMAND_ACCESS_RECORD_SIZE];

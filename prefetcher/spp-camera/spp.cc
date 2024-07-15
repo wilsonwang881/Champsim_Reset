@@ -257,7 +257,6 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   */
 
   cache->clear_internal_PQ();
-  std::cout << cache->NAME << " internal_PQ cleared" << std::endl;
   filter.clear();
   std::cout << "Filter cleared" << std::endl;
 

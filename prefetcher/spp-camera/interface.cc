@@ -87,7 +87,7 @@ void CACHE::prefetcher_cycle_operate()
             //&& champsim::operable::cache_clear_counter == 7) {
           //champsim::operable::context_switch_mode = false;
           champsim::operable::L2C_have_issued_context_switch_prefetches = true;
-          champsim::operable::cpu_side_reset_ready = false;
+          //champsim::operable::cpu_side_reset_ready = false;
           champsim::operable::cache_clear_counter = 0;
           pref.context_switch_prefetch_gathered = false;
           std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;

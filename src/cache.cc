@@ -833,6 +833,7 @@ void CACHE::print_deadlock()
 void CACHE::clear_internal_PQ()
 {
   internal_PQ.clear();
+  std::cout << NAME << " internal_PQ cleared" << std::endl;
 }
 
 // WL

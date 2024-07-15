@@ -21,7 +21,7 @@ namespace {
 
 void CACHE::prefetcher_initialize()
 {
-  std::cout << NAME << " -> Prefetcher L1 recorder initialized @ " << current_cycle << " cycles." << std::endl;
+  std::cout << NAME << " -> Prefetcher L1D recorder initialized @ " << current_cycle << " cycles." << std::endl;
 }
 
 uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)

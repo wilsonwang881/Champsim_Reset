@@ -5,7 +5,8 @@
 #include <cassert>
 
 #define PREFETCH_UNIT_SHIFT 8
-#define PREFETCH_UNIT_SIZE 128
+#define PREFETCH_UNIT_SIZE 256
+#define INS_PREFETCH_UNIT_SIZE 64
 #define NUMBER_OF_PREFETCH_UNIT 2000
 #define HISTORY_SIZE 9000
 #define CUTOFF 1
@@ -15,6 +16,7 @@ namespace {
   struct tracker {
 
     std::unordered_set<uint64_t> uniq_page_address;
+    std::unordered_set<uint64_t> uniq_ins_page_address;
     std::unordered_set<uint64_t> uniq_prefetched_page_address;
     std::deque<std::pair<uint64_t, uint64_t>> past_accesses;
  
@@ -45,8 +47,12 @@ namespace {
       std::deque<reset_misc::on_demand_data_access> dq_cpy(reset_misc::dq_before_data_access.size());
       std::copy(reset_misc::dq_before_data_access.begin(), reset_misc::dq_before_data_access.end(), dq_cpy.begin());
 
-      for (size_t i = 0; i < dq_cpy.size(); i++) {
-         if (uniq_page_address.size() <= NUMBER_OF_PREFETCH_UNIT - 1) {
+      std::deque<reset_misc::on_demand_ins_access> dq_cpy_ins(reset_misc::dq_before_ins_access.size());
+      std::copy(reset_misc::dq_before_ins_access.begin(), reset_misc::dq_before_ins_access.end(), dq_cpy_ins.begin());
+
+      for (size_t i = 0; i < HISTORY_SIZE; i++) {
+         if (uniq_page_address.size() <= NUMBER_OF_PREFETCH_UNIT - 1 &&
+             dq_cpy.size() > 0) {
            if (dq_cpy.back().load_or_store && 
                dq_cpy.back().occurance > 1) {
             uniq_page_address.insert(dq_cpy.back().ip >> PREFETCH_UNIT_SHIFT); 
@@ -54,11 +60,37 @@ namespace {
 
            dq_cpy.pop_back();
          }
+
+        /*
+        if (uniq_ins_page_address.size() <= NUMBER_OF_PREFETCH_UNIT - 1 &&
+            dq_cpy_ins.size() > 0) {
+           if (dq_cpy_ins.back().occurance > 0) {
+            uniq_ins_page_address.insert(dq_cpy_ins.back().ip >> PREFETCH_UNIT_SHIFT); 
+           }
+
+           dq_cpy_ins.pop_back();
+         }
+         */
       }
 
       if (uniq_page_address.size() <= NUMBER_OF_PREFETCH_UNIT) {
         for(auto var : uniq_page_address) {
-          for (size_t page_offset = 0; page_offset < PREFETCH_UNIT_SIZE; page_offset = (page_offset + 64)) // Half page prefetching
+          for (int page_offset = 0; page_offset < PREFETCH_UNIT_SIZE; page_offset = (page_offset + 64)) // Half page prefetching
+          {
+            auto prefetch_target = std::make_pair((var << PREFETCH_UNIT_SHIFT) + page_offset, true);
+            if (std::find(context_switch_issue_queue.begin(), context_switch_issue_queue.end(), prefetch_target) == context_switch_issue_queue.end() 
+                && prefetch_target.first < (((prefetch_target.first >> LOG2_PAGE_SIZE) << LOG2_PAGE_SIZE) + 4096)
+                && prefetch_target.first >= ((prefetch_target.first >> LOG2_PAGE_SIZE) << LOG2_PAGE_SIZE)) {
+              context_switch_issue_queue.push_back(prefetch_target);
+            }
+          }
+        }
+      }
+
+      /*
+      if (uniq_ins_page_address.size() <= NUMBER_OF_PREFETCH_UNIT) {
+        for(auto var : uniq_ins_page_address) {
+          for (size_t page_offset = 0; page_offset < INS_PREFETCH_UNIT_SIZE; page_offset = (page_offset + 64)) // Half page prefetching
           {
             auto prefetch_target = std::make_pair((var << PREFETCH_UNIT_SHIFT) + page_offset, true);
             if (std::find(context_switch_issue_queue.begin(), context_switch_issue_queue.end(), prefetch_target) == context_switch_issue_queue.end() &&
@@ -68,6 +100,7 @@ namespace {
           }
         }
       }
+      */
 
       std::cout << "PREFETCH_UNIT_SHIFT = " << PREFETCH_UNIT_SHIFT << " PREFETCH_UNIT_SIZE = " << PREFETCH_UNIT_SIZE << " NUMBER_OF_PREFETCH_UNIT = " << NUMBER_OF_PREFETCH_UNIT << std::endl; 
 
@@ -80,7 +113,7 @@ namespace {
       }
       */ 
 
-      std::cout << "LLC Prefetcher: ready to issue prefetches for " << uniq_page_address.size() << " page(s) and " << context_switch_issue_queue.size() << " prefetch(es)" << std::endl;
+      std::cout << "LLC Prefetcher: ready to issue prefetches for " << uniq_page_address.size() << " + " << uniq_ins_page_address.size() << " page(s) and " << context_switch_issue_queue.size() << " prefetch(es)" << std::endl;
     }
 
     bool context_switch_queue_empty()
