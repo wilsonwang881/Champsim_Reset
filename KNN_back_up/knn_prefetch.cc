@@ -163,6 +163,43 @@ ClassifiedPoint convertToIrisPoint(int x){
   return point;
 }
 
+ClassifiedPoint convertToIrisPoint_aft_2 (int x){
+  //ClassifiedPoint* point = (ClassifiedPoint *) malloc(sizeof(ClassifiedPoint));
+  ClassifiedPoint point {};
+  //uint64_t * pos = (uint64_t *)malloc(2 * sizeof(uint64_t));
+  uint64_t pos[2];
+  //before clk
+  pos[0] = reset_misc::before_reset_on_demand_ins_access[x].cycle;
+  //pos[0] = reset_misc::before_reset_on_demand_data_access[x].cycle;
+  //before adr
+  pos[1] = reset_misc::before_reset_on_demand_ins_access[x].ip;
+  //pos[1] = reset_misc::before_reset_on_demand_data_access[x].ip;
+  //Septal Length
+  //pos[2] = strtof(strtok(NULL, ","),NULL);
+  //Septal Width
+  //pos[3] = strtof(strtok(NULL, ","),NULL);
+  
+  point.point_1= pos[0];
+  point.point_2 =pos[1];
+  //Target
+  //uint64_t page_num= (reset_misc::after_reset_on_demand_ins_access[x].ip)>>12;
+  //uint64_t page_num= (reset_misc::after_reset_on_demand_data_access[x].ip)>>12;
+  //point.classification = page_num;
+
+  return point;
+}
+
+ClassifiedPoint convertToIrisPoint_only_page_num (int x){
+  //ClassifiedPoint* point = (ClassifiedPoint *) malloc(sizeof(ClassifiedPoint));
+  ClassifiedPoint point {};
+  
+  //Target
+  uint64_t page_num= (reset_misc::after_reset_on_demand_ins_access[x].ip)>>12;
+  //uint64_t page_num= (reset_misc::after_reset_on_demand_data_access[x].ip)>>12;
+  point.classification = page_num;
+
+  return point;
+}
 
 /**
  * Reading Data from the specified File
@@ -198,8 +235,8 @@ ClassifiedPoint convertToIrisPoint(int x){
   //if(overall==NULL)
     //std::cout<<"The allocation failure occurs"<<std::endl;
 
-    for (int i=0;i<total_size;i++){
-      ClassifiedPoint p =  convertToIrisPoint(i);
+  for (int i=0;i<total_size;i++){
+      ClassifiedPoint p = convertToIrisPoint(i);
       //overall[i] = *p;
       overall.push_back(p);
       //std::cout<<"The overall should have the point value at "<<i<<"is"<<overall[i].classification<<std::endl;
@@ -219,7 +256,8 @@ ClassifiedPoint convertToIrisPoint(int x){
   int no_match;
   for (int z=0;z<train_size;z++)
   {
-    x=rand()%999;
+    //x=rand()%999;
+    x=(1000/train_size)*(z);
     train[z]=overall[x];
     train_save.push_back(train[z]);
     record[z]=x;
@@ -270,6 +308,89 @@ ClassifiedPoint convertToIrisPoint(int x){
   //return ( *(uint64_t*)a - *(uint64_t*)b );
 //}
 
+void readTrainingData_aft_2 (int numOfLines, std::deque<ClassifiedPoint> &train, std::deque<ClassifiedPoint> &test, int train_size ,int total_size){
+  //FILE* fileptr;
+  //fileptr = fopen(filename, "r");
+  //fseek(fileptr,saved,SEEK_SET);
+
+  //int bufferLen = 255;
+  //char buffer[bufferLen];
+  int i = 0;
+  //Randomnize data
+  int x =0;
+  int record[train_size];
+  //uint64_t page_number[numOfLines];
+  //allocate the space for determining the KNN label
+  //point_label* label = malloc(train_size*sizeof(point_label));
+
+  //ClassifiedPoint*train_save= (ClassifiedPoint *)malloc(sizeof(ClassifiedPoint) * train_size);
+  std::deque<ClassifiedPoint> train_save (train_size);
+  //ClassifiedPoint*overall = (ClassifiedPoint *) malloc(sizeof(ClassifiedPoint) * 1000);
+  std::deque<ClassifiedPoint> overall (total_size);
+  train_save.clear();
+  overall.clear();
+  //train.clear();
+  //test.clear();
+  //if(overall==NULL)
+    //std::cout<<"The allocation failure occurs"<<std::endl;
+
+    for (int i=0;i<total_size;i++){
+      ClassifiedPoint p =  convertToIrisPoint_aft_2(i);
+      //overall[i] = *p;
+      overall.push_back(p);
+      //std::cout<<"The overall should have the point value at "<<i<<"is"<<overall[i].classification<<std::endl;
+      //std::cout<<"The overall should have the point value at "<<i<<"is"<<overall[i]->point<<std::endl;
+      //page_number[i]=overall[i].classification;
+      //printf("Has entered\n");
+  }
+  i=0;
+  int match=0;
+  int no_match;
+  for (int z=0;z<train_size;z++)
+  {
+    x=(1000/train_size)*(z);
+    train[z]=overall[x];
+    train_save.push_back(train[z]);
+    record[z]=x;
+    //printf("The training data set is: %d\n",train_save[z].classification);
+    //printf("The record number is: %d\n",record[z]);
+    //std::cout<<"The train_save has"<<train_save[z].classification<<std::endl;
+    //std::cout<<"The train_save has the point value at "<<z<<"is"<<train_save[z].point[0]<<std::endl;
+    //std::cout<<"The train_save has the point value "<<z<<"is"<<train_save[z].point[1]<<std::endl;
+  }
+  while(i<total_size)
+  {
+    no_match=0;
+    for(int j=0;j<train_size;j++)
+    {
+      if(i!=record[j])
+      {
+        no_match++;
+      }
+      if(i==record[j])
+      {
+        match++;
+        //printf("Number of match is:%d\n",match);
+        i++;
+        break;
+      }
+      if(no_match==train_size)
+      {
+        test[i-match]=overall[i-match];
+        //test.at(i-match)=overall[i-match];
+        int y=i-match;
+        //printf("The test iteration is:%d\n",y);
+        i++;
+      }
+    }
+  //printf("The iteration is:%d\n",i);
+  }
+  //fclose(fileptr);
+  //std::cout<<"The lpoop is out"<<std::endl;
+  //return train_save;
+}
+
+
 uint64_t findMajorityClass(std::deque<ClassifiedDistance> & neighbors,int k){
   int count0=0,count1=0;
   uint64_t compare[k];
@@ -296,31 +417,7 @@ uint64_t findMajorityClass(std::deque<ClassifiedDistance> & neighbors,int k){
     }
   }
   return compare[res];
-
-
-
-  //printf("The majority page is:%d\n",compare[res]);
-  //int count[2]={0,0};
-  //for(int i=0;i<k;++i){
-    //if(neighbors[i].classification==1025){
-    //count[0]++;
-    //}
-    //if(neighbors[i].classification==1026){
-      //count[1]++;
-    //}
-    ////if(neighbors[i].classification==1027){
-      ////count[2]++;
-    ////}
-  //}
-  //if(count[0]>count[1])
-    //{return 1025;}
-  //else{
-    //return 1026;
-  //}
-  ////qsort(count,2,sizeof(int),compare);
-    ////printf("The final pairing outcome is:%d \n",count[1]);
-  ////return count[1];
-}
+  }
 
 int classify_1(int dimensions, std::deque<ClassifiedPoint> & trainedData, int trainedSize, ClassifiedPoint & toClassify,int k ){
   
@@ -361,6 +458,89 @@ int classify_1(int dimensions, std::deque<ClassifiedPoint> & trainedData, int tr
 
 }
 
+void add_classification (int numOfLines, std::deque<ClassifiedPoint> &train, std::deque<ClassifiedPoint> &test, int train_size ,int total_size){
+  //FILE* fileptr;
+  //fileptr = fopen(filename, "r");
+  //fseek(fileptr,saved,SEEK_SET);
+
+  //int bufferLen = 255;
+  //char buffer[bufferLen];
+  int i = 0;
+  //Randomnize data
+  int x =0;
+  int record[train_size];
+
+  //ClassifiedPoint*train_save= (ClassifiedPoint *)malloc(sizeof(ClassifiedPoint) * train_size);
+  std::deque<ClassifiedPoint> train_save (train_size);
+  //ClassifiedPoint*overall = (ClassifiedPoint *) malloc(sizeof(ClassifiedPoint) * 1000);
+  std::deque<ClassifiedPoint> overall (total_size);
+  train_save.clear();
+  overall.clear();
+  //train.clear();
+  //test.clear();
+  //if(overall==NULL)
+    //std::cout<<"The allocation failure occurs"<<std::endl;
+
+  for (int i=0;i<total_size;i++){
+      ClassifiedPoint p = convertToIrisPoint_only_page_num (i);
+      //overall[i] = *p;
+      overall.push_back(p);
+  }
+  //fseek(fileptr,0,SEEK_CUR);
+  //saved=ftell(fileptr);
+  //printf("The file pointer after the reading is: %ld \n",ftell(fileptr));
+
+  //find the unique pages
+  //distinct_page(page_number,numOfLines,special_page,page_number);
+  //get the training data
+  i=0;
+  int match=0;
+  int no_match;
+  for (int z=0;z<train_size;z++)
+  {
+    x=(1000/train_size)*(z);
+    train[z].classification=overall[x].classification;
+    //train_save.push_back(train[z]);
+    record[z]=x;
+    //printf("The training data set is: %d\n",train_save[z].classification);
+    //printf("The record number is: %d\n",record[z]);
+    //std::cout<<"The train_save has"<<train_save[z].classification<<std::endl;
+    //std::cout<<"The train_save has the point value at "<<z<<"is"<<train_save[z].point[0]<<std::endl;
+    //std::cout<<"The train_save has the point value "<<z<<"is"<<train_save[z].point[1]<<std::endl;
+  }
+  while(i<total_size)
+  {
+    no_match=0;
+    for(int j=0;j<train_size;j++)
+    {
+      if(i!=record[j])
+      {
+        no_match++;
+      }
+      if(i==record[j])
+      {
+        match++;
+        //printf("Number of match is:%d\n",match);
+        i++;
+        break;
+      }
+      if(no_match==train_size)
+      {
+        test[i-match].classification=overall[i-match].classification;
+        //test.at(i-match)=overall[i-match];
+        int y=i-match;
+        //printf("The test iteration is:%d\n",y);
+        i++;
+      }
+    }
+  //printf("The iteration is:%d\n",i);
+  }
+  //fclose(fileptr);
+  //std::cout<<"The lpoop is out"<<std::endl;
+  //return train_save;
+}
+
+
 }
 void CACHE::prefetcher_initialize() {}
 
@@ -371,7 +551,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   {
     //std::cout<<"at round"<<champsim::operable::reset_count<<std::endl;
   }
-  if((champsim::operable::knn_can_predict == true) && (champsim::operable::reset_count==1))
+  if(champsim::operable::reset_count==1)
   {
   std::cout<<"Enter the round 1"<<std::endl;
   uint64_t prefetch_candidate[testDataSize];
@@ -388,7 +568,9 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   //std::cout<<"The core malloc is finished up"<<std::endl;
   //Read the Trained Data from CSV- File and Store it into TrainData Array
   readTrainingData(totalDataSize, trainData,testData,trainDataSize,totalDataSize);
-  current_train=trainData;
+  //current_train=trainData;
+  copy(trainData.begin(), trainData.end(),
+        current_train.begin());
   //std::cout<<"The size of the current_train elements is"<<current_train.size()<<std::endl;
   //for(int i=0;i<15;i++)
  // {
@@ -428,8 +610,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   //printf("The testDataSize is:%d\n",testDataSize);
   //printf("The final accuracy is:%f \n",final_accuracy);
   std::cout<<"The accuracy at round"<<champsim::operable::reset_count<<"is"<<final_accuracy<<std::endl;
-  previous_train=current_train;
-
+  //previous_train=current_train;
+  copy(current_train.begin(),current_train.end(),previous_train.begin());
   std::vector<uint64_t> actual_prefetch;
   actual_prefetch= distinct_page (prefetch_candidate,testDataSize);
   std::cout << "actual_prefetch = " << actual_prefetch.size() << std::endl;
@@ -476,9 +658,9 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 
 
 
-  if((champsim::operable::knn_can_predict == true) && (champsim::operable::reset_count>1)&&(final_accuracy>0.7))
+  if((champsim::operable::knn_can_predict == true) && (champsim::operable::reset_count>1))
   {
-  std::cout<<"No Replacement at round"<<champsim::operable::reset_count<<std::endl;
+  //std::cout<<"No Replacement at round"<<champsim::operable::reset_count<<std::endl;
   uint64_t prefetch_candidate[testDataSize];
   //ClassifiedPoint *  trainData = (ClassifiedPoint*)malloc(sizeof(ClassifiedPoint) * trainDataSize);
   std::deque<ClassifiedPoint> trainData (trainDataSize);
@@ -492,8 +674,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   std::deque<ClassifiedPoint> current_train(trainDataSize); 
   //std::cout<<"The core malloc is finished up"<<std::endl;
   //Read the Trained Data from CSV- File and Store it into TrainData Array
-  readTrainingData(totalDataSize, trainData,testData,trainDataSize,totalDataSize);
-  current_train=trainData;
+  readTrainingData_aft_2(totalDataSize, trainData,testData,trainDataSize,totalDataSize);
+  //current_train=trainData;
   //std::cout<<"The size of the current_train elements is"<<current_train.size()<<std::endl;
   //for(int i=0;i<15;i++)
  // {
@@ -514,29 +696,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
       //prefetch_line(pf_addr, true, metadata_in);
     //}
   }
-  //std::cout<<"The prefetch is finished up"<<std::endl;
-  //accuracy check
-  float count_success=0; 
-  for(size_t i=0;i<testDataSize;i++)
-  {
-    //std::cout<<"The estimated classification at "<<i<< "are"<<finalData[i].classification<<std::endl;
-    //std::cout<<"The real classification are at "<<i<<"are"<<testData[i].classification<<std::endl;
-    if(finalData[i].classification==testData[i].classification)
-    {
-      //printf("The classification is successful\n");
-      std::cout<<"The classification is successful at"<<testData[i].classification<<std::endl;
-      count_success++;
-    }
-  }
-
-  //champsim::operable::knn_accuracy=count_success/testDataSize;
-  final_accuracy=count_success/testDataSize;
-  //printf("The count_success is:%f\n",count_success);
-  //printf("The testDataSize is:%d\n",testDataSize);
-  std::cout<<"The accuracy at round"<<champsim::operable::reset_count<<"is"<<final_accuracy<<std::endl;
-  
-  //previous_train=current_train;
-
+  //start prefetch
   std::vector<uint64_t> actual_prefetch;
   actual_prefetch= distinct_page (prefetch_candidate,testDataSize);
   for(int i=0;i<actual_prefetch.size();i++)
@@ -548,6 +708,41 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
       prefetch_line(pf_addr, true, metadata_in);
     }
   }
+  //accuracy check
+  add_classification(totalDataSize, trainData,testData,trainDataSize,totalDataSize);
+  //current_train=trainData;
+  copy(trainData.begin(), trainData.end(),
+         current_train.begin());
+  float count_success=0; 
+  for(size_t i=0;i<testDataSize;i++)
+  {
+    //std::cout<<"The estimated classification at "<<i<< "are"<<finalData[i].classification<<std::endl;
+    //std::cout<<"The real classification are at "<<i<<"are"<<testData[i].classification<<std::endl;
+    if(finalData[i].classification==testData[i].classification)
+    {
+      //printf("The classification is successful\n");
+      //std::cout<<"The classification is successful at"<<testData[i].classification<<std::endl;
+      count_success++;
+    }
+  }
+
+  //champsim::operable::knn_accuracy=count_success/testDataSize;
+  final_accuracy=count_success/testDataSize;
+  //printf("The count_success is:%f\n",count_success);
+  //printf("The testDataSize is:%d\n",testDataSize);
+  std::cout<<"The accuracy at round"<<champsim::operable::reset_count<<"is"<<final_accuracy<<std::endl;
+  if(final_accuracy<0.6)
+  {
+    //previous_train=current_train;
+    copy(current_train.begin(),current_train.end(),
+         previous_train.begin());
+    std::cout<<"Replacement at round "<<(champsim::operable::reset_count)<<std::endl;
+  }
+  else
+  {
+     std::cout<<"No Replacement at round,which is"<<(champsim::operable::reset_count)<<std::endl;
+  }
+
   //if(actual_prefetch.size()!=1)
   //{
     //std::cout<<"The actual size of the prefetch is"<< actual_prefetch.size()<<std::endl;
@@ -572,8 +767,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   champsim::operable::knn_can_predict == 0 ;
   }
 
-
-  
+/*
   //IF we meed the replacement 
   if((champsim::operable::knn_can_predict == true) && (champsim::operable::reset_count>1)&&(final_accuracy<=0.7))
   {
@@ -591,8 +785,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   std::deque<ClassifiedPoint> current_train(trainDataSize); 
   //std::cout<<"The core malloc is finished up"<<std::endl;
   //Read the Trained Data from CSV- File and Store it into TrainData Array
-  readTrainingData(totalDataSize, trainData,testData,trainDataSize,totalDataSize);
-  current_train=trainData;
+  readTrainingData_aft_2(totalDataSize, trainData,testData,trainDataSize,totalDataSize);
+  //current_train=trainData;
   //std::cout<<"The size of the current_train elements is"<<current_train.size()<<std::endl;
   //for(int i=0;i<15;i++)
  // {
@@ -602,7 +796,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   for(size_t j=0;j<testDataSize;j++)
   {
     //std::cout<<"The loop is entered"<<std::endl;
-    finalData[j].classification= classify_1(2, current_train, trainDataSize, testData[j],K);
+    finalData[j].classification= classify_1(2, previous_train, trainDataSize, testData[j],K);
     //std::cout<<"at"<<j<<"The current_train points are"<<trainData[j].point_1<<"and"<<trainData[j].point_2<<std::endl;
     //std::cout<<"at"<<j<<"The testData points are"<<testData[j].point_1<<"and"<<testData[j].point_2<<std::endl;
     prefetch_candidate[j]=finalData[j].classification;
@@ -669,7 +863,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   //return metadata_in;
   champsim::operable::knn_can_predict == 0 ;
   }  
-
+*/
 
 }
 

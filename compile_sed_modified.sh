@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Setup the compiler path
-source server_env.sh
+#source server_env.sh
 # Arrays that store the reset configurations.
 bin_names=()
 cache_setting=()
