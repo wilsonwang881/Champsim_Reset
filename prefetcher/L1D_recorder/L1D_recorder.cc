@@ -26,9 +26,11 @@ void CACHE::prefetcher_initialize()
 
 uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
 {
+  uint64_t block_addr = (addr >> LOG2_BLOCK_SIZE) << LOG2_BLOCK_SIZE;
   reset_misc::on_demand_data_access acc;
   acc.cycle = current_cycle;
-  acc.ip = (addr >> LOG2_BLOCK_SIZE) << LOG2_BLOCK_SIZE;
+  acc.ip = ip;
+  acc.addr.insert(block_addr);
   acc.load_or_store = (type == 0) ? true : false;
   acc.occurance = 1;
 
@@ -39,9 +41,10 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   }
 
   // Check the past n accesses
-  size_t limit = (reset_misc::dq_before_data_access.size() > OBSERVATION_WINDOW) ? reset_misc::dq_before_data_access.size() : 0;
+  size_t limit = (reset_misc::dq_before_data_access.size() > OBSERVATION_WINDOW) ? (reset_misc::dq_before_data_access.size() - OBSERVATION_WINDOW) : 0;
   for (size_t i = reset_misc::dq_before_data_access.size() - 1; i > limit ; i--) {
-    if (reset_misc::dq_before_data_access[i].ip == addr) {
+    if (reset_misc::dq_before_data_access[i].ip == ip) {
+      reset_misc::dq_before_data_access[i].addr.insert(block_addr);
       reset_misc::dq_before_data_access[i].occurance++;
       return metadata_in;
     }

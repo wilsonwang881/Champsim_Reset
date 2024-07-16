@@ -1,11 +1,12 @@
 // WL 
 #include "cache.h"
 #include <unordered_set>
+#include <set>
 #include <map>
 #include <cassert>
 
 #define PREFETCH_UNIT_SHIFT 8
-#define PREFETCH_UNIT_SIZE 256
+#define PREFETCH_UNIT_SIZE 64
 #define INS_PREFETCH_UNIT_SIZE 64
 #define NUMBER_OF_PREFETCH_UNIT 2000
 #define HISTORY_SIZE 9000
@@ -15,8 +16,8 @@ namespace {
 
   struct tracker {
 
-    std::unordered_set<uint64_t> uniq_page_address;
-    std::unordered_set<uint64_t> uniq_ins_page_address;
+    std::set<uint64_t> uniq_page_address;
+    std::set<uint64_t> uniq_ins_page_address;
     std::unordered_set<uint64_t> uniq_prefetched_page_address;
     std::deque<std::pair<uint64_t, uint64_t>> past_accesses;
  
@@ -54,8 +55,13 @@ namespace {
          if (uniq_page_address.size() <= NUMBER_OF_PREFETCH_UNIT - 1 &&
              dq_cpy.size() > 0) {
            if (dq_cpy.back().load_or_store && 
-               dq_cpy.back().occurance > 1) {
-            uniq_page_address.insert(dq_cpy.back().ip >> PREFETCH_UNIT_SHIFT); 
+               dq_cpy.back().occurance > 1 &&
+               dq_cpy.back().addr.size() > 2) {
+             for(auto var : dq_cpy.back().addr) {
+               uniq_page_address.insert(var >> PREFETCH_UNIT_SHIFT); 
+             }
+             std::cout << "Occurance = " << dq_cpy.back().occurance << " Data size = " << dq_cpy.back().addr.size() << std::endl;
+             uniq_ins_page_address.insert(dq_cpy.back().ip >> PREFETCH_UNIT_SHIFT); 
            }
 
            dq_cpy.pop_back();
@@ -87,7 +93,6 @@ namespace {
         }
       }
 
-      /*
       if (uniq_ins_page_address.size() <= NUMBER_OF_PREFETCH_UNIT) {
         for(auto var : uniq_ins_page_address) {
           for (size_t page_offset = 0; page_offset < INS_PREFETCH_UNIT_SIZE; page_offset = (page_offset + 64)) // Half page prefetching
@@ -100,7 +105,6 @@ namespace {
           }
         }
       }
-      */
 
       std::cout << "PREFETCH_UNIT_SHIFT = " << PREFETCH_UNIT_SHIFT << " PREFETCH_UNIT_SIZE = " << PREFETCH_UNIT_SIZE << " NUMBER_OF_PREFETCH_UNIT = " << NUMBER_OF_PREFETCH_UNIT << std::endl; 
 

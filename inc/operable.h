@@ -32,6 +32,7 @@
 
 #include <string>
 #include <deque>
+#include <unordered_set>
 // WL
 
 // WL 
@@ -45,6 +46,7 @@ namespace reset_misc {
   
   struct on_demand_data_access : on_demand_ins_access {
     bool load_or_store; 
+    std::unordered_set<uint64_t> addr;
   };
 
   extern on_demand_ins_access before_reset_on_demand_ins_access[ON_DEMAND_ACCESS_RECORD_SIZE];
