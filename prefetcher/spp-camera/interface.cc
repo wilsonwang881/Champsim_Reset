@@ -3,7 +3,7 @@
 
 #include <map>
 
-#define L1D_PREFETCHER_IN_USE 1
+#define L1D_PREFETCHER_IN_USE 0
 #define CONTEXT_SWITCH_PREFETCH_IN_USE 1
 
 using unique_key = std::pair<CACHE*, uint32_t>;
@@ -85,7 +85,7 @@ void CACHE::prefetcher_cycle_operate()
             && !champsim::operable::have_cleared_prefetcher
             && champsim::operable::cpu_side_reset_ready) {
             //&& champsim::operable::cache_clear_counter == 7) {
-          champsim::operable::context_switch_mode = false;
+          //champsim::operable::context_switch_mode = false;
           champsim::operable::cpu_side_reset_ready = false;
           champsim::operable::cache_clear_counter = 0;
           pref.context_switch_prefetch_gathered = false;

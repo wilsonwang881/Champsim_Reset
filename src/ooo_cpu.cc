@@ -203,17 +203,15 @@ void O3_CPU::initialize_instruction()
       reset_misc::after_reset_on_demand_ins_access[reset_misc::after_reset_on_demand_ins_access_index].cycle = current_cycle;
       reset_misc::after_reset_on_demand_ins_access[reset_misc::after_reset_on_demand_ins_access_index].ip = input_queue.front().ip;
       reset_misc::after_reset_on_demand_ins_access_index++;
-      //std::cout<<"The index inside the reset_misc is"<< reset_misc::after_reset_on_demand_ins_access_index<<std::endl;
-      if(reset_misc::after_reset_on_demand_ins_access_index==999)
-      {
-        champsim::operable::knn_can_predict = true;
-        champsim::operable::reset_count++;
-      }
+      //std::cout<<"The index inside the reset_misc is "<< reset_misc::after_reset_on_demand_ins_access_index<<std::endl;
     }
 
     // Write the first 1000 accesses after the context switch to file.
     if (reset_misc::after_reset_on_demand_ins_access_index >= ON_DEMAND_ACCESS_RECORD_SIZE) {
       have_recorded_on_demand_ins_accesses = false;
+      champsim::operable::knn_can_predict = true;
+      champsim::operable::reset_count++;
+      std::cout << "can predict" << std::endl;
       reset_misc::after_reset_on_demand_ins_access_index = 0;
       std::cout<<"at round"<<champsim::operable::reset_count<<std::endl;
       std::cout << "Dumping 1st 1000 on demand instruction accesses after context switch." << std::endl;
