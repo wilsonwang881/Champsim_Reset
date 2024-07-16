@@ -507,11 +507,11 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
 void CACHE::prefetcher_cycle_operate()
 {
-  auto previous_train = ::trackers[this].previous_train;
-  auto trainData = ::trackers[this].trainData;
-  auto testData = ::trackers[this].testData;
-  auto finalData = ::trackers[this].finalData;
-  auto current_train = ::trackers[this].current_train;
+  auto &previous_train = ::trackers[this].previous_train;
+  auto &trainData = ::trackers[this].trainData;
+  auto &testData = ::trackers[this].testData;
+  auto &finalData = ::trackers[this].finalData;
+  auto &current_train = ::trackers[this].current_train;
 
   if (champsim::operable::context_switch_mode)
   {
@@ -541,13 +541,13 @@ void CACHE::prefetcher_cycle_operate()
     std::cout<<"Enter the round 1"<<std::endl;
     uint64_t prefetch_candidate[testDataSize];
   
-    trainData.assign(trainDataSize, {0});
+    ::trackers[this].trainData.assign(trainDataSize, {0});
  
-    testData.assign(testDataSize, {0});
+    ::trackers[this].testData.assign(testDataSize, {0});
  
-    finalData.assign(testDataSize, {0});
+    ::trackers[this].finalData.assign(testDataSize, {0});
 
-    current_train.assign(trainDataSize, {0}); 
+    ::trackers[this].current_train.assign(trainDataSize, {0}); 
 
     std::cout << "333" << std::endl;
     ::trackers[this].readTrainingData(totalDataSize, ::trackers[this].trainData,::trackers[this].testData,trainDataSize,totalDataSize);
