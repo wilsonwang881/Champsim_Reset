@@ -507,6 +507,7 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
 void CACHE::prefetcher_cycle_operate()
 {
+  //std::cout<<"has entered the stage"<<champsim::operable::reset_count<<std::endl;
   auto &previous_train = ::trackers[this].previous_train;
   auto &trainData = ::trackers[this].trainData;
   auto &testData = ::trackers[this].testData;
@@ -549,6 +550,8 @@ void CACHE::prefetcher_cycle_operate()
 
     ::trackers[this].current_train.assign(trainDataSize, {0}); 
 
+    ::trackers[this].previous_train.assign(trainDataSize,{0});
+
     std::cout << "333" << std::endl;
     ::trackers[this].readTrainingData(totalDataSize, ::trackers[this].trainData,::trackers[this].testData,trainDataSize,totalDataSize);
     //current_train=trainData;
@@ -576,9 +579,18 @@ void CACHE::prefetcher_cycle_operate()
 
     final_accuracy=count_success/testDataSize;
     std::cout<<"The accuracy at round"<<champsim::operable::reset_count<<"is"<<final_accuracy<<std::endl;
+    for(size_t i=0;i<trainDataSize;i++)
+    {
+      std::cout<<"The traindata size is"<<current_train[i].classification<<std::endl;
+    }
     //previous_train=current_train;
     copy(current_train.begin(),current_train.end(),::trackers[this].previous_train.begin());
+    std::cout<<"We are at the point after the accuracy count"<<std::endl;
     std::vector<uint64_t> actual_prefetch;
+    for(size_t i=0;i<trainDataSize;i++)
+    {
+      std::cout<<"The prev train  size is"<<::trackers[this].previous_train[i].classification<<std::endl;
+    }
     actual_prefetch= ::trackers[this].distinct_page (prefetch_candidate,testDataSize);
     std::cout << "actual_prefetch = " << actual_prefetch.size() << std::endl;
 
@@ -597,7 +609,7 @@ void CACHE::prefetcher_cycle_operate()
     {
       if (champsim::operable::cpu_side_reset_ready) {
        ::trackers[this].context_switch_issue(this);
-
+       //std::cout<<"Enter the prefetch issue stage"<<std::endl;
        
         /*for(auto &[addr, issued_at, received_at] : ::trackers[this].context_switch_prefetching_timing) {
           if (received_at == 0) {
@@ -623,25 +635,29 @@ void CACHE::prefetcher_cycle_operate()
         }
       }*/
       //clear the value
+      std::cout<<"Enter the clear stage"<<std::endl;
       actual_prefetch.clear();
       trainData.clear();
       testData.clear();
       finalData.clear();
       //previous_train.clear();
       current_train.clear();
-
-      if (!champsim::operable::have_cleared_BTB
+      std::cout<<"The clear is done"<<std::endl;
+      champsim::operable::knn_can_predict = false;
+      /*if (!champsim::operable::have_cleared_BTB
           && !champsim::operable::have_cleared_BP
           && champsim::operable::cpu_side_reset_ready
           && !champsim::operable::have_cleared_prefetcher
           ) {//&& champsim::operable::cache_clear_counter == 7
+        std::cout<<"The erasing mode is entered"<<std::endl;
         champsim::operable::context_switch_mode = false;
         champsim::operable::cpu_side_reset_ready = false;
         champsim::operable::cache_clear_counter = 0;
-        champsim::operable::knn_can_predict = false;
+        //champsim::operable::knn_can_predict = false;
         ::trackers[this].context_switch_prefetch_gathered = false;
+        std::cout<<"The clear mode is over"<<std::endl;
         //std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
-      }
+      }*/
     }
   }
 
@@ -650,7 +666,7 @@ void CACHE::prefetcher_cycle_operate()
   if (champsim::operable::context_switch_mode && (champsim::operable::reset_count>1))
   {
     //newly added
-    std::cout<<"Enter the round 1"<<std::endl;
+    std::cout<<"Enter the round above 1"<<std::endl;
     uint64_t prefetch_candidate[testDataSize];
   
     // std::deque<ClassifiedPoint> trainData (trainDataSize);
@@ -661,24 +677,36 @@ void CACHE::prefetcher_cycle_operate()
 
     // std::deque<ClassifiedPoint> current_train(trainDataSize); 
 
-    ::trackers[this].readTrainingData_aft_2(totalDataSize, trainData,testData,trainDataSize,totalDataSize);
+    //::trackers[this].readTrainingData_aft_2(totalDataSize, trainData,testData,trainDataSize,totalDataSize);
     //current_train=trainData;
 
-    for(size_t j=0;j<testDataSize;j++)
-    {
+    //for(size_t j=0;j<testDataSize;j++)
+    //{
       //std::cout<<"The loop is entered"<<std::endl;
-      finalData[j].classification= ::trackers[this].classify_1(2,::trackers[this].previous_train, trainDataSize, testData[j],K);
-      prefetch_candidate[j]=finalData[j].classification;
-    }
+      //finalData[j].classification= ::trackers[this].classify_1(2,::trackers[this].previous_train, trainDataSize, testData[j],K);
+      //prefetch_candidate[j]=finalData[j].classification;
+    //}
 
    
     std::vector<uint64_t> actual_prefetch;
-    actual_prefetch= ::trackers[this].distinct_page (prefetch_candidate,testDataSize);
-    std::cout << "actual_prefetch = " << actual_prefetch.size() << std::endl;
+    //actual_prefetch= ::trackers[this].distinct_page (prefetch_candidate,testDataSize);
+    //std::cout << "actual_prefetch = " << actual_prefetch.size() << std::endl;
 
     // Gather prefetches
     if (!::trackers[this].context_switch_prefetch_gathered)
     {
+      //newly added
+      std::cout<<"Enter the round above 1"<<std::endl;
+      ::trackers[this].readTrainingData_aft_2(totalDataSize, trainData,testData,trainDataSize,totalDataSize);
+      for(size_t j=0;j<testDataSize;j++)
+      {
+        //std::cout<<"The loop is entered"<<std::endl;
+        finalData[j].classification= ::trackers[this].classify_1(2,::trackers[this].previous_train, trainDataSize, testData[j],K);
+        prefetch_candidate[j]=finalData[j].classification;
+      }
+      actual_prefetch= ::trackers[this].distinct_page (prefetch_candidate,testDataSize);
+      std::cout << "actual_prefetch = " << actual_prefetch.size() << std::endl;
+
       this->clear_internal_PQ();
       ::trackers[this].gather_context_switch_prefetches(actual_prefetch); 
       ::trackers[this].context_switch_prefetch_gathered = true;

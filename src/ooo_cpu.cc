@@ -212,6 +212,7 @@ void O3_CPU::initialize_instruction()
       champsim::operable::knn_can_predict = true;
       champsim::operable::reset_count++;
       std::cout << "can predict" << std::endl;
+      std::cout <<"Reset count is"<< champsim::operable::reset_count<<std::endl;
       reset_misc::after_reset_on_demand_ins_access_index = 0;
       std::cout<<"at round"<<champsim::operable::reset_count<<std::endl;
       std::cout << "Dumping 1st 1000 on demand instruction accesses after context switch." << std::endl;
@@ -233,7 +234,7 @@ void O3_CPU::initialize_instruction()
 
     if (reset_misc::before_reset_on_demand_ins_access_index >= ON_DEMAND_ACCESS_RECORD_SIZE) 
       reset_misc::before_reset_on_demand_ins_access_index = reset_misc::before_reset_on_demand_ins_access_index % ON_DEMAND_ACCESS_RECORD_SIZE;
-
+    
     if (have_recorded_before_reset_on_demand_ins_accesses) {
       std::cout << "Dumping 1000 on demand instruction accesses before context switch." << std::endl;
       dump_before_reset_ins_accesses();

@@ -1,18 +1,18 @@
 =================================
 Current cycle = 150687044
 1000 accesses before this moment:
-hit = 472
-miss = 528
-cycles taken = 55739
+hit = 425
+miss = 574
+cycles taken = 22348
 =================================
-Current cycle = 150764648
+Current cycle = 150737089
 1000 accesses after last reset:
-hit = 9
-miss = 991
-cycles taken = 77602
+hit = 401
+miss = 599
+cycles taken = 49174
 =================================
 Current cycle = 326872455
 1000 accesses before this moment:
-hit = 503
-miss = 497
-cycles taken = 50806
+hit = 389
+miss = 610
+cycles taken = 22970
