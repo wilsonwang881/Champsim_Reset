@@ -142,7 +142,7 @@ namespace {
           i++;  
         }
         special_page.push_back(arr[i]);
-        std::cout<<"The special pages are"<<arr[i]<<std::endl;
+       // std::cout<<"The special pages are"<<arr[i]<<std::endl;
       }
       return special_page;
       //printf("The number of distinct page is:%d\n",special_page);
@@ -246,7 +246,7 @@ namespace {
       {
         //x=rand()%999;
         x=(1000/train_size)*(z);
-        std::cout<<"train index"<<x<<std::endl;
+       // std::cout<<"train index"<<x<<std::endl;
         train[z]=overall[x];
         train_save.push_back(train[z]);
         record[z]=x;
@@ -527,7 +527,7 @@ void CACHE::prefetcher_cycle_operate()
         champsim::operable::context_switch_mode = false;
         champsim::operable::cpu_side_reset_ready = false;
         champsim::operable::cache_clear_counter = 0;
-        //pref.context_switch_prefetch_gathered = false;
+        ::trackers[this].context_switch_prefetch_gathered = false;
         ::trackers[this].context_switch_toggled = true;
         //std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
       }
@@ -552,15 +552,12 @@ void CACHE::prefetcher_cycle_operate()
 
     ::trackers[this].previous_train.assign(trainDataSize,{0});
 
-    std::cout << "333" << std::endl;
     ::trackers[this].readTrainingData(totalDataSize, ::trackers[this].trainData,::trackers[this].testData,trainDataSize,totalDataSize);
     //current_train=trainData;
-    std::cout << "222" << std::endl;
     copy(trainData.begin(), trainData.end(),current_train.begin());
-    std::cout << "111" << std::endl;
+
     for(size_t j=0;j<testDataSize;j++)
     {
-      std::cout<<"The loop is entered"<<std::endl;
       finalData[j].classification= ::trackers[this].classify_1(2, trainData, trainDataSize, testData[j],K);
       prefetch_candidate[j]=finalData[j].classification;
     }
@@ -568,8 +565,8 @@ void CACHE::prefetcher_cycle_operate()
     float count_success=0; 
     for(size_t i=0;i<testDataSize;i++)
     {
-      std::cout<<"The estimated classification at "<<i<< "are"<<finalData[i].classification<<std::endl;
-      std::cout<<"The real classification are at "<<i<<"are"<<testData[i].classification<<std::endl;
+     // std::cout<<"The estimated classification at "<<i<< "are"<<finalData[i].classification<<std::endl;
+     // std::cout<<"The real classification are at "<<i<<"are"<<testData[i].classification<<std::endl;
       if(finalData[i].classification==testData[i].classification)
       {
         //printf("The classification is successful\n");
@@ -578,52 +575,33 @@ void CACHE::prefetcher_cycle_operate()
     }
 
     final_accuracy=count_success/testDataSize;
-    std::cout<<"The accuracy at round"<<champsim::operable::reset_count<<"is"<<final_accuracy<<std::endl;
+   // std::cout<<"The accuracy at round"<<champsim::operable::reset_count<<"is"<<final_accuracy<<std::endl;
     for(size_t i=0;i<trainDataSize;i++)
     {
-      std::cout<<"The traindata size is"<<current_train[i].classification<<std::endl;
+     // std::cout<<"The traindata size is"<<current_train[i].classification<<std::endl;
     }
     //previous_train=current_train;
     copy(current_train.begin(),current_train.end(),::trackers[this].previous_train.begin());
-    std::cout<<"We are at the point after the accuracy count"<<std::endl;
+   // std::cout<<"We are at the point after the accuracy count"<<std::endl;
     std::vector<uint64_t> actual_prefetch;
     for(size_t i=0;i<trainDataSize;i++)
     {
-      std::cout<<"The prev train  size is"<<::trackers[this].previous_train[i].classification<<std::endl;
+     // std::cout<<"The prev train  size is"<<::trackers[this].previous_train[i].classification<<std::endl;
     }
     actual_prefetch= ::trackers[this].distinct_page (prefetch_candidate,testDataSize);
-    std::cout << "actual_prefetch = " << actual_prefetch.size() << std::endl;
+   // std::cout << "actual_prefetch = " << actual_prefetch.size() << std::endl;
 
     // Gather prefetches
     if (!::trackers[this].context_switch_prefetch_gathered)
     {
       this->clear_internal_PQ();
       //::trackers[this].gather_context_switch_prefetches(actual_prefetch); 
-      ::trackers[this].context_switch_prefetch_gathered = true;
+      //::trackers[this].context_switch_prefetch_gathered = true;
       //::trackers[this].context_switch_prefetching_timing.clear();
       //::trackers[this].uniq_prefetched_page_address.clear();
     }
    
     // Issue prefetches until the queue is empty.
-    if (!::trackers[this].context_switch_queue_empty())
-    {
-      if (champsim::operable::cpu_side_reset_ready) {
-       ::trackers[this].context_switch_issue(this);
-       //std::cout<<"Enter the prefetch issue stage"<<std::endl;
-       
-        /*for(auto &[addr, issued_at, received_at] : ::trackers[this].context_switch_prefetching_timing) {
-          if (received_at == 0) {
-            for(auto var : block) {
-              if (var.valid && var.address == addr) {
-                received_at = this->current_cycle; 
-              }
-            } 
-          } 
-        }*/
-      }
-    }
-    // Toggle switches after all prefetches are issued.
-    else
     {
       /*std::unordered_set<uint64_t> printed_page_addresses;
       
@@ -666,7 +644,6 @@ void CACHE::prefetcher_cycle_operate()
   if (champsim::operable::context_switch_mode && (champsim::operable::reset_count>1))
   {
     //newly added
-    std::cout<<"Enter the round above 1"<<std::endl;
     uint64_t prefetch_candidate[testDataSize];
   
     // std::deque<ClassifiedPoint> trainData (trainDataSize);

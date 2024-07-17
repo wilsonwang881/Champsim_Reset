@@ -313,9 +313,11 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
               res = context_switch_aux(el_sig, _delta, confidence, el_last_accessed_page_num, _last_offset);
             }
           }
+          /*
           else {
             std::cout << "Cross page boundary place 1" << std::endl;
           }
+          */
         }
       }
     }
