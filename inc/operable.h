@@ -43,9 +43,15 @@ namespace reset_misc {
     uint64_t ip;
     uint64_t occurance;
   };
+
+  struct addr_occr {
+    uint64_t addr;
+    uint64_t occr;
+  };
   
   struct on_demand_data_access : on_demand_ins_access {
     bool load_or_store; 
+    std::vector<addr_occr> addr_rec;
     std::unordered_set<uint64_t> addr;
   };
 
@@ -65,6 +71,8 @@ namespace reset_misc {
   extern std::deque<on_demand_ins_access> dq_after_ins_access;
   extern std::deque<on_demand_data_access> dq_before_data_access;
   extern std::deque<on_demand_data_access> dq_after_data_access;
+  extern std::deque<on_demand_data_access> dq_pf_data_access;
+  extern bool can_record_after_access;
 }
 // WL
 

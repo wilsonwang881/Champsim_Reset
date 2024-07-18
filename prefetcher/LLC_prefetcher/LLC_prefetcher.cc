@@ -55,12 +55,21 @@ namespace {
          if (uniq_page_address.size() <= NUMBER_OF_PREFETCH_UNIT - 1 &&
              dq_cpy.size() > 0) {
            if (dq_cpy.back().load_or_store && 
-               dq_cpy.back().occurance > 1 &&
-               dq_cpy.back().addr.size() > 2) {
-             for(auto var : dq_cpy.back().addr) {
-               uniq_page_address.insert(var >> PREFETCH_UNIT_SHIFT); 
+               dq_cpy.back().occurance > 1) {
+
+             reset_misc::dq_pf_data_access.push_back(dq_cpy.back());
+             reset_misc::dq_pf_data_access.back().addr_rec.clear();
+
+             for(auto var : dq_cpy.back().addr_rec) {
+               std::cout << "addr = " << var.addr << " occr = " << var.occr << std::endl;
+               if (var.occr > 1) {
+                 uniq_page_address.insert(var.addr >> PREFETCH_UNIT_SHIFT); 
+                 reset_misc::dq_pf_data_access.back().addr_rec.push_back(var);
+                 std::cout << "pushing" << std::endl;
+               }
              }
-             std::cout << "Occurance = " << dq_cpy.back().occurance << " Data size = " << dq_cpy.back().addr.size() << std::endl;
+
+             //std::cout << "Occurance = " << dq_cpy.back().occurance << " Data size = " << dq_cpy.back().addr.size() << std::endl;
              uniq_ins_page_address.insert(dq_cpy.back().ip >> PREFETCH_UNIT_SHIFT); 
            }
 
@@ -108,10 +117,10 @@ namespace {
 
       std::cout << "PREFETCH_UNIT_SHIFT = " << PREFETCH_UNIT_SHIFT << " PREFETCH_UNIT_SIZE = " << PREFETCH_UNIT_SIZE << " NUMBER_OF_PREFETCH_UNIT = " << NUMBER_OF_PREFETCH_UNIT << std::endl; 
 
+      /*
       for(auto var : uniq_page_address) {
         //std::cout << "Base address of page to be prefetched: " << std::hex << (var << PREFETCH_UNIT_SHIFT) << std::dec << std::endl;  
       }
-/*
       for(auto var : context_switch_issue_queue) {
         std::cout << std::hex << var.first << std::dec << std::endl; 
       }
@@ -197,6 +206,7 @@ void CACHE::prefetcher_cycle_operate()
     if (!::trackers[this].context_switch_prefetch_gathered)
     {
       this->clear_internal_PQ();
+      reset_misc::dq_pf_data_access.clear();
       ::trackers[this].gather_context_switch_prefetches(); 
       ::trackers[this].context_switch_prefetch_gathered = true;
       ::trackers[this].context_switch_prefetching_timing.clear();
@@ -245,6 +255,8 @@ void CACHE::prefetcher_cycle_operate()
         champsim::operable::cache_clear_counter = 0;
         ::trackers[this].context_switch_prefetch_gathered = false;
         std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
+        reset_misc::can_record_after_access = true;
+        reset_misc::dq_after_data_access.clear();
       }
     }
   }

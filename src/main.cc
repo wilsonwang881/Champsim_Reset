@@ -103,6 +103,8 @@ namespace reset_misc {
   std::deque<on_demand_ins_access> dq_after_ins_access;
   std::deque<on_demand_data_access> dq_before_data_access;
   std::deque<on_demand_data_access> dq_after_data_access;
+  std::deque<on_demand_data_access> dq_pf_data_access;
+  bool can_record_after_access = false;
 }
 // WL
 
