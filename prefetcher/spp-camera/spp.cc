@@ -257,7 +257,6 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   */
 
   cache->clear_internal_PQ();
-  std::cout << cache->NAME << " internal_PQ cleared" << std::endl;
   filter.clear();
   std::cout << "Filter cleared" << std::endl;
 
@@ -343,7 +342,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
     context_switch_issue_queue.push_back(var); 
   }
 
-  std::cout << "Gathered " << context_switch_issue_queue.size() << " prefetches." << std::endl;
+  std::cout << "L2C SPP Gathered " << context_switch_issue_queue.size() << " prefetches." << std::endl;
 }
 
 // WL 

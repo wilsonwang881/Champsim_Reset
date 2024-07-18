@@ -28,10 +28,11 @@
 #define SIMULATE_WITH_BRANCH_PREDICTOR_RESET 0
 #define RESET_INTERVAL 4000000
 #define ON_DEMAND_ACCESS_RECORD_SIZE 1000
-#define DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE 3000
+#define DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE 12000
 
 #include <string>
 #include <deque>
+#include <unordered_set>
 // WL
 
 // WL 
@@ -40,10 +41,18 @@ namespace reset_misc {
   struct on_demand_ins_access {
     uint64_t cycle;
     uint64_t ip;
+    uint64_t occurance;
+  };
+
+  struct addr_occr {
+    uint64_t addr;
+    uint64_t occr;
   };
   
   struct on_demand_data_access : on_demand_ins_access {
     bool load_or_store; 
+    std::vector<addr_occr> addr_rec;
+    std::unordered_set<uint64_t> addr;
   };
 
   extern on_demand_ins_access before_reset_on_demand_ins_access[ON_DEMAND_ACCESS_RECORD_SIZE];
@@ -62,6 +71,8 @@ namespace reset_misc {
   extern std::deque<on_demand_ins_access> dq_after_ins_access;
   extern std::deque<on_demand_data_access> dq_before_data_access;
   extern std::deque<on_demand_data_access> dq_after_data_access;
+  extern std::deque<on_demand_data_access> dq_pf_data_access;
+  extern bool can_record_after_access;
 }
 // WL
 
@@ -78,6 +89,7 @@ public:
   static uint64_t reset_count;
   // WL
   static bool context_switch_mode;
+  static bool L2C_have_issued_context_switch_prefetches;
   static bool have_recorded_on_demand_ins_accesses;
   static bool have_recorded_on_demand_data_accesses;
   static bool have_recorded_before_reset_on_demand_ins_accesses;

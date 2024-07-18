@@ -42,6 +42,7 @@ bool champsim::operable::knn_can_predict = false;
 uint64_t champsim::operable::reset_count=0;
 // WL
 bool champsim::operable::context_switch_mode = false;
+bool champsim::operable::L2C_have_issued_context_switch_prefetches = false;
 bool champsim::operable::have_recorded_on_demand_ins_accesses = false;
 bool champsim::operable::have_recorded_on_demand_data_accesses = false;
 bool champsim::operable::have_recorded_before_reset_on_demand_ins_accesses = false;
@@ -102,6 +103,8 @@ namespace reset_misc {
   std::deque<on_demand_ins_access> dq_after_ins_access;
   std::deque<on_demand_data_access> dq_before_data_access;
   std::deque<on_demand_data_access> dq_after_data_access;
+  std::deque<on_demand_data_access> dq_pf_data_access;
+  bool can_record_after_access = false;
 }
 // WL
 

@@ -151,6 +151,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       std::cout << std::endl << "Resetting @ins. count = " << std::dec << (unsigned)cpu_0.num_retired << " + " << (unsigned)cpu_0.input_queue.size() << " = " << (unsigned)(cpu_0.num_retired + cpu_0.input_queue.size()) << " at cycle " << cpu_0.current_cycle << std::endl;
 
       champsim::operable::context_switch_mode = true;
+      champsim::operable::L2C_have_issued_context_switch_prefetches = false;
       champsim::operable::have_recorded_on_demand_ins_accesses = true;
       champsim::operable::have_recorded_on_demand_data_accesses = true;
       champsim::operable::have_recorded_before_reset_on_demand_ins_accesses = true;
