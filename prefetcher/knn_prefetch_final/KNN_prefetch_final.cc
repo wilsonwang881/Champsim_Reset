@@ -142,7 +142,7 @@ namespace {
           i++;  
         }
         special_page.push_back(arr[i]);
-       // std::cout<<"The special pages are"<<arr[i]<<std::endl;
+        std::cout<<"The distinct pages are"<<arr[i]<<std::endl;
       }
       return special_page;
       //printf("The number of distinct page is:%d\n",special_page);
@@ -313,6 +313,7 @@ namespace {
         //x=rand()%999;
         x=(1000/train_size)*(z);
         train[z]=overall[x];
+        //std::cout<<"The trainpoints are"<<train[z].point_1<<"and"<<train[z].point_2<<std::endl;
         train_save.push_back(train[z]);
         record[z]=x;
 
@@ -338,6 +339,7 @@ namespace {
             test[i-match]=overall[i-match];
             //test.at(i-match)=overall[i-match];
             int y=i-match;
+            //std::cout<<"The testpoints are"<<test[i-match].point_1<<"and"<<test[i-match].point_2<<std::endl;
             //printf("The test iteration is:%d\n",y);
             i++;
           }
@@ -672,17 +674,27 @@ void CACHE::prefetcher_cycle_operate()
     // Gather prefetches
     if (!::trackers[this].context_switch_prefetch_gathered)
     {
+      ::trackers[this].trainData.assign(trainDataSize, {0});
+ 
+      ::trackers[this].testData.assign(testDataSize, {0});
+ 
+      ::trackers[this].finalData.assign(testDataSize, {0});
+
+      ::trackers[this].current_train.assign(trainDataSize, {0}); 
+
+      //::trackers[this].previous_train.assign(trainDataSize,{0});
       //newly added
       std::cout<<"Enter the round above 1"<<std::endl;
-      ::trackers[this].readTrainingData_aft_2(totalDataSize, trainData,testData,trainDataSize,totalDataSize);
+      ::trackers[this].readTrainingData_aft_2(totalDataSize,::trackers[this].trainData, ::trackers[this].testData,trainDataSize,totalDataSize);
       for(size_t j=0;j<testDataSize;j++)
       {
         //std::cout<<"The loop is entered"<<std::endl;
         finalData[j].classification= ::trackers[this].classify_1(2,::trackers[this].previous_train, trainDataSize, testData[j],K);
         prefetch_candidate[j]=finalData[j].classification;
+        //std::cout<<"The classification is "<<finalData[j].classification<<std::endl;
       }
       actual_prefetch= ::trackers[this].distinct_page (prefetch_candidate,testDataSize);
-      std::cout << "actual_prefetch = " << actual_prefetch.size() << std::endl;
+      //std::cout << "actual_prefetch = " << actual_prefetch.size() << std::endl;
 
       this->clear_internal_PQ();
       ::trackers[this].gather_context_switch_prefetches(actual_prefetch); 
@@ -748,6 +760,8 @@ void CACHE::prefetcher_cycle_operate()
       float count_success=0; 
       for(size_t i=0;i<testDataSize;i++)
       {
+        //std::cout<<"The real classification is"<<testData[i].classification<<std::endl;
+        //std::cout<<"The estimated classification is"<<finalData[i].classification<<std::endl;
         if(finalData[i].classification==testData[i].classification)
         {
           count_success++;
