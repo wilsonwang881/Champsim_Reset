@@ -75,7 +75,6 @@ namespace {
              //std::cout << "Occurance = " << dq_cpy.back().occurance << " Data size = " << dq_cpy.back().addr.size() << std::endl;
              uniq_ins_page_address.insert(dq_cpy.back().ip >> PREFETCH_UNIT_SHIFT); 
            }
-
            dq_cpy.pop_back();
          }
 
@@ -125,10 +124,10 @@ namespace {
         //uint64_t separator, r_cycle, r_ip, r_occurance;
         //L1D_access_file >> separator >> r_cycle >> r_ip >> r_occurance;
 
-        uint64_t r_access;
+        uint64_t r_access, r_occurance;
         int readin_count = 0;
 
-        while (L1D_access_file >> r_access) {
+        while (L1D_access_file >> r_access >> r_occurance) {
           if (r_access == 99999) {
             break; 
           } 
@@ -184,7 +183,7 @@ namespace {
         if (prefetched) {
           context_switch_issue_queue.pop_front();
           context_switch_prefetching_timing.push_back({addr, cache->current_cycle, 0});
-          std::cout << "Prefetched " << std::hex << addr << " at " << std::dec << cache->current_cycle << std::endl;
+          //std::cout << "Prefetched " << std::hex << addr << " at " << std::dec << cache->current_cycle << std::endl;
 
           /*
           if (uniq_prefetched_page_address.find(addr >> 12) ==  uniq_prefetched_page_address.end()) {

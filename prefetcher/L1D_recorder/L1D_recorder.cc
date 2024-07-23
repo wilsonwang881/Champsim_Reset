@@ -6,7 +6,7 @@
 #define PREFETCH_UNIT_SHIFT 8
 #define PREFETCH_UNIT_SIZE 64
 #define NUMBER_OF_PREFETCH_UNIT 400
-#define OBSERVATION_WINDOW 20
+#define OBSERVATION_WINDOW 500
 #define RECORD_ON_DEMAND_ACCESS_L1D 0
 
 namespace {
@@ -98,12 +98,13 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
         std::ofstream on_demand_access_file_out;
         on_demand_access_file_out.open("L1D_on_demand_access.txt", std::ios_base::app);
 
+        std::cout << "Writing" << std::endl;
         for (auto var : reset_misc::dq_after_data_access)
         {
           //on_demand_access_file_out << "r " << var.cycle << " " << var.ip << " " << var.occurance << std::endl;
 
           for(auto address : var.addr_rec) {
-            on_demand_access_file_out << address.addr << std::endl; 
+            on_demand_access_file_out << address.addr << " " << address.occr << std::endl; 
           }
         }
 
