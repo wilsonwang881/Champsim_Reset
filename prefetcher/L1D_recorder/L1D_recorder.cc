@@ -6,14 +6,15 @@
 #define PREFETCH_UNIT_SHIFT 8
 #define PREFETCH_UNIT_SIZE 64
 #define NUMBER_OF_PREFETCH_UNIT 400
-#define OBSERVATION_WINDOW 10
+#define OBSERVATION_WINDOW 20
+#define RECORD_ON_DEMAND_ACCESS_L1D 0
 
 namespace {
 
   struct tracker {
 
     std::unordered_set<uint64_t> uniq_prefetch_address;
-    
+    std::ofstream L1D_access_file;
   };
 
   std::map<CACHE*, tracker> trackers;
@@ -22,6 +23,13 @@ namespace {
 void CACHE::prefetcher_initialize()
 {
   std::cout << NAME << " -> Prefetcher L1D recorder initialized @ " << current_cycle << " cycles." << std::endl;
+  
+  if (RECORD_ON_DEMAND_ACCESS_L1D) {
+    std::cout << "L1D access record file cleared." << std::endl;
+    std::ofstream on_demand_access_file_out;
+    on_demand_access_file_out.open("L1D_on_demand_access.txt", std::ios::out);
+    on_demand_access_file_out.close();
+  }
 }
 
 uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
@@ -40,16 +48,42 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   if (reset_misc::can_record_after_access) {
     
     // Check if deque empty. 
-    if (reset_misc::dq_pf_data_access.empty()) {
+    if (reset_misc::dq_after_data_access.empty()) {
       reset_misc::dq_after_data_access.push_back(acc);
     }
     // Deque not empty.
     else {
-      if (reset_misc::dq_pf_data_access.back().ip == ip) {
-        reset_misc::dq_after_data_access.back().addr.insert(block_addr);
-        reset_misc::dq_after_data_access.back().occurance++;
-      } 
-      else {
+ 
+      size_t limit = reset_misc::dq_after_data_access.size() > OBSERVATION_WINDOW ? (reset_misc::dq_after_data_access.size() - OBSERVATION_WINDOW) : 0; 
+      bool found = false;
+
+      // Check past data accesses
+      for (size_t i = reset_misc::dq_after_data_access.size() - 1; i > limit; i--) {
+        for(auto &var : reset_misc::dq_after_data_access[i].addr_rec) {
+          if (var.addr == block_addr) {
+            var.occr++;
+            found = true;
+          } 
+        }
+      }
+
+      // If past data accesses no match, add to matching IP
+      if (!found) {
+      
+        for (size_t i = reset_misc::dq_after_data_access.size() - 1; i > limit; i--) {
+          if (reset_misc::dq_after_data_access[i].ip == ip) {
+            reset_misc::dq_after_data_access[i].occurance++;
+            reset_misc::dq_after_data_access[i].addr.insert(block_addr);
+            reset_misc::dq_after_data_access[i].addr_rec.push_back(addr_obj);
+            found = true;
+          }
+        }
+      }
+
+      // If no past data accesses match,
+      // and no IP match
+      // create new entry
+      if (!found) {
         reset_misc::dq_after_data_access.push_back(acc);
       }
     }
@@ -59,6 +93,24 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
     if (reset_misc::dq_after_data_access.size() > DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE) {
       reset_misc::dq_after_data_access.pop_front(); 
       reset_misc::can_record_after_access = false;
+
+      if (RECORD_ON_DEMAND_ACCESS_L1D) {
+        std::ofstream on_demand_access_file_out;
+        on_demand_access_file_out.open("L1D_on_demand_access.txt", std::ios_base::app);
+
+        for (auto var : reset_misc::dq_after_data_access)
+        {
+          //on_demand_access_file_out << "r " << var.cycle << " " << var.ip << " " << var.occurance << std::endl;
+
+          for(auto address : var.addr_rec) {
+            on_demand_access_file_out << address.addr << std::endl; 
+          }
+        }
+
+        on_demand_access_file_out << "99999" << std::endl;
+        on_demand_access_file_out.close();
+
+      }
 
       std::cout << "Feedback:" << reset_misc::dq_after_data_access.size() << " " << reset_misc::dq_pf_data_access.size() << std::endl;
       for(auto pf: reset_misc::dq_pf_data_access) {
@@ -77,7 +129,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
           }
         }
         if (printable) {
-          std::cout << "Match: Occurance (pf, after) = " << pf.occurance << " " << " Data size (pf, after) = " << pf.addr_rec.size() << " " << std::endl;
+          //std::cout << "Match: Occurance (pf, after) = " << pf.occurance << " " << " Data size (pf, after) = " << pf.addr_rec.size() << " " << std::endl;
         }
       }
     }

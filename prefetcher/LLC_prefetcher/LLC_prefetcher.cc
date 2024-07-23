@@ -11,6 +11,7 @@
 #define NUMBER_OF_PREFETCH_UNIT 2000
 #define HISTORY_SIZE 9000
 #define CUTOFF 1
+#define READ_ON_DEMAND_ACCESS_L1D 1
 
 namespace {
 
@@ -24,6 +25,8 @@ namespace {
     public:
 
     bool context_switch_prefetch_gathered;
+
+    std::ifstream L1D_access_file;
 
     std::deque<std::pair<uint64_t, bool>> context_switch_issue_queue;
     std::deque<std::tuple<uint64_t, uint64_t, uint64_t>> context_switch_prefetching_timing; 
@@ -61,11 +64,11 @@ namespace {
              reset_misc::dq_pf_data_access.back().addr_rec.clear();
 
              for(auto var : dq_cpy.back().addr_rec) {
-               std::cout << "addr = " << var.addr << " occr = " << var.occr << std::endl;
+               //std::cout << "addr = " << var.addr << " occr = " << var.occr << std::endl;
                if (var.occr > 1) {
                  uniq_page_address.insert(var.addr >> PREFETCH_UNIT_SHIFT); 
                  reset_misc::dq_pf_data_access.back().addr_rec.push_back(var);
-                 std::cout << "pushing" << std::endl;
+                 //std::cout << "pushing" << std::endl;
                }
              }
 
@@ -115,6 +118,40 @@ namespace {
         }
       }
 
+      if (READ_ON_DEMAND_ACCESS_L1D) {
+
+        context_switch_issue_queue.clear();
+
+        //uint64_t separator, r_cycle, r_ip, r_occurance;
+        //L1D_access_file >> separator >> r_cycle >> r_ip >> r_occurance;
+
+        uint64_t r_access;
+        int readin_count = 0;
+
+        while (L1D_access_file >> r_access) {
+          if (r_access == 99999) {
+            break; 
+          } 
+
+          bool found = false;
+
+          for(auto var : context_switch_issue_queue) {
+            if (var.first == r_access) {
+              found = true; 
+            }
+          }
+
+          readin_count++;
+
+          if (!found) {
+            context_switch_issue_queue.push_back(std::make_pair(r_access, true));
+          }
+        }
+
+        std::cout << "Read in count = " << readin_count << std::endl;
+      }
+
+
       std::cout << "PREFETCH_UNIT_SHIFT = " << PREFETCH_UNIT_SHIFT << " PREFETCH_UNIT_SIZE = " << PREFETCH_UNIT_SIZE << " NUMBER_OF_PREFETCH_UNIT = " << NUMBER_OF_PREFETCH_UNIT << std::endl; 
 
       /*
@@ -147,11 +184,14 @@ namespace {
         if (prefetched) {
           context_switch_issue_queue.pop_front();
           context_switch_prefetching_timing.push_back({addr, cache->current_cycle, 0});
+          std::cout << "Prefetched " << std::hex << addr << " at " << std::dec << cache->current_cycle << std::endl;
 
+          /*
           if (uniq_prefetched_page_address.find(addr >> 12) ==  uniq_prefetched_page_address.end()) {
             //std::cout << "First prefetch in page " << std::hex << addr << " prefetched at cycle " << std::dec << cache->current_cycle << std::endl;
             uniq_prefetched_page_address.insert(addr >> 12); 
           }
+          */
         }
       }
     }
@@ -163,6 +203,10 @@ namespace {
 void CACHE::prefetcher_initialize()
 {
   std::cout << NAME << " -> Prefetcher LLC Prefetcher initialized @ " << current_cycle << " cycles." << std::endl;
+
+  if (READ_ON_DEMAND_ACCESS_L1D) {
+    ::trackers[this].L1D_access_file.open("L1D_on_demand_access.txt", std::ios::in); 
+  }
 }
 
 uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
@@ -214,6 +258,7 @@ void CACHE::prefetcher_cycle_operate()
     }
    
     // Issue prefetches until the queue is empty.
+    /*
     if (!::trackers[this].context_switch_queue_empty())
     {
       if (champsim::operable::cpu_side_reset_ready) {
@@ -231,11 +276,14 @@ void CACHE::prefetcher_cycle_operate()
         }
       }
     }
+    */
     // Toggle switches after all prefetches are issued.
-    else
+    //else
+    if (::trackers[this].context_switch_prefetch_gathered) 
     {
-      std::unordered_set<uint64_t> printed_page_addresses;
+      //std::unordered_set<uint64_t> printed_page_addresses;
       
+      /*
       for(auto [addr, issued_at, received_at] : ::trackers[this].context_switch_prefetching_timing) {
         if (printed_page_addresses.find(addr >> 12) == printed_page_addresses.end()) {
           
@@ -243,6 +291,7 @@ void CACHE::prefetcher_cycle_operate()
           printed_page_addresses.insert(addr >> 12);
         }
       }
+      */
 
       if (!champsim::operable::have_cleared_BTB
           && !champsim::operable::have_cleared_BP
@@ -257,6 +306,26 @@ void CACHE::prefetcher_cycle_operate()
         std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
         reset_misc::can_record_after_access = true;
         reset_misc::dq_after_data_access.clear();
+      }
+    }
+  }
+  else {
+    if (!::trackers[this].context_switch_queue_empty())
+    {
+      //if (champsim::operable::cpu_side_reset_ready) 
+      {
+       ::trackers[this].context_switch_issue(this);
+
+       
+        for(auto &[addr, issued_at, received_at] : ::trackers[this].context_switch_prefetching_timing) {
+          if (received_at == 0) {
+            for(auto var : block) {
+              if (var.valid && var.address == addr) {
+                received_at = this->current_cycle; 
+              }
+            } 
+          } 
+        }
       }
     }
   }
