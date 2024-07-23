@@ -174,14 +174,18 @@ namespace {
       ClassifiedPoint point {};
       uint64_t pos[2];
       //before clk
-      pos[0] = reset_misc::before_reset_on_demand_ins_access[x].cycle;
+      //pos[0] = reset_misc::before_reset_on_demand_ins_access[x].cycle;
+      pos[0]=reset_misc::dq_before_data_access[x].cycle;
+      //std::cout<<"The data access cycle is"<<pos[0]<<std::endl;
       //before adr
-      pos[1] = reset_misc::before_reset_on_demand_ins_access[x].ip;
+      //pos[1] = reset_misc::before_reset_on_demand_ins_access[x].ip;
+      pos[1] = reset_misc::dq_before_data_access[x].ip;
+      //std::cout<<"The ip access is"<<pos[1]<<std::endl;
       point.point_1= pos[0];
       point.point_2 =pos[1];
       //Target
-      uint64_t page_num= (reset_misc::after_reset_on_demand_ins_access[x].ip)>>12;
-      //uint64_t page_num= (reset_misc::after_reset_on_demand_data_access[x].ip)>>12;
+      //uint64_t page_num= (reset_misc::after_reset_on_demand_ins_access[x].ip)>>12;
+      uint64_t page_num= (reset_misc::dq_after_data_access[x].ip)>>12;
       point.classification = page_num;
       return point;
     }
@@ -192,11 +196,11 @@ namespace {
       //uint64_t * pos = (uint64_t *)malloc(2 * sizeof(uint64_t));
       uint64_t pos[2];
       //before clk
-      pos[0] = reset_misc::before_reset_on_demand_ins_access[x].cycle;
-      //pos[0] = reset_misc::before_reset_on_demand_data_access[x].cycle;
+      //pos[0] = reset_misc::before_reset_on_demand_ins_access[x].cycle;
+      pos[0]=reset_misc::dq_before_data_access[x].cycle;
       //before adr
-      pos[1] = reset_misc::before_reset_on_demand_ins_access[x].ip;
-  
+      //pos[1] = reset_misc::before_reset_on_demand_ins_access[x].ip;
+      pos[1]=reset_misc::dq_before_data_access[x].ip;
       point.point_1= pos[0];
       point.point_2 =pos[1];
 
@@ -208,8 +212,8 @@ namespace {
       ClassifiedPoint point {};
   
       //Target
-      uint64_t page_num= (reset_misc::after_reset_on_demand_ins_access[x].ip)>>12;
-      //uint64_t page_num= (reset_misc::after_reset_on_demand_data_access[x].ip)>>12;
+      //uint64_t page_num= (reset_misc::after_reset_on_demand_ins_access[x].ip)>>12;
+      uint64_t page_num= (reset_misc::dq_after_data_access[x].ip)>>12;
       point.classification = page_num;
 
       return point;
@@ -681,14 +685,17 @@ void CACHE::prefetcher_cycle_operate()
       ::trackers[this].finalData.assign(testDataSize, {0});
 
       ::trackers[this].current_train.assign(trainDataSize, {0}); 
-
+      //for (size_t i=0;i<trainDataSize;i++)
+      //{
+         //std::cout<<"The previous_train classification in the next round is"<<::trackers[this].previous_train[i].classification<<" The point 1 is "<<::trackers[this].previous_train[i].point_1<<std::endl;
+      //}
       //::trackers[this].previous_train.assign(trainDataSize,{0});
       //newly added
       std::cout<<"Enter the round above 1"<<std::endl;
       ::trackers[this].readTrainingData_aft_2(totalDataSize,::trackers[this].trainData, ::trackers[this].testData,trainDataSize,totalDataSize);
       for(size_t j=0;j<testDataSize;j++)
       {
-        //std::cout<<"The loop is entered"<<std::endl;
+        std::cout<<"The loop is entered"<<std::endl;
         finalData[j].classification= ::trackers[this].classify_1(2,::trackers[this].previous_train, trainDataSize, testData[j],K);
         prefetch_candidate[j]=finalData[j].classification;
         //std::cout<<"The classification is "<<finalData[j].classification<<std::endl;
@@ -755,14 +762,14 @@ void CACHE::prefetcher_cycle_operate()
     //add classification
     if(champsim::operable::knn_can_predict==true)
     {
-      ::trackers[this].add_classification(totalDataSize, trainData,testData,trainDataSize,totalDataSize);
-      copy(trainData.begin(), trainData.end(),current_train.begin());
+      ::trackers[this].add_classification(totalDataSize, ::trackers[this].trainData,::trackers[this].testData,trainDataSize,totalDataSize);
+      copy(::trackers[this].trainData.begin(), ::trackers[this].trainData.end(),::trackers[this].current_train.begin());
       float count_success=0; 
       for(size_t i=0;i<testDataSize;i++)
       {
-        //std::cout<<"The real classification is"<<testData[i].classification<<std::endl;
-        //std::cout<<"The estimated classification is"<<finalData[i].classification<<std::endl;
-        if(finalData[i].classification==testData[i].classification)
+        //std::cout<<"The real classification is"<<::trackers[this].testData[i].classification<<std::endl;
+        //std::cout<<"The estimated classification is"<<::trackers[this].finalData[i].classification<<std::endl;
+        if(::trackers[this].finalData[i].classification==::trackers[this].testData[i].classification)
         {
           count_success++;
         }
@@ -773,8 +780,13 @@ void CACHE::prefetcher_cycle_operate()
       if(final_accuracy<0.6)
       {
         //previous_train=current_train;
-        copy(current_train.begin(),current_train.end(),trackers[this].previous_train.begin());
+        copy(::trackers[this].current_train.begin(),::trackers[this].current_train.end(),::trackers[this].previous_train.begin());
         std::cout<<"Replacement at round "<<(champsim::operable::reset_count)<<std::endl;
+        //for(size_t i=0;i<trainDataSize;i++)
+        //{
+          //std::cout<<"The current train classification is"<<::trackers[this].current_train[i].classification<<" The point 1 is "<<::trackers[this].current_train[i].point_1<<std::endl;
+          //std::cout<<"The previous_train classification is"<<::trackers[this].previous_train[i].classification<<" The point 1 is "<<::trackers[this].previous_train[i].point_1<<std::endl;
+        //}
       }
       else
       {
@@ -784,11 +796,11 @@ void CACHE::prefetcher_cycle_operate()
       champsim::operable::knn_can_predict=false;
       //clear the value     
       //actual_prefetch.clear();
-      trainData.clear();
-      testData.clear();
-      finalData.clear();
+      ::trackers[this].trainData.clear();
+      ::trackers[this].testData.clear();
+      ::trackers[this].finalData.clear();
       //previous_train.clear();
-      current_train.clear();
+      ::trackers[this].current_train.clear();
 
     }
   }

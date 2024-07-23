@@ -209,7 +209,7 @@ void O3_CPU::initialize_instruction()
     // Write the first 1000 accesses after the context switch to file.
     if (reset_misc::after_reset_on_demand_ins_access_index >= ON_DEMAND_ACCESS_RECORD_SIZE) {
       have_recorded_on_demand_ins_accesses = false;
-      champsim::operable::knn_can_predict = true;
+      //champsim::operable::knn_can_predict = true;
       //champsim::operable::reset_count++;
       std::cout << "can predict" << std::endl;
       reset_misc::after_reset_on_demand_ins_access_index = 0;

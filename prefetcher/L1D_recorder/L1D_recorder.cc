@@ -40,17 +40,37 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   if (reset_misc::can_record_after_access) {
     
     // Check if deque empty. 
-    if (reset_misc::dq_pf_data_access.empty()) {
+    if (reset_misc::dq_after_data_access.empty()) {
       reset_misc::dq_after_data_access.push_back(acc);
+      std::cout<<"If empty, The size of the dq_after_data_access is"<<reset_misc::dq_after_data_access.size()<<std::endl;
     }
     // Deque not empty.
     else {
-      if (reset_misc::dq_pf_data_access.back().ip == ip) {
+      /*if (reset_misc::dq_after_data_access.back().ip == ip) {
         reset_misc::dq_after_data_access.back().addr.insert(block_addr);
         reset_misc::dq_after_data_access.back().occurance++;
       } 
       else {
         reset_misc::dq_after_data_access.push_back(acc);
+        std::cout<<"The size of the dq_after_data_access is"<<reset_misc::dq_after_data_access.size()<<std::endl;
+      }
+      */
+      size_t limit=reset_misc::dq_after_data_access.size()>OBSERVATION_WINDOW ?(reset_misc::dq_after_data_access.size()-10):0;
+      bool found =false;
+      for(size_t i=reset_misc::dq_after_data_access.size()-1;i>limit;i--)
+      {
+        if(reset_misc::dq_after_data_access[i].ip==ip)
+        {
+          reset_misc::dq_after_data_access[i].addr.insert(block_addr);
+          reset_misc::dq_after_data_access[i].occurance++;
+          found=true;
+          break;
+        }
+      }
+      if(!found)
+      {
+        reset_misc::dq_after_data_access.push_back(acc);
+        std::cout<<"The size of the dq_after_data_access is"<<reset_misc::dq_after_data_access.size()<<std::endl;
       }
     }
 
@@ -58,6 +78,9 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
     // Analysis.
     if (reset_misc::dq_after_data_access.size() > DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE) {
       reset_misc::dq_after_data_access.pop_front(); 
+      champsim::operable::knn_can_predict=true;
+      std::cout << "can predict" << std::endl;
+      std::cout<<"Inside L1D recorder, The knn_can_predict becomes true"<<std::endl;
       reset_misc::can_record_after_access = false;
 
       std::cout << "Feedback:" << reset_misc::dq_after_data_access.size() << " " << reset_misc::dq_pf_data_access.size() << std::endl;
