@@ -186,10 +186,10 @@ namespace {
         if (prefetched) {
           context_switch_issue_queue.pop_front();
           context_switch_prefetching_timing.push_back({addr, cache->current_cycle, 0});
-          ::trackers[this].issued_context_switch_prefetches++;
+          issued_context_switch_prefetches++;
 
-          if (::trackers[this].issued_context_switch_prefetches % 500 == 0) {
-            std::cout << "Have prefetched " << ::trackers[this].issued_context_switch_prefetches << " blocks" << std::endl; 
+          if (issued_context_switch_prefetches % 500 == 0) {
+            std::cout << "Have prefetched " << issued_context_switch_prefetches << " blocks" << std::endl; 
           }
 
           //std::cout << "Prefetched " << addr << " at " << std::dec << cache->current_cycle << std::endl;

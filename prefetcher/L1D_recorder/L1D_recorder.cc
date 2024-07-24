@@ -122,7 +122,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
           }
         }
 
-        on_demand_access_file_out << "99999" << std::endl;
+        on_demand_access_file_out << "99999 99999" << std::endl;
         on_demand_access_file_out.close();
       }
 
