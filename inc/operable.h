@@ -28,7 +28,7 @@
 #define SIMULATE_WITH_BRANCH_PREDICTOR_RESET 0
 #define RESET_INTERVAL 4000000
 #define ON_DEMAND_ACCESS_RECORD_SIZE 1000
-#define DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE 1000
+#define DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE 4000
 
 #include <string>
 #include <deque>
@@ -47,6 +47,7 @@ namespace reset_misc {
   struct addr_occr {
     uint64_t addr;
     uint64_t occr;
+    uint64_t cycle;
   };
   
   struct on_demand_data_access : on_demand_ins_access {
@@ -72,6 +73,8 @@ namespace reset_misc {
   extern std::deque<on_demand_data_access> dq_before_data_access;
   extern std::deque<on_demand_data_access> dq_after_data_access;
   extern std::deque<on_demand_data_access> dq_pf_data_access;
+  extern std::deque<addr_occr> dq_before_knn;
+  extern std::deque<addr_occr> dq_after_knn;
   extern bool can_record_after_access;
 }
 // WL
