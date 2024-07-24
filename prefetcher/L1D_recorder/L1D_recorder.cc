@@ -7,7 +7,7 @@
 #define PREFETCH_UNIT_SIZE 64
 #define NUMBER_OF_PREFETCH_UNIT 400
 #define OBSERVATION_WINDOW 500
-#define RECORD_ON_DEMAND_ACCESS_L1D 1
+#define RECORD_ON_DEMAND_ACCESS_L1D 0
 
 namespace {
 
@@ -15,7 +15,6 @@ namespace {
 
     std::unordered_set<uint64_t> uniq_prefetch_address;
     std::ofstream L1D_access_file;
-    uint64_t past_size = 0;
     uint64_t data_size = 0;
   };
 
@@ -45,6 +44,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   uint64_t block_addr = (addr >> LOG2_BLOCK_SIZE) << LOG2_BLOCK_SIZE;
   addr_obj.addr = block_addr;
   addr_obj.occr = 1;
+  addr_obj.cycle = current_cycle;
   acc.addr_rec.push_back(addr_obj);
 
   if (reset_misc::can_record_after_access && RECORD_ON_DEMAND_ACCESS_L1D) {
@@ -65,6 +65,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
         for(auto &var : reset_misc::dq_after_data_access[i].addr_rec) {
           if (var.addr == block_addr) {
             var.occr++;
+            var.cycle = current_cycle;
             found = true;
           } 
         }
@@ -91,11 +92,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
         reset_misc::dq_after_data_access.push_back(acc);
         ::trackers[this].data_size++;
       }
-    }
-
-    if (::trackers[this].past_size != reset_misc::dq_after_data_access.size()) {
-      std::cout << "Size = " << reset_misc::dq_after_data_access.size() << std::endl;
-      ::trackers[this].past_size = reset_misc::dq_after_data_access.size();
     }
 
     // Dequeue full.

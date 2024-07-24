@@ -11,7 +11,7 @@
 #define NUMBER_OF_PREFETCH_UNIT 2000
 #define HISTORY_SIZE 9000
 #define CUTOFF 1
-#define READ_ON_DEMAND_ACCESS_L1D 0
+#define READ_ON_DEMAND_ACCESS_L1D 1
 
 namespace {
 
@@ -133,7 +133,7 @@ namespace {
             break; 
           } 
 
-          std::cout << "Access = " << r_access << std::endl;
+          //std::cout << "Access = " << r_access << std::endl;
 
           bool found = false;
 
@@ -152,7 +152,6 @@ namespace {
 
         std::cout << "Read in count = " << readin_count << std::endl;
       }
-
 
       std::cout << "PREFETCH_UNIT_SHIFT = " << PREFETCH_UNIT_SHIFT << " PREFETCH_UNIT_SIZE = " << PREFETCH_UNIT_SIZE << " NUMBER_OF_PREFETCH_UNIT = " << NUMBER_OF_PREFETCH_UNIT << std::endl; 
 

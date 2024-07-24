@@ -47,6 +47,7 @@ namespace reset_misc {
   struct addr_occr {
     uint64_t addr;
     uint64_t occr;
+    uint64_t cycle;
   };
   
   struct on_demand_data_access : on_demand_ins_access {
