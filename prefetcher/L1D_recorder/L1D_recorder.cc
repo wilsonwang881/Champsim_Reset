@@ -97,11 +97,20 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
     // Dequeue full.
     // Analysis.
     if (reset_misc::dq_after_data_access.size() > DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE ||
-        champsim::operable::context_switch_mode ||
         ::trackers[this].data_size > DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE) {
       //reset_misc::dq_after_data_access.pop_front(); 
       reset_misc::can_record_after_access = false;
       ::trackers[this].data_size = 0;
+
+      reset_misc::dq_after_knn.clear();
+
+      for(auto var : reset_misc::dq_after_data_access) {
+        for(auto _addr : var.addr_rec) {
+          if (reset_misc::dq_after_knn.size() <= 999) {
+            reset_misc::dq_after_knn.push_back(_addr); 
+          }
+        }
+      }
 
       std::cout << "Writing" << std::endl;
 
@@ -146,7 +155,27 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
       }
     }
   }
+  
+  // For KNN.
+  bool found_in_dq = false;
 
+  for(auto &var : reset_misc::dq_before_knn) {
+    if (var.addr == block_addr) {
+      var.occr++;
+      var.cycle = current_cycle;
+      found_in_dq = true;
+      break;
+    }
+  } 
+
+  if (!found_in_dq) {
+    reset_misc::dq_before_knn.push_back(addr_obj); 
+  }
+
+  if (reset_misc::dq_before_knn.size() > 1000) {
+    reset_misc::dq_before_knn.pop_front(); 
+  }
+  
   // Check if deque empty
   if (reset_misc::dq_before_data_access.size() == 0) {
      reset_misc::dq_before_data_access.push_back(acc); 
@@ -164,6 +193,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
       for(reset_misc::addr_occr var : reset_misc::dq_before_data_access[i].addr_rec) {
         if (var.addr == block_addr) {
           var.occr++;
+          var.cycle = current_cycle;
           found = true;
         }
       }

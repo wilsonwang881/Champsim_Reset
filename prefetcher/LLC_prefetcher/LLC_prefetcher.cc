@@ -22,6 +22,8 @@ namespace {
     std::unordered_set<uint64_t> uniq_prefetched_page_address;
     std::deque<std::pair<uint64_t, uint64_t>> past_accesses;
     uint64_t issued_context_switch_prefetches = 0;
+    uint64_t not_issued_context_switch_prefetches = 0;
+    int prefetch_attempt = 0;
  
     public:
 
@@ -199,6 +201,14 @@ namespace {
             uniq_prefetched_page_address.insert(addr >> 12); 
           }
           */
+        }
+        else {
+          //std::cout << "Failed prefetch " << addr << std::endl;
+          prefetch_attempt++;
+          if (prefetch_attempt > 10) {
+            context_switch_issue_queue.pop_front(); 
+            prefetch_attempt = 0;
+          }
         }
       }
     }

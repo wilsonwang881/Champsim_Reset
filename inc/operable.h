@@ -73,6 +73,8 @@ namespace reset_misc {
   extern std::deque<on_demand_data_access> dq_before_data_access;
   extern std::deque<on_demand_data_access> dq_after_data_access;
   extern std::deque<on_demand_data_access> dq_pf_data_access;
+  extern std::deque<addr_occr> dq_before_knn;
+  extern std::deque<addr_occr> dq_after_knn;
   extern bool can_record_after_access;
 }
 // WL
