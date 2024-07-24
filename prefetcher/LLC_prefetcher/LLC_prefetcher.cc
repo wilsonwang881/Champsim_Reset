@@ -11,7 +11,7 @@
 #define NUMBER_OF_PREFETCH_UNIT 2000
 #define HISTORY_SIZE 9000
 #define CUTOFF 1
-#define READ_ON_DEMAND_ACCESS_L1D 1
+#define READ_ON_DEMAND_ACCESS_L1D 0
 
 namespace {
 
@@ -21,6 +21,7 @@ namespace {
     std::set<uint64_t> uniq_ins_page_address;
     std::unordered_set<uint64_t> uniq_prefetched_page_address;
     std::deque<std::pair<uint64_t, uint64_t>> past_accesses;
+    uint64_t issued_context_switch_prefetches = 0;
  
     public:
 
@@ -185,7 +186,13 @@ namespace {
         if (prefetched) {
           context_switch_issue_queue.pop_front();
           context_switch_prefetching_timing.push_back({addr, cache->current_cycle, 0});
-          //std::cout << "Prefetched " << std::hex << addr << " at " << std::dec << cache->current_cycle << std::endl;
+          ::trackers[this].issued_context_switch_prefetches++;
+
+          if (::trackers[this].issued_context_switch_prefetches % 500 == 0) {
+            std::cout << "Have prefetched " << ::trackers[this].issued_context_switch_prefetches << " blocks" << std::endl; 
+          }
+
+          //std::cout << "Prefetched " << addr << " at " << std::dec << cache->current_cycle << std::endl;
 
           /*
           if (uniq_prefetched_page_address.find(addr >> 12) ==  uniq_prefetched_page_address.end()) {
@@ -307,6 +314,7 @@ void CACHE::prefetcher_cycle_operate()
         std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
         reset_misc::can_record_after_access = true;
         reset_misc::dq_after_data_access.clear();
+        ::trackers[this].issued_context_switch_prefetches = 0;
       }
     }
   }
