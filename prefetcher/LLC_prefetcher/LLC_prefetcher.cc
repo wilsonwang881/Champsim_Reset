@@ -112,7 +112,7 @@ namespace {
             if (std::find(context_switch_issue_queue.begin(), context_switch_issue_queue.end(), prefetch_target) == context_switch_issue_queue.end() &&
                 prefetch_target.first < (((prefetch_target.first >> LOG2_PAGE_SIZE) << LOG2_PAGE_SIZE) + 4096)) {
               context_switch_issue_queue.push_back(prefetch_target);
-            }
+        }
           }
         }
       }
@@ -131,6 +131,8 @@ namespace {
           if (r_access == 99999) {
             break; 
           } 
+
+          std::cout << "Access = " << r_access << std::endl;
 
           bool found = false;
 

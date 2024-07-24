@@ -15,6 +15,8 @@ namespace {
 
     std::unordered_set<uint64_t> uniq_prefetch_address;
     std::ofstream L1D_access_file;
+    uint64_t past_size = 0;
+    uint64_t data_size = 0;
   };
 
   std::map<CACHE*, tracker> trackers;
@@ -45,11 +47,12 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   addr_obj.occr = 1;
   acc.addr_rec.push_back(addr_obj);
 
-  if (reset_misc::can_record_after_access) {
+  if (reset_misc::can_record_after_access && RECORD_ON_DEMAND_ACCESS_L1D) {
     
     // Check if deque empty. 
     if (reset_misc::dq_after_data_access.empty()) {
       reset_misc::dq_after_data_access.push_back(acc);
+      ::trackers[this].data_size++;
     }
     // Deque not empty.
     else {
@@ -76,6 +79,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
             reset_misc::dq_after_data_access[i].addr.insert(block_addr);
             reset_misc::dq_after_data_access[i].addr_rec.push_back(addr_obj);
             found = true;
+            ::trackers[this].data_size++;
           }
         }
       }
@@ -85,20 +89,30 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
       // create new entry
       if (!found) {
         reset_misc::dq_after_data_access.push_back(acc);
+        ::trackers[this].data_size++;
       }
+    }
+
+    if (::trackers[this].past_size != reset_misc::dq_after_data_access.size()) {
+      std::cout << "Size = " << reset_misc::dq_after_data_access.size() << std::endl;
+      ::trackers[this].past_size = reset_misc::dq_after_data_access.size();
     }
 
     // Dequeue full.
     // Analysis.
-    if (reset_misc::dq_after_data_access.size() > DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE) {
-      reset_misc::dq_after_data_access.pop_front(); 
+    if (reset_misc::dq_after_data_access.size() > DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE ||
+        champsim::operable::context_switch_mode ||
+        ::trackers[this].data_size > DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE) {
+      //reset_misc::dq_after_data_access.pop_front(); 
       reset_misc::can_record_after_access = false;
+      ::trackers[this].data_size = 0;
+
+      std::cout << "Writing" << std::endl;
 
       if (RECORD_ON_DEMAND_ACCESS_L1D) {
         std::ofstream on_demand_access_file_out;
         on_demand_access_file_out.open("L1D_on_demand_access.txt", std::ios_base::app);
 
-        std::cout << "Writing" << std::endl;
         for (auto var : reset_misc::dq_after_data_access)
         {
           //on_demand_access_file_out << "r " << var.cycle << " " << var.ip << " " << var.occurance << std::endl;
@@ -110,8 +124,9 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 
         on_demand_access_file_out << "99999" << std::endl;
         on_demand_access_file_out.close();
-
       }
+
+      reset_misc::dq_after_data_access.clear();
 
       std::cout << "Feedback:" << reset_misc::dq_after_data_access.size() << " " << reset_misc::dq_pf_data_access.size() << std::endl;
       for(auto pf: reset_misc::dq_pf_data_access) {
