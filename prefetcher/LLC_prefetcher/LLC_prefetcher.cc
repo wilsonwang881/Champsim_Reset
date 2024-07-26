@@ -12,6 +12,7 @@
 #define HISTORY_SIZE 9000
 #define CUTOFF 1
 #define READ_ON_DEMAND_ACCESS_L1D 1
+#define RETRY_LIMIT 10
 
 namespace {
 
@@ -24,6 +25,7 @@ namespace {
     uint64_t issued_context_switch_prefetches = 0;
     uint64_t not_issued_context_switch_prefetches = 0;
     int prefetch_attempt = 0;
+    int waited = 0;
  
     public:
 
@@ -129,6 +131,8 @@ namespace {
 
         uint64_t r_access, r_occurance;
         int readin_count = 0;
+        reset_misc::dq_prefetch_communicate.clear();
+        std::vector<uint64_t> sort_container;
 
         while (L1D_access_file >> r_access >> r_occurance) {
           if (r_access == 99999) {
@@ -139,8 +143,8 @@ namespace {
 
           bool found = false;
 
-          for(auto var : context_switch_issue_queue) {
-            if (var.first == r_access) {
+          for(auto var : sort_container) {
+            if (var == r_access) {
               found = true; 
             }
           }
@@ -148,8 +152,16 @@ namespace {
           readin_count++;
 
           if (!found) {
-            context_switch_issue_queue.push_back(std::make_pair(r_access, true));
+            sort_container.push_back(r_access);
+            //reset_misc::dq_prefetch_communicate.push_back(std::make_pair(r_access, true));
+            //context_switch_issue_queue.push_back(std::make_pair(r_access, true));
           }
+        }
+
+        sort(sort_container.begin(), sort_container.end());
+
+        for(auto var : sort_container) {
+          reset_misc::dq_prefetch_communicate.push_back(std::make_pair(var, true));
         }
 
         std::cout << "Read in count = " << readin_count << std::endl;
@@ -166,7 +178,7 @@ namespace {
       }
       */ 
 
-      std::cout << "LLC Prefetcher: ready to issue prefetches for " << uniq_page_address.size() << " + " << uniq_ins_page_address.size() << " page(s) and " << context_switch_issue_queue.size() << " prefetch(es)" << std::endl;
+      std::cout << "LLC Prefetcher: ready to issue prefetches for " << uniq_page_address.size() << " + " << uniq_ins_page_address.size() << " page(s) and " << context_switch_issue_queue.size() << " " << reset_misc::dq_prefetch_communicate.size() << " prefetch(es)" << std::endl;
     }
 
     bool context_switch_queue_empty()
@@ -177,20 +189,20 @@ namespace {
     void context_switch_issue(CACHE* cache)
     {
       // Issue eligible outstanding prefetches
-      if (!std::empty(context_switch_issue_queue)) {//&& champsim::operable::cache_clear_counter == 7
-        auto [addr, priority] = context_switch_issue_queue.front();
+      if (!std::empty(reset_misc::dq_prefetch_communicate)) {//&& champsim::operable::cache_clear_counter == 7
+        auto [addr, priority] = reset_misc::dq_prefetch_communicate.back();
 
         // If this fails, the queue was full.
         assert(priority);
         bool prefetched = cache->prefetch_line(addr, priority, 0);
 
         if (prefetched) {
-          context_switch_issue_queue.pop_front();
+          reset_misc::dq_prefetch_communicate.pop_back();
           context_switch_prefetching_timing.push_back({addr, cache->current_cycle, 0});
           issued_context_switch_prefetches++;
 
           if (issued_context_switch_prefetches % 500 == 0) {
-            std::cout << "Have prefetched " << issued_context_switch_prefetches << " blocks" << std::endl; 
+            std::cout << "LLC Have prefetched " << issued_context_switch_prefetches << " blocks" << std::endl; 
           }
 
           //std::cout << "Prefetched " << addr << " at " << std::dec << cache->current_cycle << std::endl;
@@ -202,14 +214,16 @@ namespace {
           }
           */
         }
+        /*
         else {
           //std::cout << "Failed prefetch " << addr << std::endl;
           prefetch_attempt++;
-          if (prefetch_attempt > 10) {
+          if (prefetch_attempt > RETRY_LIMIT) {
             context_switch_issue_queue.pop_front(); 
             prefetch_attempt = 0;
           }
         }
+        */
       }
     }
   };
@@ -328,13 +342,14 @@ void CACHE::prefetcher_cycle_operate()
     }
   }
   else {
-    if (!::trackers[this].context_switch_queue_empty())
+    //if (!::trackers[this].context_switch_queue_empty())
+    if (!reset_misc::dq_prefetch_communicate.empty()) 
     {
       //if (champsim::operable::cpu_side_reset_ready) 
+      if (::trackers[this].waited == 8) 
       {
        ::trackers[this].context_switch_issue(this);
 
-       
         for(auto &[addr, issued_at, received_at] : ::trackers[this].context_switch_prefetching_timing) {
           if (received_at == 0) {
             for(auto var : block) {
@@ -344,6 +359,10 @@ void CACHE::prefetcher_cycle_operate()
             } 
           } 
         }
+         ::trackers[this].waited = 0;
+      }
+      else {
+        ::trackers[this].waited++; 
       }
     }
   }
