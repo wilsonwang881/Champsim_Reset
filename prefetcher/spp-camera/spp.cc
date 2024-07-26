@@ -44,7 +44,7 @@ void spp::prefetcher::issue(CACHE* cache)
   // WL: issue context switch prefetches first 
   if (!reset_misc::dq_prefetch_communicate.empty()) {
 
-    if (waited == 8) {
+    if (waited == 5) {
       auto [addr, priority] = reset_misc::dq_prefetch_communicate.front();
 
       // If this fails, the queue was full.

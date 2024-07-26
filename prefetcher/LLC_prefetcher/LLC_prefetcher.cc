@@ -11,7 +11,7 @@
 #define NUMBER_OF_PREFETCH_UNIT 2000
 #define HISTORY_SIZE 9000
 #define CUTOFF 1
-#define READ_ON_DEMAND_ACCESS_L1D 1
+#define READ_ON_DEMAND_ACCESS_L1D 0
 #define RETRY_LIMIT 10
 
 namespace {
@@ -346,7 +346,7 @@ void CACHE::prefetcher_cycle_operate()
     if (!reset_misc::dq_prefetch_communicate.empty()) 
     {
       //if (champsim::operable::cpu_side_reset_ready) 
-      if (::trackers[this].waited == 8) 
+      if (::trackers[this].waited == 5) 
       {
        ::trackers[this].context_switch_issue(this);
 
