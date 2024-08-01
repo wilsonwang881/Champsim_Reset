@@ -44,7 +44,8 @@ void spp::prefetcher::issue(CACHE* cache)
   // WL: issue context switch prefetches first 
   if (!reset_misc::dq_prefetch_communicate.empty()) {
 
-    if (waited == 5) {
+    /*
+    if (waited == 1) {
       auto [addr, priority] = reset_misc::dq_prefetch_communicate.front();
 
       // If this fails, the queue was full.
@@ -62,7 +63,6 @@ void spp::prefetcher::issue(CACHE* cache)
           std::cout << "L2C Have prefetched " << (unsigned)context_switch_issued << " blocks" << std::endl; 
         }
       }
-      /*
       else {
         if (retry_attempt >= retry_limit) {
           reset_misc::dq_prefetch_communicate.pop_front();
@@ -70,13 +70,13 @@ void spp::prefetcher::issue(CACHE* cache)
           context_switch_issued++;
         } 
       }
-      */
       waited = 0;
     }
     else {
       waited++;
     }
 
+    */
     issue_queue.clear();
     return;
   }

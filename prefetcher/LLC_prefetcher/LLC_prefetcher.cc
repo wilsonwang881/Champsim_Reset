@@ -12,7 +12,7 @@
 #define HISTORY_SIZE 9000
 #define CUTOFF 1
 #define READ_ON_DEMAND_ACCESS_L1D 1
-#define RETRY_LIMIT 10
+#define RETRY_LIMIT 5
 
 namespace {
 
@@ -26,6 +26,7 @@ namespace {
     uint64_t not_issued_context_switch_prefetches = 0;
     int prefetch_attempt = 0;
     int waited = 0;
+    int runahead_prefetch_limit = 50;
  
     public:
 
@@ -186,33 +187,45 @@ namespace {
       return context_switch_issue_queue.empty();
     }
 
-    void context_switch_issue(CACHE* cache)
+    bool context_switch_issue(CACHE* cache)
     {
+      bool prefetched = false;
+
       // Issue eligible outstanding prefetches
       if (!std::empty(reset_misc::dq_prefetch_communicate)) {//&& champsim::operable::cache_clear_counter == 7
-        auto [addr, priority] = reset_misc::dq_prefetch_communicate.back();
+        auto [addr, priority] = reset_misc::dq_prefetch_communicate.front();
 
         // If this fails, the queue was full.
         assert(priority);
-        bool prefetched = cache->prefetch_line(addr, priority, 0);
 
-        if (prefetched) {
-          reset_misc::dq_prefetch_communicate.pop_back();
-          context_switch_prefetching_timing.push_back({addr, cache->current_cycle, 0});
-          issued_context_switch_prefetches++;
+        if (waited >= RETRY_LIMIT) {
+          
+          prefetched = cache->prefetch_line(addr, priority, 0);
 
-          if (issued_context_switch_prefetches % 500 == 0) {
-            std::cout << "LLC Have prefetched " << issued_context_switch_prefetches << " blocks" << std::endl; 
+          if (prefetched) {
+            reset_misc::dq_prefetch_communicate.pop_front();
+            context_switch_prefetching_timing.push_back({addr, cache->current_cycle, 0});
+            issued_context_switch_prefetches++;
+
+            if (issued_context_switch_prefetches % 500 == 0 ||
+                reset_misc::dq_prefetch_communicate.size() == 0) {
+              std::cout << "LLC Have prefetched " << issued_context_switch_prefetches << " blocks" << std::endl; 
+            }
+
+            //std::cout << "Prefetched " << addr << " at " << std::dec << cache->current_cycle << std::endl;
+
+            /*
+            if (uniq_prefetched_page_address.find(addr >> 12) ==  uniq_prefetched_page_address.end()) {
+              //std::cout << "First prefetch in page " << std::hex << addr << " prefetched at cycle " << std::dec << cache->current_cycle << std::endl;
+              uniq_prefetched_page_address.insert(addr >> 12); 
+            }
+            */
           }
 
-          //std::cout << "Prefetched " << addr << " at " << std::dec << cache->current_cycle << std::endl;
-
-          /*
-          if (uniq_prefetched_page_address.find(addr >> 12) ==  uniq_prefetched_page_address.end()) {
-            //std::cout << "First prefetch in page " << std::hex << addr << " prefetched at cycle " << std::dec << cache->current_cycle << std::endl;
-            uniq_prefetched_page_address.insert(addr >> 12); 
-          }
-          */
+          waited = 0;
+        }
+        else {
+          waited++;
         }
         /*
         else {
@@ -225,6 +238,8 @@ namespace {
         }
         */
       }
+
+    return prefetched;
     }
   };
 
@@ -282,6 +297,7 @@ void CACHE::prefetcher_cycle_operate()
     {
       this->clear_internal_PQ();
       reset_misc::dq_pf_data_access.clear();
+      ::trackers[this].runahead_prefetch_limit = 0;
       ::trackers[this].gather_context_switch_prefetches(); 
       ::trackers[this].context_switch_prefetch_gathered = true;
       ::trackers[this].context_switch_prefetching_timing.clear();
@@ -289,11 +305,14 @@ void CACHE::prefetcher_cycle_operate()
     }
    
     // Issue prefetches until the queue is empty.
+    //if (!reset_misc::dq_prefetch_communicate.empty()) //!::trackers[this].context_switch_queue_empty())
     /*
-    if (!::trackers[this].context_switch_queue_empty())
+    if (::trackers[this].runahead_prefetch_limit < 50) 
     {
+      bool attempt = false;
+
       if (champsim::operable::cpu_side_reset_ready) {
-       ::trackers[this].context_switch_issue(this);
+       attempt = ::trackers[this].context_switch_issue(this);
 
        
         for(auto &[addr, issued_at, received_at] : ::trackers[this].context_switch_prefetching_timing) {
@@ -306,11 +325,15 @@ void CACHE::prefetcher_cycle_operate()
           } 
         }
       }
+
+      if (attempt) {
+        ::trackers[this].runahead_prefetch_limit++; 
+      }
     }
     */
     // Toggle switches after all prefetches are issued.
-    //else
-    if (::trackers[this].context_switch_prefetch_gathered) 
+    else
+    //if (::trackers[this].context_switch_prefetch_gathered) 
     {
       //std::unordered_set<uint64_t> printed_page_addresses;
       
@@ -327,8 +350,8 @@ void CACHE::prefetcher_cycle_operate()
       if (!champsim::operable::have_cleared_BTB
           && !champsim::operable::have_cleared_BP
           && champsim::operable::cpu_side_reset_ready
-          && !champsim::operable::have_cleared_prefetcher
-          && champsim::operable::L2C_have_issued_context_switch_prefetches
+          //&& !champsim::operable::have_cleared_prefetcher
+          //&& champsim::operable::L2C_have_issued_context_switch_prefetches
           ) {//&& champsim::operable::cache_clear_counter == 7
         champsim::operable::context_switch_mode = false;
         champsim::operable::cpu_side_reset_ready = false;
@@ -346,7 +369,7 @@ void CACHE::prefetcher_cycle_operate()
     if (!reset_misc::dq_prefetch_communicate.empty()) 
     {
       //if (champsim::operable::cpu_side_reset_ready) 
-      if (::trackers[this].waited == 5) 
+      if (::trackers[this].waited == RETRY_LIMIT) 
       {
        ::trackers[this].context_switch_issue(this);
 
