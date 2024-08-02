@@ -7,7 +7,7 @@
 #define PREFETCH_UNIT_SIZE 64
 #define NUMBER_OF_PREFETCH_UNIT 400
 #define OBSERVATION_WINDOW 500
-#define RECORD_ON_DEMAND_ACCESS_L1D 0
+#define RECORD_ON_DEMAND_ACCESS_L1D 1
 
 namespace {
 
@@ -20,6 +20,29 @@ namespace {
 
   std::map<CACHE*, tracker> trackers;
 }
+
+    static int cmpfunc (const void*a,const void*b)
+    {
+      return(*(uint64_t*)a-*(uint64_t*)b);
+    }
+
+    std::vector<uint64_t> distinct_page ( uint64_t* arr ,int n) //finding distinct pages for every 1000 points
+    {
+      std::vector<uint64_t> special_page;
+      special_page.clear(); 
+      qsort(arr,n,sizeof(uint64_t),cmpfunc);
+      for(int i=0;i<n;i++)
+      {
+        while (i<n-1 && arr[i]==arr[i+1])
+        {
+          i++;  
+        }
+        special_page.push_back(arr[i]);
+        std::cout<<"The distinct pages are"<<arr[i]<<std::endl;
+      }
+      return special_page;
+      //printf("The number of distinct page is:%d\n",special_page);
+    }
 
 void CACHE::prefetcher_initialize()
 {
@@ -35,6 +58,7 @@ void CACHE::prefetcher_initialize()
 
 uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
 {
+  //std::cout<<"The prefetching operation is on"<<std::endl;
   reset_misc::on_demand_data_access acc;
   acc.cycle = current_cycle;
   acc.ip = ip;
@@ -52,11 +76,12 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
     // Check if deque empty. 
     if (reset_misc::dq_after_data_access.empty()) {
       reset_misc::dq_after_data_access.push_back(acc);
+      //std::cout<<"The dq_after_data_access size is"<<reset_misc::dq_after_data_access.size()<<std::endl;
       ::trackers[this].data_size++;
     }
     // Deque not empty.
     else {
- 
+      //std::cout<<"The dq_after_data_access size is"<<reset_misc::dq_after_data_access.size()<<std::endl;
       size_t limit = reset_misc::dq_after_data_access.size() > OBSERVATION_WINDOW ? (reset_misc::dq_after_data_access.size() - OBSERVATION_WINDOW) : 0; 
       bool found = false;
 
@@ -90,15 +115,19 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
       // create new entry
       if (!found) {
         reset_misc::dq_after_data_access.push_back(acc);
+        //std::cout<<"The dq_after_data_access size is"<<reset_misc::dq_after_data_access.size()<<std::endl;
         ::trackers[this].data_size++;
       }
     }
-
+    //std::cout<<"The dq_after_data_access size is"<<reset_misc::dq_after_data_access.size()<<std::endl;
     // Dequeue full.
     // Analysis.
     if (reset_misc::dq_after_data_access.size() > DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE ||
         ::trackers[this].data_size > DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE) {
-      //reset_misc::dq_after_data_access.pop_front(); 
+      //reset_misc::dq_after_data_access.pop_front();
+      //std::cout<<"Inside L1D, the stage is entered"<<std::endl;
+      //std::cout<<"Inside L1D recorder, the reset count is"<<champsim::operable::reset_count<<std::endl;
+      //std::cout<<"Inside L1D recorder the knn_can_predict"<<champsim::operable::knn_can_predict<<std::endl;
       reset_misc::can_record_after_access = false;
       ::trackers[this].data_size = 0;
 
@@ -107,11 +136,13 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
       for(auto var : reset_misc::dq_after_data_access) {
         for(auto _addr : var.addr_rec) {
           if (reset_misc::dq_after_knn.size() <= 999) {
-            reset_misc::dq_after_knn.push_back(_addr); 
+            reset_misc::dq_after_knn.push_back(_addr);          
           }
         }
       }
-
+      
+      champsim::operable::knn_can_predict =true;
+      std::cout<<"Inside the L1D recorder ,we can enter KNN prefetch"<<std::endl;
       std::cout << "Writing" << std::endl;
 
       if (RECORD_ON_DEMAND_ACCESS_L1D) {

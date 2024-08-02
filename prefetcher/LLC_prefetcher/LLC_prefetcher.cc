@@ -321,7 +321,7 @@ void CACHE::prefetcher_cycle_operate()
         champsim::operable::cache_clear_counter = 0;
         ::trackers[this].context_switch_prefetch_gathered = false;
         std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
-        reset_misc::can_record_after_access = true;
+        //reset_misc::can_record_after_access = true;
         reset_misc::dq_after_data_access.clear();
         ::trackers[this].issued_context_switch_prefetches = 0;
       }
