@@ -28,7 +28,7 @@
 #define SIMULATE_WITH_BRANCH_PREDICTOR_RESET 0
 #define RESET_INTERVAL 4000000
 #define ON_DEMAND_ACCESS_RECORD_SIZE 1000
-#define DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE 4000
+#define DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE 8000
 
 #include <string>
 #include <deque>
@@ -75,6 +75,7 @@ namespace reset_misc {
   extern std::deque<on_demand_data_access> dq_pf_data_access;
   extern std::deque<addr_occr> dq_before_knn;
   extern std::deque<addr_occr> dq_after_knn;
+  extern std::deque<std::pair<uint64_t, bool>> dq_prefetch_communicate;
   extern bool can_record_after_access;
 }
 // WL

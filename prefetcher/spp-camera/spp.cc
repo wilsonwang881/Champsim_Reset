@@ -41,6 +41,47 @@ namespace {
 
 void spp::prefetcher::issue(CACHE* cache)
 {
+  // WL: issue context switch prefetches first 
+  if (!reset_misc::dq_prefetch_communicate.empty()) {
+
+    /*
+    if (waited == 1) {
+      auto [addr, priority] = reset_misc::dq_prefetch_communicate.front();
+
+      // If this fails, the queue was full.
+      bool prefetched = cache->prefetch_line(addr, priority, 0);
+      if (prefetched) {
+        reset_misc::dq_prefetch_communicate.pop_front();
+        filter.update_issue(addr, cache->get_set(addr));
+        context_switch_issued++;
+
+        retry_attempt = 0;
+
+        //std::cout << "L2C prefetched " << (unsigned)addr << " at cycle " << cache->current_cycle << std::endl;
+
+        if (context_switch_issued % 500 == 0) {
+          std::cout << "L2C Have prefetched " << (unsigned)context_switch_issued << " blocks" << std::endl; 
+        }
+      }
+      else {
+        if (retry_attempt >= retry_limit) {
+          reset_misc::dq_prefetch_communicate.pop_front();
+          retry_attempt = 0;
+          context_switch_issued++;
+        } 
+      }
+      waited = 0;
+    }
+    else {
+      waited++;
+    }
+
+    */
+    issue_queue.clear();
+    return;
+  }
+  // WL 
+
   // Issue eligible outstanding prefetches
   if (!std::empty(issue_queue)) {
     auto [addr, priority] = issue_queue.front();

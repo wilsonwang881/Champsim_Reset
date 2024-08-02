@@ -61,6 +61,7 @@ void CACHE::prefetcher_cycle_operate()
       {
         pref.context_switch_gather_prefetches(this);
         pref.context_switch_prefetch_gathered = true;
+        pref.context_switch_issued = 0;
       }
      
       // Issue prefetches until the queue is empty.
