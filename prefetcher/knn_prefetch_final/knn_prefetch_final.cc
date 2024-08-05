@@ -62,7 +62,8 @@ namespace {
     bool context_switch_prefetch_gathered;
 
     std::deque<std::pair<uint64_t, bool>> context_switch_issue_queue;
-    std::deque<std::tuple<uint64_t, uint64_t, uint64_t>> context_switch_prefetching_timing; 
+    std::deque<std::tuple<uint64_t, uint64_t, uint64_t>> context_switch_prefetching_timing;
+    std::deque<uint64_t>sorting_knn;
 
     //newly added
 
@@ -78,19 +79,65 @@ namespace {
       return false;
     }
 
-    void gather_context_switch_prefetches(std::vector<uint64_t> & real_prefetch)
+    void gather_context_switch_prefetches(std::vector<uint64_t> & real_prefetch, bool mode)
     {
       //uniq_page_address.clear();
-      context_switch_issue_queue.clear();
+      //L1 replay mode
+      //std::deque<uint64_t>sorting_knn;
 
-      for(int i=0;i<real_prefetch.size();i++)
+      if(mode==0)
       {
-        for(int x=1;x<=(1<<(LOG2_PAGE_SIZE-LOG2_BLOCK_SIZE));x++)
+        context_switch_issue_queue.clear();
+        sorting_knn.clear();
+
+        for(size_t i=0;i<reset_misc::dq_before_knn.size();i++)
         {
-          //std::cout<<"The page we tend to prefetch is"<< actual_prefetch[i]<<std::endl;
-          uint64_t pf_addr = (real_prefetch[i]<<LOG2_PAGE_SIZE)+x*64;
-          //prefetch_line(pf_addr, true, metadata_in);
-          context_switch_issue_queue.push_back({pf_addr,true});
+          for(size_t x=0;x<real_prefetch.size();x++)
+          {
+            if(((reset_misc::dq_before_knn[i].addr)>>12)==real_prefetch[x])
+            {
+              for(int y=0;y<2;y++)
+              {
+                if(reset_misc::dq_before_knn[i].occr==1)
+                {
+                  uint64_t pf_addr= (reset_misc::dq_before_knn[i].addr);
+                  if((pf_addr>>12)==(real_prefetch[x]))
+                  {
+                    //context_switch_issue_queue.push_back({pf_addr,true});
+                    sorting_knn.push_back(pf_addr);
+                  }
+                }
+                //uint64_t pf_addr_1= (reset_misc::dq_before_knn[i].addr);
+                //if((pf_addr_1>>12)==real_prefetch[x])
+               //{
+                  //context_switch_issue_queue.push_back({pf_addr_1,true});
+                //}
+              }
+            }
+            else
+              continue;
+          }
+        }
+      }
+      //KNN mode
+      if(mode==1)
+      {
+        //context_switch_issue_queue.clear();
+        for(int i=0;i<real_prefetch.size();i++)
+        {
+          for(int x=1;x<=(1<<(LOG2_PAGE_SIZE-LOG2_BLOCK_SIZE));x++)
+          {
+            //std::cout<<"The page we tend to prefetch is"<< actual_prefetch[i]<<std::endl;
+              uint64_t pf_addr = (real_prefetch[i]<<LOG2_PAGE_SIZE)+x*64;
+              sorting_knn.push_back(pf_addr);
+              //prefetch_line(pf_addr, true, metadata_in);
+              //context_switch_issue_queue.push_back({pf_addr,true});           
+          }
+        }
+        sort(sorting_knn.begin(),sorting_knn.end());
+        for(auto var:sorting_knn)
+        {
+          context_switch_issue_queue.push_back(std::make_pair(var,true));
         }
       }
     }
@@ -175,17 +222,18 @@ namespace {
       uint64_t pos[2];
       //before clk
       //pos[0] = reset_misc::before_reset_on_demand_ins_access[x].cycle;
-      pos[0]=reset_misc::dq_before_data_access[x].cycle;
+      pos[0]=reset_misc::dq_before_knn[x].cycle;
       //std::cout<<"The data access cycle is"<<pos[0]<<std::endl;
       //before adr
       //pos[1] = reset_misc::before_reset_on_demand_ins_access[x].ip;
-      pos[1] = reset_misc::dq_before_data_access[x].ip;
+      pos[1] = reset_misc::dq_before_knn[x].addr;
       //std::cout<<"The ip access is"<<pos[1]<<std::endl;
       point.point_1= pos[0];
       point.point_2 =pos[1];
       //Target
       //uint64_t page_num= (reset_misc::after_reset_on_demand_ins_access[x].ip)>>12;
-      uint64_t page_num= (reset_misc::dq_after_data_access[x].ip)>>12;
+      uint64_t page_num= (reset_misc::dq_after_knn[x].addr)>>12;
+      //std::cout<<"The page number is"<<page_num<<std::endl;
       point.classification = page_num;
       return point;
     }
@@ -197,10 +245,10 @@ namespace {
       uint64_t pos[2];
       //before clk
       //pos[0] = reset_misc::before_reset_on_demand_ins_access[x].cycle;
-      pos[0]=reset_misc::dq_before_data_access[x].cycle;
+      pos[0]=reset_misc::dq_before_knn[x].cycle;
       //before adr
       //pos[1] = reset_misc::before_reset_on_demand_ins_access[x].ip;
-      pos[1]=reset_misc::dq_before_data_access[x].ip;
+      pos[1]=reset_misc::dq_before_knn[x].addr;
       point.point_1= pos[0];
       point.point_2 =pos[1];
 
@@ -213,7 +261,8 @@ namespace {
   
       //Target
       //uint64_t page_num= (reset_misc::after_reset_on_demand_ins_access[x].ip)>>12;
-      uint64_t page_num= (reset_misc::dq_after_data_access[x].ip)>>12;
+      uint64_t page_num= (reset_misc::dq_after_knn[x].addr)>>12;
+      //std::cout<<"The page number is"<<page_num<<std::endl;
       point.classification = page_num;
 
       return point;
@@ -240,6 +289,7 @@ namespace {
         ClassifiedPoint p = convertToIrisPoint(i);
         //overall[i] = *p;
         overall.push_back(p);
+        //std::cout<<"The classfication result is"<<overall[i].classification<<std::endl;
         page_number[i]=overall[i].classification;
       }
 
@@ -533,6 +583,7 @@ void CACHE::prefetcher_cycle_operate()
         champsim::operable::context_switch_mode = false;
         champsim::operable::cpu_side_reset_ready = false;
         champsim::operable::cache_clear_counter = 0;
+        reset_misc::can_record_after_access = true;
         ::trackers[this].context_switch_prefetch_gathered = false;
         ::trackers[this].context_switch_toggled = true;
         //std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
@@ -545,7 +596,7 @@ void CACHE::prefetcher_cycle_operate()
   if ((champsim::operable::reset_count==1)&&(champsim::operable::knn_can_predict==true))
   {
     //newly added
-    std::cout<<"Enter the round 1"<<std::endl;
+    //std::cout<<"Enter the round"<<champsim::operable::reset_count<<std::endl;
     uint64_t prefetch_candidate[testDataSize];
   
     ::trackers[this].trainData.assign(trainDataSize, {0});
@@ -619,7 +670,28 @@ void CACHE::prefetcher_cycle_operate()
         }
       }*/
       //clear the value
+      /*
+      uint64_t before_page[1000];
+      uint64_t after_page [1000];  
+      std::vector<uint64_t> after_knn_page;
+      std::vector<uint64_t> before_knn_page;
+      std::cout<<"finish the round"<<champsim::operable::reset_count<<std::endl;
+      for(int i=0;i<1000;i++)
+      {
+       before_page[i]=(reset_misc::dq_before_knn[i].addr)>>12;
+       //std::cout<<"The before pape number is"<<before_page[i]<<std::endl;
+       after_page[i]=(reset_misc::dq_after_knn[i].addr)>>12; 
+       //std::cout<<"The after pape number is"<<after_page[i]<<std::endl;
+      }
+
+      std::cout<<"Before"<<std::endl;
+      before_knn_page=::trackers[this].distinct_page (before_page,1000);
+      std::cout<<"after"<<std::endl;
+      after_knn_page=::trackers[this].distinct_page (after_page,1000);
+      std::cout<<"The size of before_knn_page is"<< before_knn_page.size()<<std::endl;
+      std::cout<<"The size of after_knn_page is"<< after_knn_page.size()<<std::endl;
       std::cout<<"Enter the clear stage"<<std::endl;
+      */
       actual_prefetch.clear();
       trainData.clear();
       testData.clear();
@@ -672,6 +744,7 @@ void CACHE::prefetcher_cycle_operate()
 
    
     std::vector<uint64_t> actual_prefetch;
+
     //actual_prefetch= ::trackers[this].distinct_page (prefetch_candidate,testDataSize);
     //std::cout << "actual_prefetch = " << actual_prefetch.size() << std::endl;
 
@@ -695,16 +768,28 @@ void CACHE::prefetcher_cycle_operate()
       ::trackers[this].readTrainingData_aft_2(totalDataSize,::trackers[this].trainData, ::trackers[this].testData,trainDataSize,totalDataSize);
       for(size_t j=0;j<testDataSize;j++)
       {
-        std::cout<<"The loop is entered"<<std::endl;
+        //std::cout<<"The loop is entered"<<std::endl;
         finalData[j].classification= ::trackers[this].classify_1(2,::trackers[this].previous_train, trainDataSize, testData[j],K);
         prefetch_candidate[j]=finalData[j].classification;
         //std::cout<<"The classification is "<<finalData[j].classification<<std::endl;
       }
+      uint64_t before_page[1000]; 
+      std::vector<uint64_t> before_knn_page;
+      std::cout<<"page prefetch at the round"<<champsim::operable::reset_count<<std::endl;
+      for(int i=0;i<1000;i++)
+      {
+       before_page[i]=(reset_misc::dq_before_knn[i].addr)>>12;
+       //std::cout<<"The before pape number is"<<before_page[i]<<std::endl;
+      }
+      std::cout<<"Before"<<std::endl;
+      before_knn_page=::trackers[this].distinct_page (before_page,1000);
+
       actual_prefetch= ::trackers[this].distinct_page (prefetch_candidate,testDataSize);
       //std::cout << "actual_prefetch = " << actual_prefetch.size() << std::endl;
 
       this->clear_internal_PQ();
-      ::trackers[this].gather_context_switch_prefetches(actual_prefetch); 
+      ::trackers[this].gather_context_switch_prefetches(before_knn_page,0);
+      ::trackers[this].gather_context_switch_prefetches(actual_prefetch,1);
       ::trackers[this].context_switch_prefetch_gathered = true;
       //::trackers[this].context_switch_prefetching_timing.clear();
       //::trackers[this].uniq_prefetched_page_address.clear();
@@ -750,6 +835,7 @@ void CACHE::prefetcher_cycle_operate()
         champsim::operable::cpu_side_reset_ready = false;
         champsim::operable::cache_clear_counter = 0;
         //champsim::operable::knn_can_predict = false;
+        reset_misc::can_record_after_access = true;
         ::trackers[this].context_switch_prefetch_gathered = false;
         actual_prefetch.clear();
         //std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
@@ -792,7 +878,27 @@ void CACHE::prefetcher_cycle_operate()
       {
         std::cout<<"No Replacement at round,which is"<<(champsim::operable::reset_count)<<std::endl;
       }
-
+      /*
+      uint64_t before_page[1000];
+      uint64_t after_page [1000];  
+      std::vector<uint64_t> after_knn_page;
+      std::vector<uint64_t> before_knn_page;
+      std::cout<<"finish the round"<<champsim::operable::reset_count<<std::endl;
+      for(int i=0;i<1000;i++)
+      {
+       before_page[i]=(reset_misc::dq_before_knn[i].addr)>>12;
+       //std::cout<<"The before pape number is"<<before_page[i]<<std::endl;
+       after_page[i]=(reset_misc::dq_after_knn[i].addr)>>12; 
+       //std::cout<<"The after pape number is"<<after_page[i]<<std::endl;
+      }
+      
+      std::cout<<"Before"<<std::endl;
+      before_knn_page=::trackers[this].distinct_page (before_page,1000);
+      std::cout<<"after"<<std::endl;
+      after_knn_page=::trackers[this].distinct_page (after_page,1000);
+      std::cout<<"The size of before_knn_page is"<< before_knn_page.size()<<std::endl;
+      std::cout<<"The size of after_knn_page is"<< after_knn_page.size()<<std::endl;
+      */
       champsim::operable::knn_can_predict=false;
       //clear the value     
       //actual_prefetch.clear();
