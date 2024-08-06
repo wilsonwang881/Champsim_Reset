@@ -6,8 +6,8 @@
 #define PREFETCH_UNIT_SHIFT 8
 #define PREFETCH_UNIT_SIZE 64
 #define NUMBER_OF_PREFETCH_UNIT 400
-#define OBSERVATION_WINDOW 500
-#define RECORD_ON_DEMAND_ACCESS_L1D 1
+#define OBSERVATION_WINDOW 4000
+#define RECORD_ON_DEMAND_ACCESS_L1D 0
 
 namespace {
 
@@ -59,6 +59,10 @@ void CACHE::prefetcher_initialize()
 uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
 {
   //std::cout<<"The prefetching operation is on"<<std::endl;
+  if (type == champsim::to_underlying(access_type::WRITE)) {
+    return metadata_in; 
+  }
+
   reset_misc::on_demand_data_access acc;
   acc.cycle = current_cycle;
   acc.ip = ip;
@@ -129,8 +133,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
       //std::cout<<"Inside L1D recorder, the reset count is"<<champsim::operable::reset_count<<std::endl;
       //std::cout<<"Inside L1D recorder the knn_can_predict"<<champsim::operable::knn_can_predict<<std::endl;
       reset_misc::can_record_after_access = false;
-      ::trackers[this].data_size = 0;
-
       reset_misc::dq_after_knn.clear();
 
       for(auto var : reset_misc::dq_after_data_access) {
@@ -143,11 +145,11 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
       
       champsim::operable::knn_can_predict =true;
       std::cout<<"Inside the L1D recorder ,we can enter KNN prefetch"<<std::endl;
-      std::cout << "Writing" << std::endl;
 
       if (RECORD_ON_DEMAND_ACCESS_L1D) {
         std::ofstream on_demand_access_file_out;
         on_demand_access_file_out.open("L1D_on_demand_access.txt", std::ios_base::app);
+        std::cout << "Writing " << reset_misc::dq_after_data_access.size() << " on demand entries and " << ::trackers[this].data_size << " accesses to file in " << NAME << std::endl;
 
         for (auto var : reset_misc::dq_after_data_access)
         {
@@ -162,6 +164,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
         on_demand_access_file_out.close();
       }
 
+      ::trackers[this].data_size = 0;
       reset_misc::dq_after_data_access.clear();
 
       std::cout << "Feedback:" << reset_misc::dq_after_data_access.size() << " " << reset_misc::dq_pf_data_access.size() << std::endl;
