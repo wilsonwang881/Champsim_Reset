@@ -100,7 +100,7 @@ namespace {
               {
                 if(reset_misc::dq_before_knn[i].occr==1)
                 {
-                  uint64_t pf_addr= (reset_misc::dq_before_knn[i].addr);
+                  uint64_t pf_addr= (reset_misc::dq_before_knn[i].addr)+y*64;
                   if((pf_addr>>12)==(real_prefetch[x]))
                   {
                     //context_switch_issue_queue.push_back({pf_addr,true});
