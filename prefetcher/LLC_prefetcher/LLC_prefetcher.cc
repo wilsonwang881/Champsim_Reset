@@ -11,7 +11,7 @@
 #define NUMBER_OF_PREFETCH_UNIT 2000
 #define HISTORY_SIZE 9000
 #define CUTOFF 1
-#define READ_ON_DEMAND_ACCESS_L1D 1
+#define READ_ON_DEMAND_ACCESS_L1D 0
 #define RETRY_LIMIT 5
 
 namespace {
@@ -358,7 +358,7 @@ void CACHE::prefetcher_cycle_operate()
         champsim::operable::cache_clear_counter = 0;
         ::trackers[this].context_switch_prefetch_gathered = false;
         std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycles" << " done at cycle " << current_cycle << std::endl;
-        //reset_misc::can_record_after_access = true;
+        reset_misc::can_record_after_access = true;
         reset_misc::dq_after_data_access.clear();
         ::trackers[this].issued_context_switch_prefetches = 0;
       }
