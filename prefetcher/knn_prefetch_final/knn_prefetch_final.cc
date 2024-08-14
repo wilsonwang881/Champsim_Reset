@@ -96,7 +96,7 @@ namespace {
           {
             if(((reset_misc::dq_before_knn[i].addr)>>12)==real_prefetch[x])
             {
-              for(int y=0;y<2;y++)
+              for(int y=0;y<1;y++)
               {
                 if(reset_misc::dq_before_knn[i].occr==1)
                 {
@@ -665,7 +665,7 @@ void CACHE::prefetcher_cycle_operate()
       for(auto [addr, issued_at, received_at] : ::trackers[this].context_switch_prefetching_timing) {
         if (printed_page_addresses.find(addr >> 12) == printed_page_addresses.end()) {
           
-          //std::cout << "Page with base address " << std::hex << addr << " issued at cycle " << std::dec << issued_at << " received at cycle " << received_at << std::endl; 
+          //std::cout << "Page with base address " << std::hex << addr /<< " issued at cycle " << std::dec << issued_at << " received at cycle " << received_at << std::endl; 
           printed_page_addresses.insert(addr >> 12);
         }
       }*/

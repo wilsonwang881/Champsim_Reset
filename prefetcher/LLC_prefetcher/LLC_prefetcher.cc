@@ -8,10 +8,10 @@
 #define PREFETCH_UNIT_SHIFT 8
 #define PREFETCH_UNIT_SIZE 64
 #define INS_PREFETCH_UNIT_SIZE 64
-#define NUMBER_OF_PREFETCH_UNIT 2000
+#define NUMBER_OF_PREFETCH_UNIT 8000
 #define HISTORY_SIZE 9000
 #define CUTOFF 1
-#define READ_ON_DEMAND_ACCESS_L1D 1
+#define READ_ON_DEMAND_ACCESS_L1D 0
 #define RETRY_LIMIT 5
 
 namespace {
@@ -122,6 +122,21 @@ namespace {
           }
         }
       }
+
+      reset_misc::dq_prefetch_communicate.clear();
+      std::vector<uint64_t> sort_container_;
+
+      for(auto var : context_switch_issue_queue) {
+        sort_container_.push_back(var.first); 
+      }
+
+      sort(sort_container_.begin(), sort_container_.end());
+
+      for(auto var : sort_container_) {
+        reset_misc::dq_prefetch_communicate.push_back(std::make_pair(var, true));
+      }
+
+      std::cout << "Size = " << reset_misc::dq_prefetch_communicate.size() << std::endl;
 
       if (READ_ON_DEMAND_ACCESS_L1D) {
 
