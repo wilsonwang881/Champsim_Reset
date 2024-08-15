@@ -51,7 +51,7 @@
         "prefetch_as_load": false,
         "virtual_prefetch": false,
         "prefetch_activate": "LOAD,PREFETCH",
-        "prefetcher": "L1I_recorder"
+        "prefetcher": "no"
     },
 
     "L1D": {
@@ -83,7 +83,7 @@
         "prefetch_as_load": false,
         "virtual_prefetch": false,
         "prefetch_activate": "LOAD,PREFETCH",
-        "prefetcher": "L1D_recorder"
+        "prefetcher": "no"
     },
 
     "ITLB": {
@@ -154,7 +154,7 @@
         "prefetch_as_load": false,
         "virtual_prefetch": false,
         "prefetch_activate": "LOAD,PREFETCH",
-        "prefetcher": "LLC_prefetcher",
+        "prefetcher": "no",
         "replacement": "lru"
     },
 
