@@ -263,7 +263,7 @@ namespace {
 
 void CACHE::prefetcher_initialize()
 {
-  std::cout << NAME << " -> Prefetcher LLC Prefetcher initialized @ " << current_cycle << " cycles." << std::endl;
+  std::cout << NAME << "->Prefetcher LLC Prefetcher initialized @ " << current_cycle << " cycles." << std::endl;
 
   if (READ_ON_DEMAND_ACCESS_L1D) {
     ::trackers[this].L1D_access_file.open("L1D_on_demand_access.txt", std::ios::in); 

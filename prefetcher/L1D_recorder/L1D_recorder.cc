@@ -2,12 +2,16 @@
 #include <unordered_set>
 #include <map>
 #include <cassert>
+#include <string>
+#include <set>
 
 #define PREFETCH_UNIT_SHIFT 8
 #define PREFETCH_UNIT_SIZE 64
 #define NUMBER_OF_PREFETCH_UNIT 400
 #define OBSERVATION_WINDOW 4000
 #define RECORD_ON_DEMAND_ACCESS_L1D 1
+#define RECORD_NON_UNIQ_ACCESS 1
+#define NON_UNIQ_SIZE 2000
 
 namespace {
 
@@ -16,6 +20,118 @@ namespace {
     std::unordered_set<uint64_t> uniq_prefetch_address;
     std::ofstream L1D_access_file;
     uint64_t data_size = 0;
+
+    std::deque<std::pair<uint64_t, uint64_t>> non_uniq_ip;
+    std::deque<std::pair<uint64_t, uint64_t>> non_uniq_data;
+    bool after_cs_ip_recorded = true;
+    bool after_cs_data_recorded = true;
+    bool cs_moment = false;
+    bool after_cs_moment = false;
+    bool previous_can_record = false;
+    std::set<uint64_t> ip_duplicate_check, data_duplicate_check;
+
+    public:
+    
+    void initialize_record_file()
+    {
+      if (RECORD_NON_UNIQ_ACCESS) {
+        std::cout << "Non-unique access record files cleared." << std::endl;
+        std::ofstream non_uniq_ip_file;
+        non_uniq_ip_file.open("non_uniq_ip.txt", std::ios::out);
+        non_uniq_ip_file.close();
+
+        std::ofstream non_uniq_data_file;
+        non_uniq_data_file.open("non_uniq_data.txt", std::ios::out);
+        non_uniq_data_file.close();
+      }
+    }
+
+    void duplicate_check(std::deque<std::pair<uint64_t, uint64_t>> &non_uniq_dq, std::set<uint64_t> &check_set)
+    {
+      std::deque<std::pair<uint64_t, uint64_t>> non_uniq_dup;
+
+      check_set.clear();
+
+      for (auto it = non_uniq_dq.end() - 1; it >= non_uniq_dq.begin(); --it) {
+        check_set.insert(it->first); 
+
+        if (check_set.size() <= NON_UNIQ_SIZE) {
+          non_uniq_dup.push_front(*it);
+        }
+        else {
+          break;
+        }
+      }
+      
+      non_uniq_dq.clear();
+      for(auto var : non_uniq_dup) {
+        non_uniq_dq.push_back(var); 
+      }
+    }
+
+    void record_non_uniq(uint64_t addr, std::deque<std::pair<uint64_t, uint64_t>> &non_uniq_dq, std::set<uint64_t> &duplicate_set)
+    {
+      if (non_uniq_dq.empty()) {
+        non_uniq_dq.push_back(std::make_pair(addr, 1)); 
+        duplicate_set.insert(addr);
+      }
+      else if (addr == non_uniq_dq.back().first) {
+        non_uniq_dq.back().second++; 
+      }
+      else {
+        non_uniq_dq.push_back(std::make_pair(addr, 1));
+        duplicate_set.insert(addr);
+
+        if (duplicate_set.size() >= NON_UNIQ_SIZE ) {
+          duplicate_check(non_uniq_dq, duplicate_set); 
+        }
+      }
+    }
+
+    void write_to_file(bool ip_or_data)
+    {
+      std::string file_name = ip_or_data ? "non_uniq_ip.txt" : "non_uniq_data.txt";
+      std::ofstream file;
+      file.open(file_name, std::ios_base::app);
+
+      for(auto var : ip_or_data ? non_uniq_ip : non_uniq_data) {
+        file << var.first << " " << var.second << std::endl; 
+      }
+
+      file << "999999 999999" << std::endl;
+      file.close();
+
+      if (ip_or_data) {
+        std::cout << "Writing " << non_uniq_ip.size() << " IP records to file." << std::endl;
+      }
+      else {
+        std::cout << "Writing " << non_uniq_data.size() << " data records to file." << std::endl;
+      }
+    }
+
+    void record(uint64_t ip, uint64_t data, bool record_before_cs, bool record_after_cs)
+    {
+      if (record_before_cs) {
+        write_to_file(true);
+        write_to_file(false);
+        non_uniq_ip.clear();
+        non_uniq_data.clear();
+        ip_duplicate_check.clear();
+        data_duplicate_check.clear();
+      }
+
+      if (record_after_cs) {
+        if (ip_duplicate_check.size() >= NON_UNIQ_SIZE && !after_cs_ip_recorded) {
+          write_to_file(true); 
+          after_cs_ip_recorded = true;
+        }
+
+        if (non_uniq_data.size() >= NON_UNIQ_SIZE && !after_cs_data_recorded) {
+          write_to_file(false); 
+          after_cs_data_recorded = true;
+        }
+      }
+    }
   };
 
   std::map<CACHE*, tracker> trackers;
@@ -46,7 +162,7 @@ namespace {
 
 void CACHE::prefetcher_initialize()
 {
-  std::cout << NAME << " -> Prefetcher L1D recorder initialized @ " << current_cycle << " cycles." << std::endl;
+  std::cout << NAME << "->Prefetcher L1D recorder initialized @ " << current_cycle << " cycles." << std::endl;
   
   if (RECORD_ON_DEMAND_ACCESS_L1D) {
     std::cout << "L1D access record file cleared." << std::endl;
@@ -54,10 +170,40 @@ void CACHE::prefetcher_initialize()
     on_demand_access_file_out.open("L1D_on_demand_access.txt", std::ios::out);
     on_demand_access_file_out.close();
   }
+
+  if (RECORD_NON_UNIQ_ACCESS) {
+    ::trackers[this].initialize_record_file();
+  }
 }
 
 uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
 {
+  auto &pref = ::trackers[this];
+
+  pref.record_non_uniq(ip, pref.non_uniq_ip, pref.ip_duplicate_check);
+  pref.record_non_uniq(addr, pref.non_uniq_data, pref.data_duplicate_check);
+
+  if (reset_misc::can_record_after_access && !pref.previous_can_record) {
+    pref.cs_moment = true;
+    pref.after_cs_moment = false;
+  }
+
+  if (pref.cs_moment) {
+    pref.record(ip, addr, true, false); 
+    pref.cs_moment = false;
+    pref.after_cs_moment = true;
+    pref.after_cs_ip_recorded = false;
+    pref.after_cs_data_recorded = false;
+  }
+  else {
+
+    if (pref.after_cs_moment) {
+      pref.record(ip, addr, false, true);
+    }
+  }
+
+  pref.previous_can_record = reset_misc::can_record_after_access;
+
   //std::cout<<"The prefetching operation is on"<<std::endl;
   if (type == champsim::to_underlying(access_type::WRITE)) {
     return metadata_in; 
