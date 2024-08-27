@@ -9,9 +9,9 @@
 #define PREFETCH_UNIT_SIZE 64
 #define NUMBER_OF_PREFETCH_UNIT 400
 #define OBSERVATION_WINDOW 4000
-#define RECORD_ON_DEMAND_ACCESS_L1D 1
 #define RECORD_NON_UNIQ_ACCESS 1
-#define NON_UNIQ_SIZE 2000
+#define NON_UNIQ_IP_SIZE 500
+#define NON_UNIQ_DATA_SIZE 2000
 
 namespace {
 
@@ -21,8 +21,8 @@ namespace {
     std::ofstream L1D_access_file;
     uint64_t data_size = 0;
 
-    std::deque<std::pair<uint64_t, uint64_t>> non_uniq_ip;
-    std::deque<std::pair<uint64_t, uint64_t>> non_uniq_data;
+    std::deque<reset_misc::access> non_uniq_ip;
+    std::deque<reset_misc::access> non_uniq_data;
     bool after_cs_ip_recorded = true;
     bool after_cs_data_recorded = true;
     bool cs_moment = false;
@@ -46,74 +46,106 @@ namespace {
       }
     }
 
-    void duplicate_check(std::deque<std::pair<uint64_t, uint64_t>> &non_uniq_dq, std::set<uint64_t> &check_set)
+    void duplicate_check(std::deque<reset_misc::access> &non_uniq_dq, std::set<uint64_t> &check_set, uint64_t limit)
     {
-      std::deque<std::pair<uint64_t, uint64_t>> non_uniq_dup;
+      std::deque<reset_misc::access> non_uniq_dup;
 
       check_set.clear();
 
-      for (auto it = non_uniq_dq.end() - 1; it >= non_uniq_dq.begin(); --it) {
-        check_set.insert(it->first); 
+      for (auto it = non_uniq_dq.end() - 1; it > non_uniq_dq.begin(); --it) {
+        check_set.insert(it->addr); 
 
-        if (check_set.size() <= NON_UNIQ_SIZE) {
+        if (check_set.size() <= limit) {
           non_uniq_dup.push_front(*it);
         }
         else {
+          check_set.erase(it->addr);
           break;
         }
       }
       
       non_uniq_dq.clear();
+
       for(auto var : non_uniq_dup) {
         non_uniq_dq.push_back(var); 
       }
     }
 
-    void record_non_uniq(uint64_t addr, std::deque<std::pair<uint64_t, uint64_t>> &non_uniq_dq, std::set<uint64_t> &duplicate_set)
+    void record_non_uniq(uint64_t addr, std::deque<reset_misc::access> &non_uniq_dq, std::set<uint64_t> &duplicate_set, uint64_t current_cycle, uint64_t limit)
     {
+      reset_misc::access acc;
+      acc.cycle = current_cycle;
+      acc.addr = (addr >> 6) << 6;
+      acc.occurance = 1;
+
       if (non_uniq_dq.empty()) {
-        non_uniq_dq.push_back(std::make_pair(addr, 1)); 
-        duplicate_set.insert(addr);
+        non_uniq_dq.push_back(acc); 
+        duplicate_set.insert(acc.addr);
       }
-      else if (addr == non_uniq_dq.back().first) {
-        non_uniq_dq.back().second++; 
+      else if (addr == non_uniq_dq.back().addr) {
+        non_uniq_dq.back().cycle = current_cycle;
+        non_uniq_dq.back().occurance++; 
       }
       else {
-        non_uniq_dq.push_back(std::make_pair(addr, 1));
-        duplicate_set.insert(addr);
+        non_uniq_dq.push_back(acc);
+        duplicate_set.insert(acc.addr);
 
-        if (duplicate_set.size() >= NON_UNIQ_SIZE ) {
-          duplicate_check(non_uniq_dq, duplicate_set); 
+        if (duplicate_set.size() > limit) {
+          duplicate_check(non_uniq_dq, duplicate_set, limit); 
         }
       }
     }
 
-    void write_to_file(bool ip_or_data)
+    void write_to_file(std::string file_name, std::deque<reset_misc::access> dq, std::string seperator)
     {
-      std::string file_name = ip_or_data ? "non_uniq_ip.txt" : "non_uniq_data.txt";
       std::ofstream file;
       file.open(file_name, std::ios_base::app);
 
-      for(auto var : ip_or_data ? non_uniq_ip : non_uniq_data) {
-        file << var.first << " " << var.second << std::endl; 
+      for(auto var : dq) {
+        file << var.cycle << " " << var.addr << " " << var.occurance << std::endl; 
       }
 
-      file << "999999 999999" << std::endl;
+      file << "999999 " << seperator << " 999999" << std::endl;
       file.close();
 
-      if (ip_or_data) {
-        std::cout << "Writing " << non_uniq_ip.size() << " IP records to file." << std::endl;
-      }
-      else {
-        std::cout << "Writing " << non_uniq_data.size() << " data records to file." << std::endl;
-      }
+      std::cout << "Writing " << dq.size() << " entries to file " << file_name << " with " << seperator << " flag." << std::endl;
     }
 
-    void record(uint64_t ip, uint64_t data, bool record_before_cs, bool record_after_cs)
+    void update_dq_knn(std::deque<reset_misc::access> source_dq, std::deque<reset_misc::addr_occr> &sink_dq, uint64_t length)
+    {
+      sink_dq.clear();
+
+      for(auto it = source_dq.end() - 1; it >= source_dq.begin(); --it ) {
+
+        bool found = false;
+
+        for(auto var : sink_dq) {
+
+          if (var.addr == it->addr) {
+            found = true;
+            var.cycle += it->occurance;
+            break;
+          } 
+        } 
+
+        if (!found) {
+          reset_misc::addr_occr x;
+          x.addr = it->addr;
+          x.occr = it->occurance;
+          x.cycle = it->cycle;
+          sink_dq.push_front(x);
+        }
+      }
+
+      std::cout << "KNN deque updated" << std::endl;
+    }
+
+    void record(bool record_before_cs, bool record_after_cs)
     {
       if (record_before_cs) {
-        write_to_file(true);
-        write_to_file(false);
+        write_to_file("non_uniq_ip.txt", non_uniq_ip, "before");
+        write_to_file("non_uniq_data.txt", non_uniq_data, "before");
+        update_dq_knn(non_uniq_data, reset_misc::dq_before_knn, NON_UNIQ_DATA_SIZE);
         non_uniq_ip.clear();
         non_uniq_data.clear();
         ip_duplicate_check.clear();
@@ -121,14 +153,18 @@ namespace {
       }
 
       if (record_after_cs) {
-        if (ip_duplicate_check.size() >= NON_UNIQ_SIZE && !after_cs_ip_recorded) {
-          write_to_file(true); 
+        if (ip_duplicate_check.size() >= NON_UNIQ_IP_SIZE && !after_cs_ip_recorded) {
+          write_to_file("non_uniq_ip.txt", non_uniq_ip, "after"); 
           after_cs_ip_recorded = true;
         }
 
-        if (non_uniq_data.size() >= NON_UNIQ_SIZE && !after_cs_data_recorded) {
-          write_to_file(false); 
+        if (data_duplicate_check.size() >= NON_UNIQ_DATA_SIZE && !after_cs_data_recorded) {
+          write_to_file("non_uniq_data.txt", non_uniq_data, "after"); 
+          update_dq_knn(non_uniq_data, reset_misc::dq_after_knn, NON_UNIQ_DATA_SIZE);
           after_cs_data_recorded = true;
+          cs_moment = false;
+          after_cs_moment = false;
+          reset_misc::can_record_after_access = false;
         }
       }
     }
@@ -164,13 +200,6 @@ void CACHE::prefetcher_initialize()
 {
   std::cout << NAME << "->Prefetcher L1D recorder initialized @ " << current_cycle << " cycles." << std::endl;
   
-  if (RECORD_ON_DEMAND_ACCESS_L1D) {
-    std::cout << "L1D access record file cleared." << std::endl;
-    std::ofstream on_demand_access_file_out;
-    on_demand_access_file_out.open("L1D_on_demand_access.txt", std::ios::out);
-    on_demand_access_file_out.close();
-  }
-
   if (RECORD_NON_UNIQ_ACCESS) {
     ::trackers[this].initialize_record_file();
   }
@@ -180,25 +209,29 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 {
   auto &pref = ::trackers[this];
 
-  pref.record_non_uniq(ip, pref.non_uniq_ip, pref.ip_duplicate_check);
-  pref.record_non_uniq(addr, pref.non_uniq_data, pref.data_duplicate_check);
+  if (type == champsim::to_underlying(access_type::WRITE) ||
+      type == champsim::to_underlying(access_type::LOAD)) {
 
-  if (reset_misc::can_record_after_access && !pref.previous_can_record) {
-    pref.cs_moment = true;
-    pref.after_cs_moment = false;
-  }
+    pref.record_non_uniq(ip, pref.non_uniq_ip, pref.ip_duplicate_check, current_cycle, NON_UNIQ_IP_SIZE);
+    pref.record_non_uniq(addr, pref.non_uniq_data, pref.data_duplicate_check, current_cycle, NON_UNIQ_DATA_SIZE);
 
-  if (pref.cs_moment) {
-    pref.record(ip, addr, true, false); 
-    pref.cs_moment = false;
-    pref.after_cs_moment = true;
-    pref.after_cs_ip_recorded = false;
-    pref.after_cs_data_recorded = false;
-  }
-  else {
+    if (reset_misc::can_record_after_access && !pref.previous_can_record) {
+      pref.cs_moment = true;
+      pref.after_cs_moment = false;
+    }
 
-    if (pref.after_cs_moment) {
-      pref.record(ip, addr, false, true);
+    if (pref.cs_moment) {
+      pref.record(true, false); 
+      pref.cs_moment = false;
+      pref.after_cs_moment = true;
+      pref.after_cs_ip_recorded = false;
+      pref.after_cs_data_recorded = false;
+    }
+    else {
+
+      if (pref.after_cs_moment) {
+        pref.record(false, true);
+      }
     }
   }
 
@@ -207,198 +240,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   //std::cout<<"The prefetching operation is on"<<std::endl;
   if (type == champsim::to_underlying(access_type::WRITE)) {
     return metadata_in; 
-  }
-
-  reset_misc::on_demand_data_access acc;
-  acc.cycle = current_cycle;
-  acc.ip = ip;
-  acc.occurance = 1;
-  acc.load_or_store = (type == 0) ? true : false;
-  reset_misc::addr_occr addr_obj;
-  uint64_t block_addr = (addr >> LOG2_BLOCK_SIZE) << LOG2_BLOCK_SIZE;
-  addr_obj.addr = block_addr;
-  addr_obj.occr = 1;
-  addr_obj.cycle = current_cycle;
-  acc.addr_rec.push_back(addr_obj);
-
-  if (reset_misc::can_record_after_access && RECORD_ON_DEMAND_ACCESS_L1D) {
-    
-    // Check if deque empty. 
-    if (reset_misc::dq_after_data_access.empty()) {
-      reset_misc::dq_after_data_access.push_back(acc);
-      //std::cout<<"The dq_after_data_access size is"<<reset_misc::dq_after_data_access.size()<<std::endl;
-      ::trackers[this].data_size++;
-    }
-    // Deque not empty.
-    else {
-      //std::cout<<"The dq_after_data_access size is"<<reset_misc::dq_after_data_access.size()<<std::endl;
-      size_t limit = reset_misc::dq_after_data_access.size() > OBSERVATION_WINDOW ? (reset_misc::dq_after_data_access.size() - OBSERVATION_WINDOW) : 0; 
-      bool found = false;
-
-      // Check past data accesses
-      for (size_t i = reset_misc::dq_after_data_access.size() - 1; i > limit; i--) {
-        for(auto &var : reset_misc::dq_after_data_access[i].addr_rec) {
-          if (var.addr == block_addr) {
-            var.occr++;
-            var.cycle = current_cycle;
-            found = true;
-          } 
-        }
-      }
-
-      // If past data accesses no match, add to matching IP
-      if (!found) {
-      
-        for (size_t i = reset_misc::dq_after_data_access.size() - 1; i > limit; i--) {
-          if (reset_misc::dq_after_data_access[i].ip == ip) {
-            reset_misc::dq_after_data_access[i].occurance++;
-            reset_misc::dq_after_data_access[i].addr.insert(block_addr);
-            reset_misc::dq_after_data_access[i].addr_rec.push_back(addr_obj);
-            found = true;
-            ::trackers[this].data_size++;
-          }
-        }
-      }
-
-      // If no past data accesses match,
-      // and no IP match
-      // create new entry
-      if (!found) {
-        reset_misc::dq_after_data_access.push_back(acc);
-        //std::cout<<"The dq_after_data_access size is"<<reset_misc::dq_after_data_access.size()<<std::endl;
-        ::trackers[this].data_size++;
-      }
-    }
-    //std::cout<<"The dq_after_data_access size is"<<reset_misc::dq_after_data_access.size()<<std::endl;
-    // Dequeue full.
-    // Analysis.
-    if (reset_misc::dq_after_data_access.size() > DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE ||
-        ::trackers[this].data_size > DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE) {
-      //reset_misc::dq_after_data_access.pop_front();
-      //std::cout<<"Inside L1D, the stage is entered"<<std::endl;
-      //std::cout<<"Inside L1D recorder, the reset count is"<<champsim::operable::reset_count<<std::endl;
-      //std::cout<<"Inside L1D recorder the knn_can_predict"<<champsim::operable::knn_can_predict<<std::endl;
-      reset_misc::can_record_after_access = false;
-      reset_misc::dq_after_knn.clear();
-
-      for(auto var : reset_misc::dq_after_data_access) {
-        for(auto _addr : var.addr_rec) {
-          if (reset_misc::dq_after_knn.size() <= 999) {
-            reset_misc::dq_after_knn.push_back(_addr);          
-          }
-        }
-      }
-      
-      champsim::operable::knn_can_predict =true;
-      std::cout<<"Inside the L1D recorder ,we can enter KNN prefetch"<<std::endl;
-
-      if (RECORD_ON_DEMAND_ACCESS_L1D) {
-        std::ofstream on_demand_access_file_out;
-        on_demand_access_file_out.open("L1D_on_demand_access.txt", std::ios_base::app);
-        std::cout << "Writing " << reset_misc::dq_after_data_access.size() << " on demand entries and " << ::trackers[this].data_size << " accesses to file in " << NAME << std::endl;
-
-        for (auto var : reset_misc::dq_after_data_access)
-        {
-          //on_demand_access_file_out << "r " << var.cycle << " " << var.ip << " " << var.occurance << std::endl;
-
-          for(auto address : var.addr_rec) {
-            on_demand_access_file_out << address.addr << " " << address.occr << std::endl; 
-          }
-        }
-
-        on_demand_access_file_out << "99999 99999" << std::endl;
-        on_demand_access_file_out.close();
-      }
-
-      ::trackers[this].data_size = 0;
-      reset_misc::dq_after_data_access.clear();
-
-      std::cout << "Feedback:" << reset_misc::dq_after_data_access.size() << " " << reset_misc::dq_pf_data_access.size() << std::endl;
-      for(auto pf: reset_misc::dq_pf_data_access) {
-
-        bool printable = false;
-
-        for(auto after: reset_misc::dq_after_data_access) {
-
-          for(auto data : pf.addr_rec) {
-            if (after.addr.find(data.addr) != after.addr.end()) {
-              printable = true;
-            } 
-          }
-          if (pf.ip == after.ip) {
-            printable = true;
-          }
-        }
-        if (printable) {
-          //std::cout << "Match: Occurance (pf, after) = " << pf.occurance << " " << " Data size (pf, after) = " << pf.addr_rec.size() << " " << std::endl;
-        }
-      }
-    }
-  }
-  
-  // For KNN.
-  bool found_in_dq = false;
-
-  for(auto &var : reset_misc::dq_before_knn) {
-    if (var.addr == block_addr) {
-      var.occr++;
-      var.cycle = current_cycle;
-      found_in_dq = true;
-      break;
-    }
-  } 
-
-  if (!found_in_dq) {
-    reset_misc::dq_before_knn.push_back(addr_obj); 
-  }
-
-  if (reset_misc::dq_before_knn.size() > 1000) {
-    reset_misc::dq_before_knn.pop_front(); 
-  }
-  
-  // Check if deque empty
-  if (reset_misc::dq_before_data_access.size() == 0) {
-     reset_misc::dq_before_data_access.push_back(acc); 
-     return metadata_in;  
-  }
-
-  // Check the past n accesses
-  size_t limit = (reset_misc::dq_before_data_access.size() > OBSERVATION_WINDOW) ? (reset_misc::dq_before_data_access.size() - OBSERVATION_WINDOW) : 0;
-  for (size_t i = reset_misc::dq_before_data_access.size() - 1; i > limit ; i--) {
-    if (reset_misc::dq_before_data_access[i].ip == ip) {
-
-      reset_misc::dq_before_data_access[i].occurance++;
-      bool found = false;
-
-      for(reset_misc::addr_occr var : reset_misc::dq_before_data_access[i].addr_rec) {
-        if (var.addr == block_addr) {
-          var.occr++;
-          var.cycle = current_cycle;
-          found = true;
-        }
-      }
-
-      if (!found) {
-        reset_misc::addr_occr tmpp_addr;
-        tmpp_addr.addr = block_addr;
-        tmpp_addr.occr = 1;
-        reset_misc::dq_before_data_access[i].addr_rec.push_back(tmpp_addr);
-      }
-      return metadata_in;
-    }
-  }
-
-  // Check if addr same as the last one.
-  if (reset_misc::dq_before_data_access.back().ip == addr) {
-    reset_misc::dq_before_data_access.back().occurance++;
-  }
-  else {
-    reset_misc::dq_before_data_access.push_back(acc); 
-  }
-
-  // Check if length exceeds the limit
-  if (reset_misc::dq_before_data_access.size() > DEQUE_ON_DEMAND_ACCESS_RECORD_SIZE) {
-    reset_misc::dq_before_data_access.pop_front();
   }
 
   return metadata_in;

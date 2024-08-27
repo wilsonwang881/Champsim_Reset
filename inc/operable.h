@@ -38,6 +38,12 @@
 // WL 
 namespace reset_misc {
 
+  struct access {
+    uint64_t cycle;
+    uint64_t addr;
+    uint64_t occurance;
+  };
+
   struct on_demand_ins_access {
     uint64_t cycle;
     uint64_t ip;
