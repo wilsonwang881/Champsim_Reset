@@ -11,7 +11,7 @@
 #define OBSERVATION_WINDOW 4000
 #define RECORD_NON_UNIQ_ACCESS 1
 #define NON_UNIQ_IP_SIZE 500
-#define NON_UNIQ_DATA_SIZE 2000
+#define NON_UNIQ_DATA_SIZE 4000
 
 namespace {
 
@@ -123,7 +123,7 @@ namespace {
 
           if (var.addr == it->addr) {
             found = true;
-            var.cycle += it->occurance;
+            var.occr ++;
             break;
           } 
         } 
@@ -209,8 +209,9 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 {
   auto &pref = ::trackers[this];
 
-  if (type == champsim::to_underlying(access_type::WRITE) ||
-      type == champsim::to_underlying(access_type::LOAD)) {
+  if ((type == champsim::to_underlying(access_type::WRITE) ||
+      type == champsim::to_underlying(access_type::LOAD)) && 
+      ip != addr){
 
     pref.record_non_uniq(ip, pref.non_uniq_ip, pref.ip_duplicate_check, current_cycle, NON_UNIQ_IP_SIZE);
     pref.record_non_uniq(addr, pref.non_uniq_data, pref.data_duplicate_check, current_cycle, NON_UNIQ_DATA_SIZE);
