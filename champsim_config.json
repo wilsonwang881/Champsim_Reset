@@ -83,7 +83,7 @@
         "prefetch_as_load": false,
         "virtual_prefetch": true,
         "prefetch_activate": "LOAD,PREFETCH",
-        "prefetcher": "L1D_recorder"
+        "prefetcher": "page_bitmap"
     },
 
     "ITLB": {
@@ -154,7 +154,7 @@
         "prefetch_as_load": false,
         "virtual_prefetch": false,
         "prefetch_activate": "LOAD,PREFETCH",
-        "prefetcher": "LLC_prefetcher",
+        "prefetcher": "no",
         "replacement": "lru"
     },
 
