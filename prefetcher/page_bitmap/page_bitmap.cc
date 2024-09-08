@@ -66,6 +66,25 @@ void page_bitmap::prefetcher::update(uint64_t addr)
   }
 
   // Page not found.
+  // Check or update filter first.
+  /*bool check_filter = filter_operate(addr);
+
+  if (!check_filter) {
+    return; 
+  }
+
+  // Allocate new entry for the new page with 2 blocks.
+  size_t block_2 = 0;
+
+  for(auto &var : filter) {
+    if (var.valid &&
+        var.page_no == page) 
+    {
+      block_2 = var.block_no;  
+      var.valid = false;
+    } 
+  }
+*/
   // Find an invalid entry for the page.
   for (size_t i = 0; i < TABLE_SIZE; i++) 
   {
@@ -74,6 +93,7 @@ void page_bitmap::prefetcher::update(uint64_t addr)
       tb[i].valid = true;
       tb[i].page_no = page;
       tb[i].bitmap[block] = true;
+ //     tb[i].bitmap[block_2] = true;
       update_lru(i);
       return;
     }
@@ -100,6 +120,7 @@ void page_bitmap::prefetcher::update(uint64_t addr)
   }
 
   tb[index].bitmap[block] = true;
+  //tb[index].bitmap[block_2] = true;
   update_lru(index);
 }
 
@@ -122,13 +143,10 @@ void page_bitmap::prefetcher::gather_pf()
       return left.second < right.second;
       });
 
-  std::cout << "Valid pages = " << i_lru_vec.size() << std::endl;
-
   // Get the prefetches.
   for(auto var : i_lru_vec) {
 
     size_t i = var.first;
-    //std::cout << "i = " << i << " LRU = " << (unsigned)tb[i].lru_bits << std::endl; 
     uint64_t page_addr = tb[i].page_no << 12;
 
     for (size_t j = 0; j < 64; j++) {
@@ -142,3 +160,101 @@ void page_bitmap::prefetcher::gather_pf()
   std::cout << "Gathered " << cs_pf.size() << " prefetches from past accesses in LLC." << std::endl;
 }
 
+void page_bitmap::prefetcher::filter_update_lru(std::size_t i)
+{
+  bool half = false;
+
+  for(auto var : filter) {
+    if (var.lru_bits == std::numeric_limits<uint8_t>::max()) {
+      half = true;
+      break;
+    } 
+  }
+
+  if (half) 
+  {
+    for(auto &var : filter) {
+      var.lru_bits = var.lru_bits >> 1; 
+    }
+  }
+
+  filter[i].lru_bits = 0;
+
+  for(auto &var : filter) {
+    if (var.valid) {
+      var.lru_bits++;
+    }
+  }
+}
+
+bool page_bitmap::prefetcher::filter_operate(uint64_t addr)
+{
+  uint64_t page = addr >> 12;
+  uint64_t block = (addr & 0xFFF) >> 6;
+
+  bool same_page_same_block = false;
+  bool same_page_diff_block = false;
+
+  // In the filter table,
+  // find the entry with same page number,
+  // but different block number.
+  // Ensure the entry has at least 2 unique blocks.
+  for (size_t i = 0; i < FILTER_SIZE; i++) {
+    if (filter[i].valid &&
+        filter[i].page_no == page &&
+        filter[i].block_no != block) 
+    {
+      same_page_diff_block = true;
+    }
+
+    if (filter[i].valid &&
+        filter[i].page_no == page &&
+        filter[i].block_no == block) 
+    {
+      same_page_same_block = true; 
+      filter_update_lru(i);
+    }
+  }
+
+  // Return if at least same page found.
+  if (same_page_same_block) 
+  {
+    return false;
+  }
+  
+  if (same_page_diff_block) 
+  {
+    return true; 
+  }
+
+  // Allocate new entry in the filter.
+  // If any invalid entry exists.
+  for(size_t i = 0; i < FILTER_SIZE; i++) {
+    if (!filter[i].valid) 
+    {
+      filter[i].valid = true;
+      filter[i].page_no = page;
+      filter[i].block_no = block;
+      filter_update_lru(i);
+
+      return false;
+    } 
+  }
+
+  // If filter full, use LRU to replace.
+  size_t index = 0;
+  uint8_t lru = 0;
+
+  for (size_t i = 0; i < FILTER_SIZE; i++) {
+    if (filter[i].lru_bits > lru) {
+      index = i;
+      lru = filter[i].lru_bits;
+    } 
+  }
+
+  filter[index].page_no = page;
+  filter[index].block_no = block;
+  filter[index].lru_bits = 0;
+
+  return false;
+}

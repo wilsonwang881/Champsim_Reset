@@ -122,8 +122,6 @@ void page_bitmap_l2::prefetcher::gather_pf()
       return left.second < right.second;
       });
 
-  std::cout << "Valid pages = " << i_lru_vec.size() << std::endl;
-
   // Get the prefetches.
   for(auto var : i_lru_vec) {
 
