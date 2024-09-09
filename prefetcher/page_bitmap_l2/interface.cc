@@ -35,6 +35,7 @@ void CACHE::prefetcher_cycle_operate()
 
   if (reset_misc::can_record_after_access) {
     
+    std::cout << NAME;
     pref.gather_pf();
     reset_misc::can_record_after_access = false;
   }

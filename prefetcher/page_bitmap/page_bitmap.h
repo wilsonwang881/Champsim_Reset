@@ -20,6 +20,7 @@ namespace page_bitmap
     constexpr static std::size_t TABLE_SIZE = 1024;
     constexpr static std::size_t BITMAP_SIZE = 64;
     constexpr static std::size_t FILTER_SIZE = 32;
+    constexpr static bool DEBUG_PRINT = false;
 
     // Page bitmap entry.
     struct page_r

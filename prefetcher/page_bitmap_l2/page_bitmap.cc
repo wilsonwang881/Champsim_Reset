@@ -137,6 +137,6 @@ void page_bitmap_l2::prefetcher::gather_pf()
     } 
   }
   
-  std::cout << "Gathered " << cs_pf.size() << " prefetches from past accesses in L2." << std::endl;
+  std::cout << " gathered " << cs_pf.size() << " prefetches from past accesses in L2." << std::endl;
 }
 

@@ -13,9 +13,7 @@ void page_bitmap::prefetcher::init()
     tb[i].valid = false;
     
     for (size_t j = 0; j < 64; j++) 
-    { 
       tb[i].bitmap[j] = false;
-    }
   }
 }
 
@@ -24,7 +22,7 @@ void page_bitmap::prefetcher::update_lru(std::size_t i)
   bool half = false;
 
   for(auto var : tb) {
-    if (var.lru_bits == std::numeric_limits<uint16_t>::max()) {
+    if (var.lru_bits >= (std::numeric_limits<uint16_t>::max() & 0x7FF)) {
       half = true;
       break;
     } 
@@ -32,17 +30,15 @@ void page_bitmap::prefetcher::update_lru(std::size_t i)
 
   if (half) 
   {
-    for(auto &var : tb) {
+    for(auto &var : tb) 
       var.lru_bits = var.lru_bits >> 1; 
-    }
   }
 
   tb[i].lru_bits = 0;
 
   for(auto &var : tb) {
-    if (var.valid) {
+    if (var.valid) 
       var.lru_bits++;
-    }
   }
 }
 
@@ -115,9 +111,8 @@ void page_bitmap::prefetcher::update(uint64_t addr)
 
   tb[index].page_no = page;
 
-  for(auto &var : tb[index].bitmap) {
+  for(auto &var : tb[index].bitmap) 
     var = false;
-  }
 
   tb[index].bitmap[block] = true;
   //tb[index].bitmap[block_2] = true;
@@ -134,9 +129,8 @@ void page_bitmap::prefetcher::gather_pf()
 
   for(size_t i = 0; i < TABLE_SIZE; i++) {
 
-    if (tb[i].valid) {
+    if (tb[i].valid) 
       i_lru_vec.push_back(std::make_pair(i, tb[i].lru_bits)); 
-    }
   }
 
   std::sort(i_lru_vec.begin(), i_lru_vec.end(), [](auto &left, auto &right) {
@@ -149,15 +143,35 @@ void page_bitmap::prefetcher::gather_pf()
     size_t i = var.first;
     uint64_t page_addr = tb[i].page_no << 12;
 
+    if (DEBUG_PRINT) 
+      std::cout << "Page " << std::hex << tb[i].page_no << std::dec << " ["; 
+
+    int no_blks = 0;
+
     for (size_t j = 0; j < 64; j++) {
 
       if (tb[i].bitmap[j]) {
         cs_pf.push_back(page_addr + (j << 6)); 
+        no_blks++;
+
+        if (DEBUG_PRINT)
+          std::cout << " " << j;
       }
     } 
+
+    /*
+    if (no_blks == 1) 
+      cs_pf.pop_back();
+      */
+      
+
+    if (DEBUG_PRINT) 
+      std::cout << " ]" << std::endl;
   }
+
+  //cs_pf.clear();
   
-  std::cout << "Gathered " << cs_pf.size() << " prefetches from past accesses in LLC." << std::endl;
+  std::cout << " gathered " << cs_pf.size() << " prefetches from past accesses." << std::endl;
 }
 
 void page_bitmap::prefetcher::filter_update_lru(std::size_t i)
@@ -173,17 +187,15 @@ void page_bitmap::prefetcher::filter_update_lru(std::size_t i)
 
   if (half) 
   {
-    for(auto &var : filter) {
+    for(auto &var : filter) 
       var.lru_bits = var.lru_bits >> 1; 
-    }
   }
 
   filter[i].lru_bits = 0;
 
   for(auto &var : filter) {
-    if (var.valid) {
+    if (var.valid) 
       var.lru_bits++;
-    }
   }
 }
 
@@ -203,9 +215,7 @@ bool page_bitmap::prefetcher::filter_operate(uint64_t addr)
     if (filter[i].valid &&
         filter[i].page_no == page &&
         filter[i].block_no != block) 
-    {
       same_page_diff_block = true;
-    }
 
     if (filter[i].valid &&
         filter[i].page_no == page &&
@@ -218,14 +228,10 @@ bool page_bitmap::prefetcher::filter_operate(uint64_t addr)
 
   // Return if at least same page found.
   if (same_page_same_block) 
-  {
     return false;
-  }
   
   if (same_page_diff_block) 
-  {
     return true; 
-  }
 
   // Allocate new entry in the filter.
   // If any invalid entry exists.

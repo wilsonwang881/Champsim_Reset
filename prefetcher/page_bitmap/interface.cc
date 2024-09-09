@@ -39,6 +39,7 @@ void CACHE::prefetcher_cycle_operate()
       && !champsim::operable::have_cleared_prefetcher
       && champsim::operable::cpu_side_reset_ready) {
     
+    std::cout << NAME;
     pref.gather_pf();
     champsim::operable::context_switch_mode = false;
     reset_misc::can_record_after_access = true;
