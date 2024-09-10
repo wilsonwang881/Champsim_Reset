@@ -41,6 +41,7 @@ void CACHE::prefetcher_cycle_operate()
     
     std::cout << NAME;
     pref.gather_pf();
+    pref.clear_pg_access_status();
     champsim::operable::context_switch_mode = false;
     reset_misc::can_record_after_access = true;
   }

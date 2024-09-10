@@ -19,7 +19,7 @@ namespace page_bitmap
   {
     constexpr static std::size_t TABLE_SIZE = 1024;
     constexpr static std::size_t BITMAP_SIZE = 64;
-    constexpr static std::size_t FILTER_SIZE = 32;
+    constexpr static std::size_t FILTER_SIZE = 4;
     constexpr static bool DEBUG_PRINT = false;
 
     // Page bitmap entry.
@@ -29,6 +29,7 @@ namespace page_bitmap
       uint64_t page_no;
       bool bitmap[BITMAP_SIZE];
       uint16_t lru_bits;
+      bool aft_cs_acc;
     };
 
     page_r tb[TABLE_SIZE];
@@ -53,6 +54,7 @@ namespace page_bitmap
     void init();
     void update_lru(std::size_t i);
     void update(uint64_t addr);
+    void clear_pg_access_status();
     void gather_pf();
     bool pf_q_empty();
     void filter_update_lru(std::size_t i);

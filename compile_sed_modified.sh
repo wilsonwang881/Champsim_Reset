@@ -39,7 +39,7 @@ do
  	sed -i "s/#define DUMP_INS_NUMBER_EVERY_4M_CYCLES 1/#define DUMP_INS_NUMBER_EVERY_4M_CYCLES ${dump_setting[i]}/g" inc/champsim.h
  
  	# Threaded compile
- 	make -j 16;
+ 	make -j 8;
  
  	# Prompt
  	echo "$tmpp_base_name" compiled;
