@@ -27,7 +27,9 @@ namespace page_bitmap
     {
       bool valid;
       uint64_t page_no;
+      uint64_t page_no_store;
       bool bitmap[BITMAP_SIZE];
+      bool bitmap_store[BITMAP_SIZE];
       uint16_t lru_bits;
       bool aft_cs_acc;
     };
@@ -54,6 +56,7 @@ namespace page_bitmap
     void init();
     void update_lru(std::size_t i);
     void update(uint64_t addr);
+    void update_bitmap_store();
     void clear_pg_access_status();
     void gather_pf();
     bool pf_q_empty();

@@ -14,7 +14,11 @@ void page_bitmap::prefetcher::init()
     tb[i].aft_cs_acc = true;
     
     for (size_t j = 0; j < 64; j++) 
+    {
       tb[i].bitmap[j] = false;
+      tb[i].bitmap_store[j] = true;
+    }
+      
   }
 }
 
@@ -121,9 +125,27 @@ void page_bitmap::prefetcher::update(uint64_t addr)
   for(auto &var : tb[index].bitmap) 
     var = false;
 
+  for(auto &var : tb[index].bitmap_store)
+    var = false;
+
   tb[index].bitmap[block] = true;
   tb[index].bitmap[block_2] = true;
   update_lru(index);
+}
+void page_bitmap::prefetcher::update_bitmap_store()
+{
+  for (size_t i = 0; i < TABLE_SIZE; i++) 
+  {
+    if (tb[i].valid) 
+    {
+      tb[i].page_no_store = tb[i].page_no;
+
+      for (size_t j = 0; j < BITMAP_SIZE; j++) {
+        tb[i].bitmap_store[j] = tb[i].bitmap[j];
+        tb[i].bitmap[j] = false;
+      }
+    }
+  }
 }
 
 void page_bitmap::prefetcher::clear_pg_access_status()
@@ -167,7 +189,7 @@ void page_bitmap::prefetcher::gather_pf()
 
       for (size_t j = 0; j < 64; j++) {
 
-        if (tb[i].bitmap[j]) {
+        if (tb[i].bitmap[j] && tb[i].bitmap_store[j]) {
           cs_pf.push_back(page_addr + (j << 6)); 
           no_blks++;
 
