@@ -78,6 +78,40 @@ void spp::SPP_PREFETCH_FILTER::update_issue(uint64_t check_addr, std::size_t)
   }
 }
 
+// WL 
+std::vector<uint64_t> spp::SPP_PREFETCH_FILTER::gather_pf()
+{
+  std::vector<uint64_t> pf;
+
+  std::vector<std::pair<std::size_t, uint16_t>> i_lru_vec;
+
+  for(size_t i = 0; i < WAY * SET; i++) 
+    i_lru_vec.push_back(std::make_pair(i, prefetch_table[i].last_used)); 
+
+  std::sort(i_lru_vec.begin(), i_lru_vec.end(), [](auto &left, auto &right) {
+      return left.second < right.second;
+      });
+
+  // Get the prefetches.
+  for(auto var : i_lru_vec) {
+
+    size_t i = var.first;
+
+    uint64_t page_addr = prefetch_table[i].page_no << 12;
+
+    for (size_t j = 0; j < 64; j++) {
+
+      if (prefetch_table[i].used.test(j) ||
+          prefetch_table[i].prefetched.test(j))
+        pf.push_back(page_addr + (j << 6)); 
+    } 
+  }
+
+  std::cout << "Gathered " << pf.size() << " prefetches from filter." << std::endl;
+
+  return pf;
+}
+
 // WL
 void spp::SPP_PREFETCH_FILTER::clear()
 {

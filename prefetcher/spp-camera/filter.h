@@ -6,6 +6,7 @@
 
 // WL
 #include <iostream>
+#include <vector>
 
 namespace spp
 {
@@ -45,6 +46,7 @@ namespace spp
       confidence_t check(uint64_t pf_addr, int confidence = highconf_threshold) const;
       void update_demand(uint64_t pf_addr, std::size_t set);
       void update_issue(uint64_t pf_addr, std::size_t set);
+      std::vector<uint64_t> gather_pf(); // WL 
       void clear(); // WL
   };
 }

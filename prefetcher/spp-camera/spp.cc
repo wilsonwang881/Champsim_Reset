@@ -42,8 +42,20 @@ namespace {
 void spp::prefetcher::issue(CACHE* cache)
 {
   // WL: issue context switch prefetches first 
-  if (!reset_misc::dq_prefetch_communicate.empty()) {
+  //if (!reset_misc::dq_prefetch_communicate.empty()) {
+  if (!context_switch_queue_empty()) {
 
+    auto [addr, priority] = context_switch_issue_queue.front();
+    bool prefetched = cache->prefetch_line(addr, priority, 0);
+
+    if (prefetched) {
+      context_switch_issue_queue.pop_front();
+      filter.update_issue(addr, cache->get_set(addr));
+      context_switch_issued++;
+    }
+
+    return;
+  }
     /*
     if (waited == 1) {
       auto [addr, priority] = reset_misc::dq_prefetch_communicate.front();
@@ -77,9 +89,9 @@ void spp::prefetcher::issue(CACHE* cache)
     }
 
     */
-    issue_queue.clear();
-    return;
-  }
+//    issue_queue.clear();
+//    return;
+  //}
   // WL 
 
   // Issue eligible outstanding prefetches
@@ -298,7 +310,13 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   */
 
   cache->clear_internal_PQ();
-  filter.clear();
+  std::vector<uint64_t> tmpp_pf = filter.gather_pf();
+  for(auto var : tmpp_pf) {
+    context_switch_issue_queue.push_back(std::make_pair(var, true)); 
+  }
+  //filter.clear();
+
+  return;
   std::cout << "Filter cleared" << std::endl;
 
   std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature(1.0 * filter.pf_useful / filter.pf_issued);
