@@ -89,7 +89,7 @@ std::vector<uint64_t> spp::SPP_PREFETCH_FILTER::gather_pf()
     i_lru_vec.push_back(std::make_pair(i, prefetch_table[i].last_used)); 
 
   std::sort(i_lru_vec.begin(), i_lru_vec.end(), [](auto &left, auto &right) {
-      return left.second < right.second;
+      return left.second > right.second;
       });
 
   // Get the prefetches.

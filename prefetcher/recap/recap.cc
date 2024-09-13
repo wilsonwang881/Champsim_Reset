@@ -1,12 +1,12 @@
-#include "page_bitmap.h"
+#include "recap.h"
 
 using unique_key = std::pair<CACHE*, uint32_t>;
 
 namespace {
-  std::map<unique_key, page_bitmap::prefetcher> PAGE_BITMAP; 
+  std::map<unique_key, page_bitmap::prefetcher> RECAP; 
 }
 
-void page_bitmap::prefetcher::init()
+void recap::prefetcher::init()
 {
   for(size_t i = 0; i < TABLE_SIZE; i++)
   {
@@ -16,13 +16,12 @@ void page_bitmap::prefetcher::init()
     for (size_t j = 0; j < 64; j++) 
     {
       tb[i].bitmap[j] = false;
-      tb[i].bitmap_store[j] = true;
     }
       
   }
 }
 
-void page_bitmap::prefetcher::update_lru(std::size_t i)
+void recap::prefetcher::update_lru(std::size_t i)
 {
   bool half = false;
 
@@ -47,7 +46,7 @@ void page_bitmap::prefetcher::update_lru(std::size_t i)
   }
 }
 
-void page_bitmap::prefetcher::update(uint64_t addr)
+void recap::prefetcher::update(uint64_t addr)
 {
   uint64_t page = addr >> 12;
   uint64_t block = (addr & 0xFFF) >> 6;
@@ -125,37 +124,19 @@ void page_bitmap::prefetcher::update(uint64_t addr)
   for(auto &var : tb[index].bitmap) 
     var = false;
 
-  for(auto &var : tb[index].bitmap_store)
-    var = false;
-
   tb[index].bitmap[block] = true;
   tb[index].bitmap[block_2] = true;
   update_lru(index);
 }
-void page_bitmap::prefetcher::update_bitmap_store()
-{
-  for (size_t i = 0; i < TABLE_SIZE; i++) 
-  {
-    if (tb[i].valid) 
-    {
-      tb[i].page_no_store = tb[i].page_no;
 
-      for (size_t j = 0; j < BITMAP_SIZE; j++) {
-        tb[i].bitmap_store[j] = tb[i].bitmap[j];
-        tb[i].bitmap[j] = false;
-      }
-    }
-  }
-}
-
-void page_bitmap::prefetcher::clear_pg_access_status()
+void recap::prefetcher::clear_pg_access_status()
 {
   for(auto &var : tb) {
     var.aft_cs_acc = true; 
   }
 }
 
-void page_bitmap::prefetcher::gather_pf()
+void recap::prefetcher::gather_pf()
 {
   // Clear prefetch queue.
   cs_pf.clear();
@@ -185,23 +166,16 @@ void page_bitmap::prefetcher::gather_pf()
       if (DEBUG_PRINT) 
         std::cout << "Page " << std::hex << tb[i].page_no << std::dec << " ["; 
 
-      int no_blks = 0;
 
       for (size_t j = 0; j < 64; j++) {
 
-        if (tb[i].bitmap[j] && tb[i].bitmap_store[j]) {
+        if (tb[i].bitmap[j]) {
           cs_pf.push_back(page_addr + (j << 6)); 
-          no_blks++;
 
           if (DEBUG_PRINT)
             std::cout << " " << j;
         }
       } 
-
-      /*
-      if (no_blks == 1) 
-        cs_pf.pop_back();
-        */
 
       if (DEBUG_PRINT) 
         std::cout << " ]" << std::endl;
@@ -213,7 +187,7 @@ void page_bitmap::prefetcher::gather_pf()
   std::cout << " gathered " << cs_pf.size() << " prefetches from past accesses." << std::endl;
 }
 
-void page_bitmap::prefetcher::filter_update_lru(std::size_t i)
+void recap::prefetcher::filter_update_lru(std::size_t i)
 {
   bool half = false;
 
@@ -238,7 +212,7 @@ void page_bitmap::prefetcher::filter_update_lru(std::size_t i)
   }
 }
 
-bool page_bitmap::prefetcher::filter_operate(uint64_t addr)
+bool recap::prefetcher::filter_operate(uint64_t addr)
 {
   uint64_t page = addr >> 12;
   uint64_t block = (addr & 0xFFF) >> 6;
