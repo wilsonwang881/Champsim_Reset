@@ -20,7 +20,6 @@ namespace recap
     constexpr static std::size_t TABLE_SIZE = 1024;
     constexpr static std::size_t BITMAP_SIZE = 64;
     constexpr static std::size_t FILTER_SIZE = 4;
-    constexpr static bool DEBUG_PRINT = false;
 
     // Page bitmap entry.
     struct page_r
@@ -29,24 +28,14 @@ namespace recap
       uint64_t page_no;
       bool bitmap[BITMAP_SIZE];
       uint16_t lru_bits;
-      bool aft_cs_acc;
+      bool reuse;
     };
 
     page_r tb[TABLE_SIZE];
 
-    // Filter.
-    // Make sure each page has 1 access before putting into tb.
-    struct page_filter_r
-    {
-      bool valid;
-      uint64_t page_no;
-      uint8_t block_no;
-      uint8_t lru_bits;
-    };
-
-    page_filter_r filter[FILTER_SIZE];
- 
     public:
+
+    constexpr static bool BLOCK_REUSE_MODE = false;
 
     // Context switch prefetch queue.
     std::deque<uint64_t> cs_pf; 
@@ -54,11 +43,9 @@ namespace recap
     void init();
     void update_lru(std::size_t i);
     void update(uint64_t addr);
-    void clear_pg_access_status();
+    void update_reuse(uint64_t addr);
     void gather_pf();
     bool pf_q_empty();
-    void filter_update_lru(std::size_t i);
-    bool filter_operate(uint64_t addr);
   };
 }
 
