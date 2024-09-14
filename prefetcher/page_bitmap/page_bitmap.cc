@@ -68,6 +68,7 @@ void page_bitmap::prefetcher::update(uint64_t addr)
 
   // Page not found.
   // Check or update filter first.
+  /*
   bool check_filter = filter_operate(addr);
 
   if (!check_filter) {
@@ -85,6 +86,7 @@ void page_bitmap::prefetcher::update(uint64_t addr)
       var.valid = false;
     } 
   }
+  */
 
   // Find an invalid entry for the page.
   for (size_t i = 0; i < TABLE_SIZE; i++) 
@@ -99,7 +101,7 @@ void page_bitmap::prefetcher::update(uint64_t addr)
       }
 
       tb[i].bitmap[block] = true;
-      tb[i].bitmap[block_2] = true;
+      //tb[i].bitmap[block_2] = true;
       update_lru(i);
       return;
     }
@@ -129,7 +131,7 @@ void page_bitmap::prefetcher::update(uint64_t addr)
     var = false;
 
   tb[index].bitmap[block] = true;
-  tb[index].bitmap[block_2] = true;
+  //tb[index].bitmap[block_2] = true;
   update_lru(index);
 }
 void page_bitmap::prefetcher::update_bitmap_store()
