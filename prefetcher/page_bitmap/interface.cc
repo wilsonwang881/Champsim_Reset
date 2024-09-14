@@ -20,9 +20,9 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 {
   auto &pref = ::PAGE_BITMAP[{this, cpu}];
 
-  //if (cache_hit) {
+  if (cache_hit) {
     pref.update(addr);
-  //}
+  }
 
   return metadata_in;
 }
