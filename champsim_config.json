@@ -83,7 +83,7 @@
         "prefetch_as_load": false,
         "virtual_prefetch": true,
         "prefetch_activate": "LOAD,PREFETCH",
-        "prefetcher": "page_bitmap"
+        "prefetcher": "spp-camera"
     },
 
     "ITLB": {
@@ -154,7 +154,7 @@
         "prefetch_as_load": false,
         "virtual_prefetch": false,
         "prefetch_activate": "LOAD,PREFETCH",
-        "prefetcher": "page_bitmap_l2",
+        "prefetcher": "no",
         "replacement": "lru"
     },
 
