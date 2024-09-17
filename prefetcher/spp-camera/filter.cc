@@ -101,8 +101,8 @@ std::vector<uint64_t> spp::SPP_PREFETCH_FILTER::gather_pf()
 
     for (size_t j = 0; j < 64; j++) {
 
-      if (prefetch_table[i].used.test(j) ||
-          prefetch_table[i].prefetched.test(j))
+      if (prefetch_table[i].used.test(j)) // ||
+          //prefetch_table[i].prefetched.test(j))
         pf.push_back(page_addr + (j << 6)); 
     } 
   }

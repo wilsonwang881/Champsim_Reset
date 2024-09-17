@@ -16,7 +16,7 @@ namespace spp
   class SPP_PREFETCH_FILTER
   {
     public:
-      static constexpr std::size_t SET = 1 << 8;
+      static constexpr std::size_t SET = 1 << 10; // WL: was 1 << 8
       static constexpr std::size_t WAY = 1;
       static constexpr std::size_t TAG_BITS = 27;
 

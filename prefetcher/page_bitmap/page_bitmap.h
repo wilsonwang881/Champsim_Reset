@@ -47,7 +47,7 @@ namespace page_bitmap
     };
 
     page_filter_r filter[FILTER_SIZE];
- 
+
     public:
 
     // Context switch prefetch queue.

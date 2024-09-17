@@ -19,7 +19,10 @@ void CACHE::prefetcher_initialize()
 uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
 {
   auto &pref = ::PAGE_BITMAP_L2[{this, cpu}];
-  pref.update(addr);
+
+  if (cache_hit) {
+    pref.update(addr);
+  }
 
   return metadata_in;
 }
@@ -37,6 +40,8 @@ void CACHE::prefetcher_cycle_operate()
     
     std::cout << NAME;
     pref.gather_pf();
+    pref.clear_pg_access_status();
+    pref.update_bitmap_store();
     reset_misc::can_record_after_access = false;
   }
   else 

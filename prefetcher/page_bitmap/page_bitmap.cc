@@ -13,12 +13,11 @@ void page_bitmap::prefetcher::init()
     tb[i].valid = false;
     tb[i].aft_cs_acc = true;
     
-    for (size_t j = 0; j < 64; j++) 
+    for (size_t j = 0; j < BITMAP_SIZE; j++) 
     {
       tb[i].bitmap[j] = false;
       tb[i].bitmap_store[j] = true;
     }
-      
   }
 }
 
@@ -35,14 +34,14 @@ void page_bitmap::prefetcher::update_lru(std::size_t i)
 
   if (half) 
   {
-    for(auto &var : tb) 
+    for(auto &var : tb)
       var.lru_bits = var.lru_bits >> 1; 
   }
 
   tb[i].lru_bits = 0;
 
   for(auto &var : tb) {
-    if (var.valid) 
+    if (var.valid)
       var.lru_bits++;
   }
 }
@@ -68,7 +67,6 @@ void page_bitmap::prefetcher::update(uint64_t addr)
 
   // Page not found.
   // Check or update filter first.
-  /*
   bool check_filter = filter_operate(addr);
 
   if (!check_filter) {
@@ -86,7 +84,6 @@ void page_bitmap::prefetcher::update(uint64_t addr)
       var.valid = false;
     } 
   }
-  */
 
   // Find an invalid entry for the page.
   for (size_t i = 0; i < TABLE_SIZE; i++) 
@@ -101,7 +98,7 @@ void page_bitmap::prefetcher::update(uint64_t addr)
       }
 
       tb[i].bitmap[block] = true;
-      //tb[i].bitmap[block_2] = true;
+      tb[i].bitmap[block_2] = true;
       update_lru(i);
       return;
     }
@@ -124,16 +121,17 @@ void page_bitmap::prefetcher::update(uint64_t addr)
   tb[index].page_no = page;
   tb[index].aft_cs_acc = false;
 
-  for(auto &var : tb[index].bitmap) 
+  for(auto &var : tb[index].bitmap)
     var = false;
 
   for(auto &var : tb[index].bitmap_store)
     var = false;
 
   tb[index].bitmap[block] = true;
-  //tb[index].bitmap[block_2] = true;
+  tb[index].bitmap[block_2] = true;
   update_lru(index);
 }
+
 void page_bitmap::prefetcher::update_bitmap_store()
 {
   for (size_t i = 0; i < TABLE_SIZE; i++) 
@@ -167,7 +165,7 @@ void page_bitmap::prefetcher::gather_pf()
 
   for(size_t i = 0; i < TABLE_SIZE; i++) {
 
-    if (tb[i].valid) 
+    if (tb[i].valid)
       i_lru_vec.push_back(std::make_pair(i, tb[i].lru_bits)); 
   }
 
@@ -189,7 +187,7 @@ void page_bitmap::prefetcher::gather_pf()
 
       int no_blks = 0;
 
-      for (size_t j = 0; j < 64; j++) {
+      for (size_t j = 0; j < BITMAP_SIZE; j++) {
 
         if (tb[i].bitmap[j] && tb[i].bitmap_store[j]) {
           cs_pf.push_back(page_addr + (j << 6)); 
