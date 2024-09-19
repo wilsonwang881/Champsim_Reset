@@ -39,6 +39,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   {
     pref.page_bitmap.update(base_addr);
   }
+
   return metadata_in;
 }
 

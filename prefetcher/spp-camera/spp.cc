@@ -54,7 +54,7 @@ void spp::prefetcher::issue(CACHE* cache)
       context_switch_issued++;
     }
 
-    //return;
+    return;
   }
     /*
     if (waited == 1) {
@@ -315,7 +315,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   for(auto var : tmpp_pf) {
     context_switch_issue_queue.push_back(std::make_pair(var, true)); 
   }
-  //filter.clear();
+  filter.clear();
 
   return;
   std::cout << "Filter cleared" << std::endl;

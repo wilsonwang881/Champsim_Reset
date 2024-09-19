@@ -10,7 +10,7 @@ void spp::SPP_PAGE_BITMAP::init()
     for (size_t j = 0; j < BITMAP_SIZE; j++) 
     {
       tb[i].bitmap[j] = false;
-      tb[i].bitmap_store[j] = true;
+      tb[i].bitmap_store[j] = false;
     }
   }
 
