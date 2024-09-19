@@ -108,15 +108,8 @@ void CACHE::prefetcher_cycle_operate()
     // No prefetch gathering via the signature and pattern tables.
     else
     {
-      //if (!pref.context_switch_queue_empty()) 
-      //{
-        pref.context_switch_issue(this);
-      //}
-      //else 
-      //{
-        pref.issue(this);
-        pref.step_lookahead();
-      //}
+      pref.issue(this);
+      pref.step_lookahead();
     }
   }
   else {
