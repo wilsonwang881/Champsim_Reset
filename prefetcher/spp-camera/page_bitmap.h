@@ -1,6 +1,3 @@
-#ifndef PAGE_BITMAP_H
-#define PAGE_BITMAP_H
-
 #include <cstdint>
 #include <cstddef>
 #include <map>
@@ -11,11 +8,9 @@
 #include <algorithm>
 #include <vector>
 
-class CACHE;
-
-namespace page_bitmap 
+namespace spp 
 {
-  class prefetcher
+  class SPP_PAGE_BITMAP 
   {
     constexpr static std::size_t TABLE_SIZE = 1024;
     constexpr static std::size_t BITMAP_SIZE = 64;
@@ -70,7 +65,7 @@ namespace page_bitmap
     void update(uint64_t addr);
     void update_bitmap_store();
     void clear_pg_access_status();
-    void gather_pf();
+    std::vector<uint64_t> gather_pf();
     bool pf_q_empty();
     void filter_update_lru(std::size_t i);
     bool filter_operate(uint64_t addr);
@@ -79,4 +74,3 @@ namespace page_bitmap
   };
 }
 
-#endif

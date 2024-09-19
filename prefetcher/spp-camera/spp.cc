@@ -310,7 +310,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   */
 
   cache->clear_internal_PQ();
-  std::vector<uint64_t> tmpp_pf = filter.gather_pf();
+  std::vector<uint64_t> tmpp_pf = page_bitmap.gather_pf();
   for(auto var : tmpp_pf) {
     context_switch_issue_queue.push_back(std::make_pair(var, true)); 
   }
@@ -454,9 +454,10 @@ void spp::prefetcher::context_switch_issue(CACHE* cache)
     // If this fails, the queue was full.
     bool prefetched = cache->prefetch_line(addr, priority, 0);
     if (prefetched) {
-      filter.update_issue(addr, cache->get_set(addr)); // Update the filter
+      //filter.update_issue(addr, cache->get_set(addr)); // Update the filter
       context_switch_issue_queue.pop_front();
     }
+    /*
     else {
       // If the current level of prefetch queue is full, issue to the lower level.
       bool prefetched_retry = cache->prefetch_line(addr, !priority, 0);
@@ -466,6 +467,7 @@ void spp::prefetcher::context_switch_issue(CACHE* cache)
         context_switch_issue_queue.pop_front();
       }
     }
+    */
   }
 }
 

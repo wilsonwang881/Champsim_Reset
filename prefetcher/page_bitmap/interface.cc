@@ -20,8 +20,10 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 {
   auto &pref = ::PAGE_BITMAP[{this, cpu}];
 
-  if (cache_hit) {
+  if (cache_hit) 
+  {
     pref.update(addr);
+    pref.counter_update(addr);
   }
 
   return metadata_in;
@@ -40,8 +42,8 @@ void CACHE::prefetcher_cycle_operate()
       && !champsim::operable::have_cleared_BTB
       && !champsim::operable::have_cleared_BP
       && !champsim::operable::have_cleared_prefetcher
-      && champsim::operable::cpu_side_reset_ready) {
-    
+      && champsim::operable::cpu_side_reset_ready) 
+  {
     std::cout << NAME;
     pref.gather_pf();
     pref.clear_pg_access_status();
@@ -51,7 +53,8 @@ void CACHE::prefetcher_cycle_operate()
   }
   else 
   {
-    if (!pref.cs_pf.empty()) {
+    if (!pref.cs_pf.empty()) 
+    {
       bool prefetched = prefetch_line(pref.cs_pf.front(), 1, 0);
 
       if (prefetched) 

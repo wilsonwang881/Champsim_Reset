@@ -5,6 +5,7 @@
 #include "bootstraptable.h"
 #include "patterntable.h"
 #include "filter.h"
+#include "page_bitmap.h" // WL
 
 #include <cstdlib>
 #include <deque>
@@ -56,6 +57,9 @@ namespace spp {
     std::vector<unsigned> depth_ptmiss_tracker;
 
     public:
+
+    SPP_PAGE_BITMAP page_bitmap; // WL
+                                 //
     bool warmup = true;
     
     void update_demand(uint64_t base_addr, uint32_t set);

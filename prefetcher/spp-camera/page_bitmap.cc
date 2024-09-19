@@ -1,12 +1,6 @@
 #include "page_bitmap.h"
 
-using unique_key = std::pair<CACHE*, uint32_t>;
-
-namespace {
-  std::map<unique_key, page_bitmap::prefetcher> PAGE_BITMAP; 
-}
-
-void page_bitmap::prefetcher::init()
+void spp::SPP_PAGE_BITMAP::init()
 {
   for(size_t i = 0; i < TABLE_SIZE; i++)
   {
@@ -24,7 +18,7 @@ void page_bitmap::prefetcher::init()
     ct[i].valid = false; 
 }
 
-void page_bitmap::prefetcher::update_lru(std::size_t i)
+void spp::SPP_PAGE_BITMAP::update_lru(std::size_t i)
 {
   bool half = false;
 
@@ -52,7 +46,7 @@ void page_bitmap::prefetcher::update_lru(std::size_t i)
   }
 }
 
-void page_bitmap::prefetcher::update(uint64_t addr)
+void spp::SPP_PAGE_BITMAP::update(uint64_t addr)
 {
   uint64_t page = addr >> 12;
   uint64_t block = (addr & 0xFFF) >> 6;
@@ -138,7 +132,7 @@ void page_bitmap::prefetcher::update(uint64_t addr)
   update_lru(index);
 }
 
-void page_bitmap::prefetcher::update_bitmap_store()
+void spp::SPP_PAGE_BITMAP::update_bitmap_store()
 {
   for (size_t i = 0; i < TABLE_SIZE; i++) 
   {
@@ -155,13 +149,13 @@ void page_bitmap::prefetcher::update_bitmap_store()
   }
 }
 
-void page_bitmap::prefetcher::clear_pg_access_status()
+void spp::SPP_PAGE_BITMAP::clear_pg_access_status()
 {
   for(auto &var : tb)
     var.aft_cs_acc = true; 
 }
 
-void page_bitmap::prefetcher::gather_pf()
+std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
 {
   // Clear prefetch queue.
   cs_pf.clear();
@@ -216,11 +210,18 @@ void page_bitmap::prefetcher::gather_pf()
   }
 
   //cs_pf.clear();
+
+  std::vector<uint64_t> pf;
+  for(auto var : cs_pf) {
+    pf.push_back(var); 
+  }
   
-  std::cout << " gathered " << cs_pf.size() << " prefetches from past accesses." << std::endl;
+  std::cout << "Page bitmap gathered " << cs_pf.size() << " prefetches from past accesses." << std::endl;
+
+  return pf;
 }
 
-void page_bitmap::prefetcher::filter_update_lru(std::size_t i)
+void spp::SPP_PAGE_BITMAP::filter_update_lru(std::size_t i)
 {
   bool half = false;
 
@@ -248,7 +249,7 @@ void page_bitmap::prefetcher::filter_update_lru(std::size_t i)
   }
 }
 
-bool page_bitmap::prefetcher::filter_operate(uint64_t addr)
+bool spp::SPP_PAGE_BITMAP::filter_operate(uint64_t addr)
 {
   uint64_t page = addr >> 12;
   uint64_t block = (addr & 0xFFF) >> 6;
@@ -318,13 +319,13 @@ bool page_bitmap::prefetcher::filter_operate(uint64_t addr)
   return false;
 }
 
-void page_bitmap::prefetcher::counter_update_lru(std::size_t i)
+void spp::SPP_PAGE_BITMAP::counter_update_lru(std::size_t i)
 {
   bool half = false;
 
   for(auto var : ct) 
   {
-    if (var.lru_bits == (std::numeric_limits<uint16_t>::max() & 0xFFF) 
+    if (var.lru_bits == (std::numeric_limits<uint16_t>::max() & 0xFFF)) 
     {
       half = true;
       break;
@@ -346,7 +347,7 @@ void page_bitmap::prefetcher::counter_update_lru(std::size_t i)
   }
 }
 
-void page_bitmap::prefetcher::counter_update(uint64_t addr)
+void spp::SPP_PAGE_BITMAP::counter_update(uint64_t addr)
 {
   uint64_t blk_addr = (addr >> 6) << 6;
 
@@ -355,7 +356,7 @@ void page_bitmap::prefetcher::counter_update(uint64_t addr)
   {
     if (ct[i].valid && ct[i].addr == blk_addr) 
     {
-      var.counter++;
+      ct[i].counter++;
       counter_update_lru(i);
       return;
     } 

@@ -24,6 +24,7 @@ void CACHE::prefetcher_initialize()
   // WL 
   auto &pref = ::SPP[{this, cpu}];
   pref.prefetcher_state_file.open("prefetcher_states.txt", std::ios::out);
+  pref.page_bitmap.init();
   // WL 
 }
 
@@ -34,6 +35,10 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   pref.update_demand(base_addr,this->get_set_index(base_addr));
   pref.initiate_lookahead(base_addr);
 
+  if (cache_hit) 
+  {
+    pref.page_bitmap.update(base_addr);
+  }
   return metadata_in;
 }
 
@@ -93,6 +98,8 @@ void CACHE::prefetcher_cycle_operate()
           champsim::operable::L2C_have_issued_context_switch_prefetches = true;
           champsim::operable::cache_clear_counter = 0;
           pref.context_switch_prefetch_gathered = false;
+          pref.page_bitmap.clear_pg_access_status();
+          pref.page_bitmap.update_bitmap_store();
           std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
         }
       }
@@ -101,8 +108,15 @@ void CACHE::prefetcher_cycle_operate()
     // No prefetch gathering via the signature and pattern tables.
     else
     {
-      pref.issue(this);
-      pref.step_lookahead();
+      //if (!pref.context_switch_queue_empty()) 
+      //{
+        pref.context_switch_issue(this);
+      //}
+      //else 
+      //{
+        pref.issue(this);
+        pref.step_lookahead();
+      //}
     }
   }
   else {
