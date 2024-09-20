@@ -324,7 +324,7 @@ void page_bitmap::prefetcher::counter_update_lru(std::size_t i)
 
   for(auto var : ct) 
   {
-    if (var.lru_bits == (std::numeric_limits<uint16_t>::max() & 0xFFF) 
+    if (var.lru_bits == (std::numeric_limits<uint16_t>::max() & 0xFFF)) 
     {
       half = true;
       break;
@@ -355,7 +355,7 @@ void page_bitmap::prefetcher::counter_update(uint64_t addr)
   {
     if (ct[i].valid && ct[i].addr == blk_addr) 
     {
-      var.counter++;
+      ct[i].counter++;
       counter_update_lru(i);
       return;
     } 
