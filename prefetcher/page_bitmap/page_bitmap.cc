@@ -20,8 +20,17 @@ void page_bitmap::prefetcher::init()
     }
   }
 
-  for (size_t i = 0; i < COUNTER_SIZE; i++)
-    ct[i].valid = false; 
+  for (size_t i = 0; i < TAG_COUNTER_SIZE; i++)
+  {
+    ct[i].valid = true; 
+    ct[i].counter = 16;
+  }
+
+  for (size_t i = 0; i < RJ_PF_SIZE; i++) 
+  {
+    rj_tb[i].valid = false;
+    pf_tb[i].valid = false;
+  }
 }
 
 void page_bitmap::prefetcher::update_lru(std::size_t i)
@@ -138,6 +147,23 @@ void page_bitmap::prefetcher::update(uint64_t addr)
   update_lru(index);
 }
 
+void page_bitmap::prefetcher::update_bitmap(uint64_t addr)
+{
+  uint64_t page = addr >> 12;
+  uint64_t block = (addr & 0xFFF) >> 6;
+
+  // Update the bitmap of that page.
+  // Update the LRU bits.
+  for (size_t i = 0; i < TABLE_SIZE; i++)
+  {
+    if (tb[i].valid &&
+        tb[i].page_no == page) 
+    {
+      tb[i].bitmap[block] = true;
+    }
+  }
+}
+
 void page_bitmap::prefetcher::update_bitmap_store()
 {
   for (size_t i = 0; i < TABLE_SIZE; i++) 
@@ -166,6 +192,22 @@ void page_bitmap::prefetcher::gather_pf()
   // Clear prefetch queue.
   cs_pf.clear();
 
+  std::cout << std::endl;
+
+  for(size_t i = 0; i < TAG_COUNTER_SIZE; i++) 
+  {
+    if (ct[i].valid)
+    {
+      std::cout << std::setw(4) << (unsigned)i << std::setw(3) << (unsigned)ct[i].counter << "|"; 
+    }  
+
+    if (((i + 1) % 25) == 0) {
+      std::cout << std::endl; 
+    }
+  }
+
+  std::cout << std::endl;
+
   // Start from MRU pages.
   std::vector<std::pair<std::size_t, uint16_t>> i_lru_vec;
 
@@ -191,24 +233,19 @@ void page_bitmap::prefetcher::gather_pf()
       if (DEBUG_PRINT) 
         std::cout << "Page " << std::hex << tb[i].page_no << std::dec << " ["; 
 
-      int no_blks = 0;
-
       for (size_t j = 0; j < BITMAP_SIZE; j++) 
       {
-        if (tb[i].bitmap[j] && tb[i].bitmap_store[j])
+        uint64_t pf_addr = page_addr + (j << 6);
+
+        if (tb[i].bitmap[j] && 
+            tb[i].bitmap_store[j])
         {
-          cs_pf.push_back(page_addr + (j << 6)); 
-          no_blks++;
+          cs_pf.push_back(pf_addr); 
 
           if (DEBUG_PRINT)
             std::cout << " " << j;
         }
       } 
-
-      /*
-      if (no_blks == 1) 
-        cs_pf.pop_back();
-        */
 
       if (DEBUG_PRINT) 
         std::cout << " ]" << std::endl;
@@ -318,80 +355,110 @@ bool page_bitmap::prefetcher::filter_operate(uint64_t addr)
   return false;
 }
 
-void page_bitmap::prefetcher::counter_update_lru(std::size_t i)
+uint8_t page_bitmap::prefetcher::saturating_counter(uint8_t val, bool increment)
 {
-  bool half = false;
+  uint8_t rt = 16;
 
-  for(auto var : ct) 
+  if (val == 0 && !increment) 
+    rt = 0; 
+  else if (val >= 31 && increment) 
+    rt = 31; 
+  else if (increment) 
+    rt = val + 1;  
+  else if (!increment) 
+    rt = val - 1; 
+
+  return rt;
+}
+
+void page_bitmap::prefetcher::tag_counter_update(uint64_t addr, bool useful)
+{
+  // Directly mapped table.
+  uint64_t truncated = (addr >> 12) & 0x3FF;
+
+  if (ct[truncated].valid) 
   {
-    if (var.lru_bits == (std::numeric_limits<uint16_t>::max() & 0xFFF)) 
-    {
-      half = true;
-      break;
-    } 
+    uint8_t updated  = saturating_counter(ct[truncated].counter, useful);
+    ct[truncated].counter = updated;
+  } 
+  else
+  {
+    ct[truncated].valid = true;
+    ct[truncated].counter = 16;
+  } 
+}
+
+bool page_bitmap::prefetcher::tag_counter_check(uint64_t addr)
+{
+  uint64_t truncated = (addr >> 12) & 0x3FF;
+
+  for(uint64_t i = 0; i < TAG_COUNTER_SIZE; i++) 
+  {
+    if (ct[i].valid && 
+        i == truncated &&
+        ct[i].counter >= 15)
+      return true;
   }
 
-  if (half) 
+  return false;
+}
+
+void page_bitmap::prefetcher::invalidate_rj_pf_tb(rj_pf_r rj_pf_tb[], uint64_t addr)
+{
+  size_t index = (addr >> 6) & 0x3FF;
+  rj_pf_tb[index].valid = false;
+  rj_pf_tb[index].tag = 0;
+}
+
+void page_bitmap::prefetcher::invalidate_p_tb(bool rj_or_pf_tb, uint64_t addr)
+{
+  if (rj_or_pf_tb)
+    invalidate_rj_pf_tb(rj_tb, addr); 
+  else
+    invalidate_rj_pf_tb(pf_tb, addr);
+}
+
+void page_bitmap::prefetcher::update_rj_pf_tb(rj_pf_r rj_pf_tb[], uint64_t addr)
+{
+  size_t index = (addr >> 6) & 0x3FF;
+  uint16_t tag_seg = (addr >> 16) & 0xFFFFFF;
+
+  // Allocate new entry
+  if (!rj_pf_tb[index].valid)
   {
-    for(auto &var : ct) 
-      var.lru_bits = var.lru_bits >> 1; 
+    rj_pf_tb[index].valid = true;
+    rj_pf_tb[index].tag = tag_seg;
   }
-
-  ct[i].lru_bits = 0;
-
-  for(auto &var : ct) 
+  else 
   {
-    if (var.valid) 
-      var.lru_bits++;
+    rj_pf_tb[index].tag = tag_seg;  
   }
 }
 
-void page_bitmap::prefetcher::counter_update(uint64_t addr)
+void page_bitmap::prefetcher::update_p_tb(bool rj_or_pf_tb, uint64_t addr)
 {
-  uint64_t blk_addr = (addr >> 6) << 6;
+  if (rj_or_pf_tb)
+    update_rj_pf_tb(rj_tb, addr); 
+  else 
+    update_rj_pf_tb(pf_tb, addr);
+}
 
-  // Try to find an existing entry.
-  for(size_t i = 0; i < COUNTER_SIZE; i++) 
-  {
-    if (ct[i].valid && ct[i].addr == blk_addr) 
-    {
-      ct[i].counter++;
-      counter_update_lru(i);
-      return;
-    } 
-  }
+bool page_bitmap::prefetcher::check_rj_pf_tb(rj_pf_r rj_pf_tb[], uint64_t addr)
+{
+  size_t index = (addr >> 6) & 0x3FF;
+  uint16_t tag_seg = (addr >> 16) & 0xFFFFFF;
 
-  // No existing entry found.
-  // Allocate new entry.
-  for (size_t i = 0; i < COUNTER_SIZE; i++) 
-  {
-    if (!ct[i].valid) 
-    {
-      ct[i].valid = true;
-      ct[i].addr = blk_addr;
-      ct[i].counter = 1;
-      counter_update(i);
-      return;
-    } 
-  }
+  return (rj_pf_tb[index].valid) && (rj_pf_tb[index].tag == tag_seg);
+}
 
+bool page_bitmap::prefetcher::check_p_tb(bool rj_or_pf_tb, uint64_t addr)
+{
+  bool res = false;
 
-  // All entries valid.
-  // Find the LRU entry.
-  std::size_t index = 0;
-  uint16_t lru = 0;
+  if (rj_or_pf_tb)
+    res = check_rj_pf_tb(rj_tb, addr); 
+  else
+    res = check_rj_pf_tb(pf_tb, addr);
 
-  for(size_t i = 0; i < COUNTER_SIZE; i++) 
-  {
-    if (ct[i].valid &&
-        ct[i].lru_bits > lru) 
-    {
-      index = i;
-      lru = ct[i].lru_bits;
-    } 
-  }
-
-  ct[index].addr = blk_addr;
-  ct[index].counter = 1;
-  counter_update_lru(index);
+  return res;
 }
