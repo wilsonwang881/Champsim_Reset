@@ -88,8 +88,8 @@ void CACHE::prefetcher_cycle_operate()
     if (!pref.cs_pf.empty()) 
     {
       // Check the rejection table.
-      if (!pref.check_p_tb(true, addr) &&
-          pref.tag_counter_check(addr))
+      if (true) //!pref.check_p_tb(true, addr) &&
+//          pref.tag_counter_check(addr))
       {
         // If not rejected, prefetch.
         bool prefetched = prefetch_line(pref.cs_pf.front(), 1, 0);
