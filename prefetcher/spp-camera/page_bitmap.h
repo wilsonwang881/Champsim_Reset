@@ -63,6 +63,7 @@ namespace spp
     void init();
     void update_lru(std::size_t i);
     void update(uint64_t addr);
+    void update_bitmap(uint64_t addr);
     void update_bitmap_store();
     void clear_pg_access_status();
     std::vector<uint64_t> gather_pf();

@@ -45,6 +45,13 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
 uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
 {
+  auto &pref = ::SPP[{this, cpu}];
+
+  // WL
+  if (!prefetch) {
+    pref.page_bitmap.update_bitmap(addr);
+  }
+
   return metadata_in;
 }
 

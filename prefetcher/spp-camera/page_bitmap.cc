@@ -132,6 +132,23 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr)
   update_lru(index);
 }
 
+void spp::SPP_PAGE_BITMAP::update_bitmap(uint64_t addr)
+{
+  uint64_t page = addr >> 12;
+  uint64_t block = (addr & 0xFFF) >> 6;
+
+  // Update the bitmap of that page.
+  // Update the LRU bits.
+  for (size_t i = 0; i < TABLE_SIZE; i++)
+  {
+    if (tb[i].valid &&
+        tb[i].page_no == page)
+    {
+      tb[i].bitmap[block] = true;
+    }
+  }
+}
+
 void spp::SPP_PAGE_BITMAP::update_bitmap_store()
 {
   for (size_t i = 0; i < TABLE_SIZE; i++) 
