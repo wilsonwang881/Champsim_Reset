@@ -1,6 +1,8 @@
 #ifndef PAGE_BITMAP_H
 #define PAGE_BITMAP_H
 
+#include "ppf.h"
+
 #include <cstdint>
 #include <cstddef>
 #include <map>
@@ -16,13 +18,12 @@ class CACHE;
 
 namespace page_bitmap 
 {
+
   class prefetcher
   {
     constexpr static std::size_t TABLE_SIZE = 1024;
     constexpr static std::size_t BITMAP_SIZE = 64;
     constexpr static std::size_t FILTER_SIZE = 4;
-    constexpr static std::size_t TAG_COUNTER_SIZE = 1024;
-    constexpr static std::size_t RJ_PF_SIZE = 1024;
     constexpr static bool DEBUG_PRINT = false;
 
     // Page bitmap entry.
@@ -51,29 +52,12 @@ namespace page_bitmap
 
     page_filter_r filter[FILTER_SIZE];
 
-    // Counter for each block access.
-    struct tag_counter_r
-    {
-      bool valid;
-      uint8_t counter;
-    };
-      
-    // Direcctly mapped table.
-    tag_counter_r ct[TAG_COUNTER_SIZE];
-
-    struct rj_pf_r
-    {
-      bool valid;
-      uint16_t tag;
-    };
-
-    // Directly mapped table.
-    rj_pf_r rj_tb[RJ_PF_SIZE];
-    rj_pf_r pf_tb[RJ_PF_SIZE];
+    PAGE_BITMAP_PPF ppf;
 
     public:
 
     int rejected_count = 0;
+    int incorr_rejected_count = 0;
 
     // Context switch prefetch queue.
     std::deque<uint64_t> cs_pf; 
@@ -88,14 +72,10 @@ namespace page_bitmap
     bool pf_q_empty();
     void filter_update_lru(std::size_t i);
     bool filter_operate(uint64_t addr);
-    uint8_t saturating_counter(uint8_t val, bool increment);
-    void tag_counter_update(uint64_t addr, bool useful);
-    bool tag_counter_check(uint64_t addr);
-    void invalidate_rj_pf_tb(rj_pf_r rj_pf_tb[], uint64_t addr);
+    bool perceptron_check(uint64_t addr); 
+    void perceptron_update(uint64_t addr, bool useful);
     void invalidate_p_tb(bool rj_or_pf_tb, uint64_t); // Wrapper for invalidate_rj_pf_tb().
-    void update_rj_pf_tb(rj_pf_r rj_pf_tb[], uint64_t addr);
     void update_p_tb(bool rj_or_pf_tb, uint64_t); // Wrapper for update_rj_pf_tb().
-    bool check_rj_pf_tb(rj_pf_r rj_pf_tb[], uint64_t addr);
     bool check_p_tb(bool rj_or_pf_tb, uint64_t addr); // Wrapper for check_rj_pf_tb().
   };
 }

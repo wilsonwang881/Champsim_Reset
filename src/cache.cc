@@ -137,13 +137,20 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       if (way->prefetch)
         ++sim_stats.pf_useless;
 
+      // WL: if the block is prefetched in during the current context switch cycle,
+      // then it is a useless prefetch and should update the prefetcher.
+      uint32_t pf_this_interval = way->asid == currently_active_thread_ID ? 1 : 0; 
+      uint32_t pf_replaced = way->prefetch ? 1 : 0; 
+      uint32_t pf_feed = (pf_this_interval << 1) + pf_replaced;
+      // WL
+
       if (fill_mshr.type == access_type::PREFETCH)
         ++sim_stats.pf_fill;
 
       *way = BLOCK{fill_mshr};
 
       metadata_thru = impl_prefetcher_cache_fill(pkt_address, get_set_index(fill_mshr.address), way_idx, fill_mshr.type == access_type::PREFETCH,
-                                                 evicting_address, metadata_thru);
+                                                 evicting_address, pf_feed); // WL: replaced last metadata_thru with pf_feed.
       impl_update_replacement_state(fill_mshr.cpu, get_set_index(fill_mshr.address), way_idx, fill_mshr.address, fill_mshr.ip, evicting_address,
                                     champsim::to_underlying(fill_mshr.type), false);
 

@@ -25,40 +25,56 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
     pref.update(addr);
   }
 
-  if (pref.check_p_tb(true, addr) ||
-      pref.check_p_tb(false, addr))
+  if (cache_hit) 
   {
-    pref.invalidate_p_tb(true, addr);
-    pref.tag_counter_update(addr, true);
+    if (pref.check_p_tb(true, addr) ||
+        pref.check_p_tb(false, addr)) 
+      pref.perceptron_update(addr, true);
   }
-  /*
-  if (cache_hit && useful_prefetch)
-    pref.tag_counter_update(addr, useful_prefetch);
-    */
+  else
+  {
+     if (pref.check_p_tb(true, addr) ||
+        pref.check_p_tb(false, addr)) 
+      pref.perceptron_update(addr, false);
+  }
 
   return metadata_in;
 }
 
 uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
 {
+  // metadata_in is used to indicate if the block is prefetched or not and
+  // whether it is brought in during this context switch interval.
+  uint32_t pf_this_interval = metadata_in >> 1;
+  uint32_t pf_replaced = metadata_in & 0x1;
   auto &pref = ::PAGE_BITMAP[{this, cpu}];
 
   // If the block is brought in by prefetch,
   // and now is evicted,
   // move the address from prefetch table to reject table,
   // and update the perceptron layer.
-  if (prefetch && pref.check_p_tb(false, evicted_addr))
+  /*
+  if (pf_this_interval && pf_replaced)
   {
     pref.invalidate_p_tb(false, evicted_addr);
     pref.update_p_tb(true, evicted_addr);
-    pref.tag_counter_update(evicted_addr, false);
+    pref.perceptron_update(evicted_addr, false);
   }
+  */
+
+  /*
+  if (pf_this_interval && pref.check_p_tb(true, evicted_addr))
+  {
+    pref.perceptron_update(evicted_addr, false);  
+  }
+  */
 
   // Update the bitmap.
   // If the block is not brought in by prefetch and now is evicted,
   // then the block is brought in by on demand access.
-  if (!prefetch) {
-    pref.update_bitmap(addr); 
+  if (pf_this_interval && !prefetch) {
+    pref.update(addr); 
+    //pref.invalidate_p_tb(true, evicted_addr);
   }
 
   return metadata_in;
@@ -88,8 +104,7 @@ void CACHE::prefetcher_cycle_operate()
     if (!pref.cs_pf.empty()) 
     {
       // Check the rejection table.
-      if (true) //!pref.check_p_tb(true, addr) &&
-//          pref.tag_counter_check(addr))
+      if (pref.perceptron_check(addr))
       {
         // If not rejected, prefetch.
         bool prefetched = prefetch_line(pref.cs_pf.front(), 1, 0);
@@ -115,5 +130,6 @@ void CACHE::prefetcher_final_stats()
 {
   auto &pref = ::PAGE_BITMAP[{this, cpu}];
   std::cout << "Page bitmap rejected " << pref.rejected_count << " prefetches." << std::endl; 
+  std::cout << "Page bitmap incorrectly rejected " << pref.incorr_rejected_count << " prefetches." << std::endl;
 }
 

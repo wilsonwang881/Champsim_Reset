@@ -52,6 +52,11 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
     pref.page_bitmap.update_bitmap(addr);
   }
 
+  // WL 
+  if (!metadata_in) {
+    
+  }
+
   return metadata_in;
 }
 
