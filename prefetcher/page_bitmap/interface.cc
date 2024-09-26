@@ -23,6 +23,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   if (cache_hit) 
   {
     pref.update(addr);
+    pref.hit_blks.insert(addr);
   }
 
   if (cache_hit) 
@@ -36,7 +37,15 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
      if (pref.check_p_tb(true, addr) ||
         pref.check_p_tb(false, addr)) 
       pref.perceptron_update(addr, false);
+
   }
+
+  /*
+  if (pref.check_p_tb(false, addr) || pref.check_p_tb))
+  {
+    pref.perceptron_update(addr, true);  
+  }
+  */
 
   return metadata_in;
 }
@@ -45,10 +54,51 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 {
   // metadata_in is used to indicate if the block is prefetched or not and
   // whether it is brought in during this context switch interval.
-  uint32_t pf_this_interval = metadata_in >> 1;
-  uint32_t pf_replaced = metadata_in & 0x1;
+  uint32_t blk_asid_match = metadata_in >> 2; 
+  uint32_t blk_pfed = (metadata_in >> 1 & 0x1); 
+  uint32_t pkt_pfed = metadata_in & 0x1;
+
   auto &pref = ::PAGE_BITMAP[{this, cpu}];
 
+  if (blk_asid_match) 
+  {
+    /*
+    if (!blk_pfed) 
+      pref.update(evicted_addr); 
+      */
+
+    if (!prefetch)
+    {
+      //assert(addr != 0);
+      //assert(evicted_addr != 0);
+
+      if (addr != 0)
+        pref.update(addr);
+
+      /*
+      if (evicted_addr != 0)
+        pref.update(evicted_addr);
+        */
+    }
+  }
+  /*
+  else 
+  {
+    if (!blk_pfed) 
+      pref.update(evicted_addr); 
+
+    if (!pkt_pfed)
+      pref.update(addr); 
+  }
+  */
+
+  if (blk_asid_match)
+  {
+    if (pref.check_p_tb(false, evicted_addr))
+    {
+      pref.perceptron_update(evicted_addr, false); 
+    }  
+  }
   // If the block is brought in by prefetch,
   // and now is evicted,
   // move the address from prefetch table to reject table,
@@ -69,13 +119,26 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   }
   */
 
-  // Update the bitmap.
+  // Update the bitmap
   // If the block is not brought in by prefetch and now is evicted,
   // then the block is brought in by on demand access.
-  if (pf_this_interval && !prefetch) {
-    pref.update(addr); 
+  /*
+  if (pf_this_interval && !pf_replaced) {
+    pref.update(evicted_addr); 
     //pref.invalidate_p_tb(true, evicted_addr);
   }
+
+  if (pf_this_interval && pf_replaced) {
+    pref.invalidate_bitmap(evicted_addr); 
+  }
+  */
+
+  /*
+  if (pf_this_interval && !prefetch)
+  {
+    pref.update(addr);
+  }
+  */
 
   return metadata_in;
 }
@@ -96,32 +159,55 @@ void CACHE::prefetcher_cycle_operate()
     pref.update_bitmap_store();
     champsim::operable::context_switch_mode = false;
     reset_misc::can_record_after_access = true;
+    pref.pf_useful += pref.check_set_overlap();
+    pref.threshold_cycle = current_cycle + 3600000;
   }
   else 
   {
     uint64_t addr = pref.cs_pf.front();
+    uint64_t priority = pref.cs_weight.front();
 
-    if (!pref.cs_pf.empty()) 
+    if (!pref.cs_pf.empty() && current_cycle < pref.threshold_cycle) 
     {
+      int weight = pref.perceptron_check(addr);
+
       // Check the rejection table.
-      if (pref.perceptron_check(addr))
+      if (true) //weight >= 10)
       {
         // If not rejected, prefetch.
+        bool prefetched = prefetch_line(addr, priority, 0);
+
+        if (prefetched) 
+        {
+          pref.update_p_tb(false, addr);
+          pref.cs_pf.pop_front();
+          pref.cs_weight.pop_front();
+          pref.pf_blks.insert(addr);
+          pref.pf_count++;
+        }  
+      }
+      /*
+      else{
+         // If not rejected, prefetch.
         bool prefetched = prefetch_line(pref.cs_pf.front(), 1, 0);
 
         if (prefetched) 
         {
           pref.update_p_tb(false, addr);
           pref.cs_pf.pop_front();
+          pref.pf_blks.insert(addr);
+          pref.pf_count++;
         }  
       }
+      */
+      /*
       else 
       {
         // If rejected, pop the address without prefetch.
         pref.update_p_tb(true, addr);
         pref.cs_pf.pop_front();
-        pref.rejected_count++;
       }
+      */
     }
   }
 }
@@ -129,7 +215,7 @@ void CACHE::prefetcher_cycle_operate()
 void CACHE::prefetcher_final_stats() 
 {
   auto &pref = ::PAGE_BITMAP[{this, cpu}];
-  std::cout << "Page bitmap rejected " << pref.rejected_count << " prefetches." << std::endl; 
-  std::cout << "Page bitmap incorrectly rejected " << pref.incorr_rejected_count << " prefetches." << std::endl;
+  std::cout << "Page bitmap correctly prefetched " << pref.pf_useful<< " blocks." << std::endl;
+  std::cout << "Page bitmap prefetched " << pref.pf_count << " blocks." << std::endl; 
 }
 

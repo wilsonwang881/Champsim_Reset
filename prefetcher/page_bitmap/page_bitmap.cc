@@ -20,7 +20,12 @@ void page_bitmap::prefetcher::init()
     }
   }
 
+  for (size_t i = 0; i < FILTER_SIZE; i++)
+    filter[i].valid = false;
+
   ppf.init();
+  hit_blks.clear();
+  pf_blks.clear();
 }
 
 void page_bitmap::prefetcher::update_lru(std::size_t i)
@@ -154,6 +159,22 @@ void page_bitmap::prefetcher::update_bitmap(uint64_t addr)
   }
 }
 
+void page_bitmap::prefetcher::invalidate_bitmap(uint64_t addr)
+{
+  uint64_t page = addr >> 12;
+  uint64_t block = (addr & 0xFFF) >> 6;
+
+  for (size_t i = 0; i < TABLE_SIZE; i++)
+  {
+    if (tb[i].valid &&
+        tb[i].page_no == page) 
+    {
+      tb[i].bitmap[block] = false;
+    }
+  }
+
+}
+
 void page_bitmap::prefetcher::update_bitmap_store()
 {
   for (size_t i = 0; i < TABLE_SIZE; i++) 
@@ -218,7 +239,7 @@ void page_bitmap::prefetcher::gather_pf()
   {
     size_t i = var.first;
 
-    if (tb[i].aft_cs_acc) 
+    if (tb[i].aft_cs_acc && tb[i].valid) 
     {
       uint64_t page_addr = tb[i].page_no << 12;
 
@@ -233,14 +254,33 @@ void page_bitmap::prefetcher::gather_pf()
             tb[i].bitmap_store[j])
         {
           cs_pf.push_back(pf_addr); 
+          cs_weight.push_back(1);
 
           if (DEBUG_PRINT)
             std::cout << " " << j;
         }
+        /*
+        else if (tb[i].bitmap[j])
+        {
+          cs_pf.push_back(pf_addr);
+          cs_weight.push_back(0);
+        }
+        */
       } 
 
       if (DEBUG_PRINT) 
         std::cout << " ]" << std::endl;
+    }
+  }
+
+  for(auto var : filter) 
+  {
+    if (var.valid)
+    {
+      //std::cout << (unsigned)var.page_no << " " << (unsigned)var.block_no << std::endl;
+      uint64_t addr = (var.page_no << 12) + (var.block_no << 6);
+      cs_pf.push_back(addr);
+      cs_weight.push_back(1);
     }
   }
 
@@ -281,6 +321,8 @@ bool page_bitmap::prefetcher::filter_operate(uint64_t addr)
 {
   uint64_t page = addr >> 12;
   uint64_t block = (addr & 0xFFF) >> 6;
+
+  assert(page != 0);
 
   bool same_page_same_block = false;
   bool same_page_diff_block = false;
@@ -347,7 +389,7 @@ bool page_bitmap::prefetcher::filter_operate(uint64_t addr)
   return false;
 }
 
-bool page_bitmap::prefetcher::perceptron_check(uint64_t addr)
+int page_bitmap::prefetcher::perceptron_check(uint64_t addr)
 {
   return ppf.tag_counter_check(addr);
 }
@@ -383,4 +425,22 @@ bool page_bitmap::prefetcher::check_p_tb(bool rj_or_pf_tb, uint64_t addr)
     res = ppf.check_rj_pf_tb(ppf.pf_tb, addr);
 
   return res;
+}
+
+int page_bitmap::prefetcher::check_set_overlap()
+{
+  int n = 0;
+
+  for(auto var : pf_blks)
+  {
+    if (hit_blks.find(var) != hit_blks.end())
+    {
+      n++; 
+    }  
+  }
+
+  pf_blks.clear();
+  hit_blks.clear();
+
+  return n;
 }

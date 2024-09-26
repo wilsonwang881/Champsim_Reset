@@ -45,16 +45,24 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
 uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
 {
-  auto &pref = ::SPP[{this, cpu}];
+  uint32_t blk_asid_match = metadata_in >> 2; 
+  uint32_t blk_pfed = (metadata_in >> 1 & 0x1); 
+  uint32_t pkt_pfed = metadata_in & 0x1;
 
-  // WL
-  if (!prefetch) {
-    pref.page_bitmap.update_bitmap(addr);
-  }
+  auto &pref = ::PAGE_BITMAP[{this, cpu}];
 
-  // WL 
-  if (!metadata_in) {
-    
+  if (blk_asid_match) 
+  {
+    /*
+    if (!blk_pfed) 
+      pref.update(evicted_addr); 
+      */
+
+    //if (!pkt_pfed)
+    {
+      pref.update(addr);
+      pref.update(evicted_addr);
+    }
   }
 
   return metadata_in;

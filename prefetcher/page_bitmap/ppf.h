@@ -43,7 +43,7 @@ namespace page_bitmap
     void init();
     uint8_t saturating_counter(uint8_t val, bool increment);
     void tag_counter_update(uint64_t addr, bool useful);
-    bool tag_counter_check(uint64_t addr);
+    int tag_counter_check(uint64_t addr);
     void invalidate_rj_pf_tb(rj_pf_r rj_pf_tb[], uint64_t addr);
     void update_rj_pf_tb(rj_pf_r rj_pf_tb[], uint64_t addr);
     bool check_rj_pf_tb(rj_pf_r rj_pf_tb[], uint64_t addr);

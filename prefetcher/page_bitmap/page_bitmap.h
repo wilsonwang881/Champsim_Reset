@@ -13,6 +13,8 @@
 #include <deque>
 #include <algorithm>
 #include <vector>
+#include <set>
+#include <cassert>
 
 class CACHE;
 
@@ -23,7 +25,7 @@ namespace page_bitmap
   {
     constexpr static std::size_t TABLE_SIZE = 1024;
     constexpr static std::size_t BITMAP_SIZE = 64;
-    constexpr static std::size_t FILTER_SIZE = 4;
+    constexpr static std::size_t FILTER_SIZE = 256;
     constexpr static bool DEBUG_PRINT = false;
 
     // Page bitmap entry.
@@ -56,27 +58,34 @@ namespace page_bitmap
 
     public:
 
-    int rejected_count = 0;
-    int incorr_rejected_count = 0;
+    int pf_count = 0;
+    int pf_useful = 0;
+    uint64_t threshold_cycle = 0;
+
+    std::set<uint64_t> pf_blks;
+    std::set<uint64_t> hit_blks;
 
     // Context switch prefetch queue.
     std::deque<uint64_t> cs_pf; 
+    std::deque<uint64_t> cs_weight;
 
     void init();
     void update_lru(std::size_t i);
     void update(uint64_t addr);
     void update_bitmap(uint64_t addr);
+    void invalidate_bitmap(uint64_t addr);
     void update_bitmap_store();
     void clear_pg_access_status();
     void gather_pf();
     bool pf_q_empty();
     void filter_update_lru(std::size_t i);
     bool filter_operate(uint64_t addr);
-    bool perceptron_check(uint64_t addr); 
+    int perceptron_check(uint64_t addr); 
     void perceptron_update(uint64_t addr, bool useful);
-    void invalidate_p_tb(bool rj_or_pf_tb, uint64_t); // Wrapper for invalidate_rj_pf_tb().
-    void update_p_tb(bool rj_or_pf_tb, uint64_t); // Wrapper for update_rj_pf_tb().
-    bool check_p_tb(bool rj_or_pf_tb, uint64_t addr); // Wrapper for check_rj_pf_tb().
+    void invalidate_p_tb(bool rj_or_pf_tb, uint64_t); 
+    void update_p_tb(bool rj_or_pf_tb, uint64_t); 
+    bool check_p_tb(bool rj_or_pf_tb, uint64_t addr);
+    int check_set_overlap();
   };
 }
 

@@ -40,7 +40,7 @@ void page_bitmap::PAGE_BITMAP_PPF::tag_counter_update(uint64_t addr, bool useful
   uint64_t upper_truncated = (addr >> 6) & 0x3FF;
   uint64_t sum = ct[truncated].counter + upt[upper_truncated].counter;
 
-  if ((sum >= 45) || (sum <= 15))
+  if ((sum >= 50) || (sum <= 10))
     return;
 
   if (ct[truncated].valid) 
@@ -66,14 +66,14 @@ void page_bitmap::PAGE_BITMAP_PPF::tag_counter_update(uint64_t addr, bool useful
   } 
 }
 
-bool page_bitmap::PAGE_BITMAP_PPF::tag_counter_check(uint64_t addr)
+int page_bitmap::PAGE_BITMAP_PPF::tag_counter_check(uint64_t addr)
 {
   uint64_t truncated = (addr >> 12) & 0x3FF;
   uint64_t upper_truncated = (addr >> 6) & 0x3FF;
 
   uint64_t sum = ct[truncated].counter + upt[upper_truncated].counter;
 
-  return sum >= 10;
+  return sum;
 }
 
 void page_bitmap::PAGE_BITMAP_PPF::invalidate_rj_pf_tb(rj_pf_r rj_pf_tb[], uint64_t addr)
@@ -86,7 +86,7 @@ void page_bitmap::PAGE_BITMAP_PPF::invalidate_rj_pf_tb(rj_pf_r rj_pf_tb[], uint6
 void page_bitmap::PAGE_BITMAP_PPF::update_rj_pf_tb(rj_pf_r rj_pf_tb[], uint64_t addr)
 {
   uint64_t index = (addr >> 6) & 0x3FF;
-  uint16_t tag_seg = (addr >> 16); // & 0xFFFFFF;
+  uint16_t tag_seg = (addr >> 16);
 
   // Allocate new entry
   if (!rj_pf_tb[index].valid)
@@ -103,7 +103,7 @@ void page_bitmap::PAGE_BITMAP_PPF::update_rj_pf_tb(rj_pf_r rj_pf_tb[], uint64_t 
 bool page_bitmap::PAGE_BITMAP_PPF::check_rj_pf_tb(rj_pf_r rj_pf_tb[], uint64_t addr)
 {
   uint64_t index = (addr >> 6) & 0x3FF;
-  uint16_t tag_seg = (addr >> 16); // & 0xFFFFFF;
+  uint16_t tag_seg = (addr >> 16);
 
   return (rj_pf_tb[index].valid) && (rj_pf_tb[index].tag == tag_seg);
 }

@@ -139,9 +139,10 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
 
       // WL: if the block is prefetched in during the current context switch cycle,
       // then it is a useless prefetch and should update the prefetcher.
-      uint32_t pf_this_interval = way->asid == currently_active_thread_ID ? 1 : 0; 
-      uint32_t pf_replaced = way->prefetch ? 1 : 0; 
-      uint32_t pf_feed = (pf_this_interval << 1) + pf_replaced;
+      uint32_t blk_asid_match = way->asid == currently_active_thread_ID ? 1 : 0; 
+      uint32_t blk_pfed = way->prefetch ? 1 : 0; 
+      uint32_t pkt_pfed = fill_mshr.type == access_type::PREFETCH;
+      uint32_t pf_feed = (blk_asid_match << 2) + (blk_pfed << 1) + pkt_pfed;
       // WL
 
       if (fill_mshr.type == access_type::PREFETCH)
