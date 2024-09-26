@@ -32,8 +32,11 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 {
   auto &pref = ::SPP[{this, cpu}];
 
-  pref.update_demand(base_addr,this->get_set_index(base_addr));
-  pref.initiate_lookahead(base_addr);
+  if (pref.context_switch_queue_empty()) 
+  {
+    pref.update_demand(base_addr,this->get_set_index(base_addr));
+    pref.initiate_lookahead(base_addr);
+  }
 
   if (cache_hit) 
   {

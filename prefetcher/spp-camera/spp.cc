@@ -50,7 +50,7 @@ void spp::prefetcher::issue(CACHE* cache)
 
     if (prefetched) {
       context_switch_issue_queue.pop_front();
-      filter.update_issue(addr, cache->get_set(addr));
+      //filter.update_issue(addr, cache->get_set(addr));
       context_switch_issued++;
     }
 
