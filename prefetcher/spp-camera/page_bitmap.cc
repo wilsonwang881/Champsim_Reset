@@ -16,6 +16,10 @@ void spp::SPP_PAGE_BITMAP::init()
 
   for (size_t i = 0; i < COUNTER_SIZE; i++)
     ct[i].valid = false; 
+
+  for (size_t i = 0; i < FILTER_SIZE; i++) {
+    filter[i].valid = false; 
+  }
 }
 
 void spp::SPP_PAGE_BITMAP::update_lru(std::size_t i)
@@ -223,6 +227,16 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
 
       if (DEBUG_PRINT) 
         std::cout << " ]" << std::endl;
+    }
+  }
+
+  for(auto var : filter) 
+  {
+    if (var.valid)
+    {
+      //std::cout << (unsigned)var.page_no << " " << (unsigned)var.block_no << std::endl;
+      uint64_t addr = (var.page_no << 12) + (var.block_no << 6);
+      cs_pf.push_back(addr);
     }
   }
 

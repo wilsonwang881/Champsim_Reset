@@ -49,7 +49,7 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   uint32_t blk_pfed = (metadata_in >> 1 & 0x1); 
   uint32_t pkt_pfed = metadata_in & 0x1;
 
-  auto &pref = ::PAGE_BITMAP[{this, cpu}];
+  auto &pref = ::SPP[{this, cpu}];
 
   if (blk_asid_match) 
   {
@@ -58,10 +58,12 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
       pref.update(evicted_addr); 
       */
 
-    //if (!pkt_pfed)
+    if (!pkt_pfed)
     {
-      pref.update(addr);
-      pref.update(evicted_addr);
+
+      if (addr != 0)
+        pref.page_bitmap.update(addr);
+      //pref.update(evicted_addr);
     }
   }
 
