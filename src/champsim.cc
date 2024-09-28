@@ -58,7 +58,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
   else 
   {
     next_reset_moment = reset_ins_count[0];
-    reset_ins_count_readin_index++; 
+    reset_ins_count_readin_index = 1;
   }
   // WL
 
@@ -79,7 +79,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
     next_reset_moment = cpu_0.current_cycle + 4000000;
   }
 
-  std::cout << "Resetting start at cycle " << next_reset_moment << std::endl;
+  std::cout << "Resetting start at cycle " << next_reset_moment << " number of resets = " << reset_ins_count.size() << std::endl;
   // WL
 
   // Perform phase
@@ -143,7 +143,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
     }
     else
     {
-    if (cpu_0.num_retired == next_reset_moment && // + cpu_0.input_queue.size() 
+    if (cpu_0.num_retired >= next_reset_moment && // + cpu_0.input_queue.size() 
         reset_ins_count_readin_index <= num_resets) {
 
       // Assume the overhead is 1 microscrond.
@@ -203,7 +203,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
 	      auto& trace = traces.at(trace_index.at(cpu.cpu));
 	      for (auto pkt_count = cpu.IN_QUEUE_SIZE - static_cast<long>(std::size(cpu.input_queue)); !trace.eof() && pkt_count > 0; --pkt_count)
         {
-          if (fed_in_instruction <= next_reset_moment) {
+          if (fed_in_instruction < next_reset_moment) {
             cpu.input_queue.push_back(trace());
             fed_in_instruction++;
           }
