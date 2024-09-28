@@ -284,7 +284,7 @@ void page_bitmap::prefetcher::gather_pf()
     }
   }
 
-  //cs_pf.clear();
+  cs_pf.clear();
   
   std::cout << " gathered " << cs_pf.size() << " prefetches from past accesses." << std::endl;
 }

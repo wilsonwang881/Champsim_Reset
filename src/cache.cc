@@ -340,7 +340,7 @@ bool CACHE::handle_write(const tag_lookup_type& handle_pkt)
 template <bool UpdateRequest>
 auto CACHE::initiate_tag_check(champsim::channel* ul)
 {
-  return [cycle = current_cycle + (warmup ? 0 : HIT_LATENCY), ul](const auto& entry) {
+  return [cycle = current_cycle + (warmup ? 0 : HIT_LATENCY), ul, this](const auto& entry) {
     CACHE::tag_lookup_type retval{entry};
     retval.event_cycle = cycle;
     retval.asid[0] = entry.asid[0]; // WL: added ASID
@@ -351,8 +351,8 @@ auto CACHE::initiate_tag_check(champsim::channel* ul)
     }
 
     if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
-      fmt::print("[TAG] initiate_tag_check instr_id: {} address: {:#x} v_address: {:#x} type: {} response_requested: {} event: {} packet asid: {}\n", retval.instr_id, retval.address,
-                 retval.v_address, access_type_names.at(champsim::to_underlying(retval.type)), !std::empty(retval.to_return), retval.event_cycle, retval.asid[0]);
+      fmt::print("[TAG][{}] initiate_tag_check instr_id: {} address: {:#x} v_address: {:#x} type: {} response_requested: {} event: {} retval asid: {} entry asid: {}\n", this->NAME, retval.instr_id, retval.address,
+                 retval.v_address, access_type_names.at(champsim::to_underlying(retval.type)), !std::empty(retval.to_return), retval.event_cycle, retval.asid[0], entry.asid[0]);
     }
 
     return retval;
@@ -537,6 +537,7 @@ int CACHE::prefetch_line(uint64_t pf_addr, bool fill_this_level, uint32_t prefet
   pf_packet.v_address = virtual_prefetch ? pf_addr : 0;
   pf_packet.is_translated = !virtual_prefetch;
   pf_packet.asid[0] = champsim::operable::currently_active_thread_ID; // WL: added ASID
+  pf_packet.instr_id = 0xFFFFFFFFFFFFFFF; // WL: add a different instr_id
 
   internal_PQ.emplace_back(pf_packet, true, !fill_this_level);
   ++sim_stats.pf_issued;

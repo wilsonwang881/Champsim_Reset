@@ -855,6 +855,7 @@ void O3_CPU::print_deadlock()
 {
   fmt::print("DEADLOCK! CPU {} cycle {}\n", cpu, current_cycle);
   fmt::print("input_queue size = {}\n", input_queue.size()); // WL
+  fmt::print("retired instructions = {}\n", num_retired); // WL 
 
   auto instr_pack = [](const auto& entry) {
     return std::tuple{entry.instr_id, +entry.fetched, +entry.scheduled, +entry.executed, +entry.num_reg_dependent, entry.num_mem_ops() - entry.completed_mem_ops, entry.event_cycle};

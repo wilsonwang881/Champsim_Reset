@@ -129,8 +129,11 @@ int main(int argc, char** argv)
        champsim::operable::reset_ins_count_global.push_back(reset_ins_count_readin);
        //std::cout << (unsigned)reset_ins_count_readin << std::endl;
     }
- 
-    std::cout << "Number of resets: " << reset_ins_count.size() << std::endl;
+
+    reset_ins_count.push_back(4000000000);
+    champsim::operable::reset_ins_count_global.push_back(4000000000);
+
+    std::cout << "Number of resets: " << reset_ins_count.size() - 1 << std::endl;
     ins_number_every_4M_cycles_file.close();
   }
   // WL

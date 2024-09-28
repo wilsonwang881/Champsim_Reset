@@ -26,20 +26,31 @@ void spp::SPP_PAGE_BITMAP::update_lru(std::size_t i)
 {
   bool half = false;
 
-  for(auto var : tb) 
+  for(auto &var : tb) 
   {
     if (var.lru_bits >= (std::numeric_limits<uint16_t>::max() & 0xFFFF)) 
     {
       half = true;
+      var.valid = false;
+      var.aft_cs_acc = true;
+
+      for (size_t j = 0; j < BITMAP_SIZE; j++) 
+      {
+        var.bitmap[j] = false;
+        var.bitmap_store[j] = false;
+      }
+
       break;
     } 
   }
 
+  /*
   if (half) 
   {
     for(auto &var : tb)
       var.lru_bits = var.lru_bits >> 1; 
   }
+  */
 
   tb[i].lru_bits = 0;
 
@@ -203,7 +214,7 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
     {
       uint64_t page_addr = tb[i].page_no << 12;
 
-      if (DEBUG_PRINT) 
+      if (PAGE_BITMAP_DEBUG_PRINT) 
         std::cout << "Page " << std::hex << tb[i].page_no << std::dec << " ["; 
 
       int no_blks = 0;
@@ -215,7 +226,7 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
           cs_pf.push_back(page_addr + (j << 6)); 
           no_blks++;
 
-          if (DEBUG_PRINT)
+          if (PAGE_BITMAP_DEBUG_PRINT)
             std::cout << " " << j;
         }
       } 
@@ -225,7 +236,7 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
         cs_pf.pop_back();
         */
 
-      if (DEBUG_PRINT) 
+      if (PAGE_BITMAP_DEBUG_PRINT) 
         std::cout << " ]" << std::endl;
     }
   }

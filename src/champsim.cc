@@ -101,6 +101,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
     }
 
     if (stalled_cycle >= DEADLOCK_CYCLE) {
+      std::cout << "Fed in instructions = " << (unsigned)fed_in_instruction << std::endl; // WL
       std::for_each(std::begin(operables), std::end(operables), [](champsim::operable& c) { c.print_deadlock(); });
       abort();
     }
@@ -142,7 +143,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
     }
     else
     {
-    if ((cpu_0.num_retired)>= next_reset_moment && // + cpu_0.input_queue.size() 
+    if (cpu_0.num_retired == next_reset_moment && // + cpu_0.input_queue.size() 
         reset_ins_count_readin_index <= num_resets) {
 
       // Assume the overhead is 1 microscrond.
@@ -150,7 +151,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       //ooo_cpu[0]->context_switch_stall = CONTEXT_SWITCH_OVERHEAD_CYCLES;
 
       std::cout << std::endl << "Resetting @ins. count = " << std::dec << (unsigned)cpu_0.num_retired << " + " << (unsigned)cpu_0.input_queue.size() << " = " << (unsigned)(cpu_0.num_retired + cpu_0.input_queue.size()) << " at cycle " << cpu_0.current_cycle << std::endl;
-
+      std::cout << "Number of fed in instructions = " << fed_in_instruction << std::endl;
       champsim::operable::context_switch_mode = true;
       champsim::operable::L2C_have_issued_context_switch_prefetches = false;
       champsim::operable::have_recorded_on_demand_ins_accesses = true;
@@ -183,9 +184,11 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       champsim::operable::reset_count++;
       std::cout <<"Reset count is"<< champsim::operable::reset_count<<std::endl;
       // prevent out of range index
-      if (reset_ins_count_readin_index < num_resets)
+      if (reset_ins_count_readin_index <= num_resets){
         next_reset_moment = reset_ins_count[reset_ins_count_readin_index];
-            
+        std::cout << "reset_ins_count_readin_index = " << reset_ins_count_readin_index << " next_reset_moment = " << next_reset_moment << std::endl;
+      }
+
       reset_ins_count_readin_index++;
     }    
     // WL
@@ -200,8 +203,10 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
 	      auto& trace = traces.at(trace_index.at(cpu.cpu));
 	      for (auto pkt_count = cpu.IN_QUEUE_SIZE - static_cast<long>(std::size(cpu.input_queue)); !trace.eof() && pkt_count > 0; --pkt_count)
         {
-          cpu.input_queue.push_back(trace());
-          fed_in_instruction++;
+          if (fed_in_instruction <= next_reset_moment) {
+            cpu.input_queue.push_back(trace());
+            fed_in_instruction++;
+          }
           //cpu.input_queue.back().asid[0] = champsim::operable::currently_active_thread_ID;
           //std::cout << "[INS] ip 0x" << std::hex << (unsigned)cpu.input_queue.back().ip << " asid " << (unsigned)cpu.input_queue.back().asid[0] << std::endl;
         }
