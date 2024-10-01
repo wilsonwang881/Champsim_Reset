@@ -182,7 +182,8 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       champsim::operable::currently_active_thread_ID++;
       std::cout << "ASID incremented to " << (unsigned)champsim::operable::currently_active_thread_ID << std::endl;
       champsim::operable::reset_count++;
-      std::cout <<"Reset count is"<< champsim::operable::reset_count<<std::endl;
+      std::cout <<"Reset count is"<< reset_ins_count_readin_index <<std::endl;
+
       // prevent out of range index
       if (reset_ins_count_readin_index <= num_resets){
         next_reset_moment = reset_ins_count[reset_ins_count_readin_index];
@@ -204,6 +205,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
 	      for (auto pkt_count = cpu.IN_QUEUE_SIZE - static_cast<long>(std::size(cpu.input_queue)); !trace.eof() && pkt_count > 0; --pkt_count)
         {
           if (fed_in_instruction < next_reset_moment) {
+            champsim::operable::cpu0_num_retired = cpu_0.num_retired;
             cpu.input_queue.push_back(trace());
             fed_in_instruction++;
           }

@@ -243,7 +243,7 @@ void page_bitmap::prefetcher::gather_pf()
     {
       uint64_t page_addr = tb[i].page_no << 12;
 
-      if (DEBUG_PRINT) 
+      if (PAGE_BITMAP_DEBUG_PRINT) 
         std::cout << "Page " << std::hex << tb[i].page_no << std::dec << " ["; 
 
       for (size_t j = 0; j < BITMAP_SIZE; j++) 
@@ -256,7 +256,7 @@ void page_bitmap::prefetcher::gather_pf()
           cs_pf.push_back(pf_addr); 
           cs_weight.push_back(1);
 
-          if (DEBUG_PRINT)
+          if (PAGE_BITMAP_DEBUG_PRINT)
             std::cout << " " << j;
         }
         /*
@@ -268,7 +268,7 @@ void page_bitmap::prefetcher::gather_pf()
         */
       } 
 
-      if (DEBUG_PRINT) 
+      if (PAGE_BITMAP_DEBUG_PRINT) 
         std::cout << " ]" << std::endl;
     }
   }
@@ -284,7 +284,7 @@ void page_bitmap::prefetcher::gather_pf()
     }
   }
 
-  cs_pf.clear();
+  //cs_pf.clear();
   
   std::cout << " gathered " << cs_pf.size() << " prefetches from past accesses." << std::endl;
 }

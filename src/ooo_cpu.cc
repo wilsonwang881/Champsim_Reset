@@ -915,6 +915,11 @@ bool CacheBus::issue_read(request_type data_packet)
   data_packet.cpu = cpu;
   data_packet.type = access_type::LOAD;
 
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+    fmt::print("[LSQ] {} instr_id: {} full_address: {:#x} is_translated: {} packet asid: {}\n", __func__, data_packet.instr_id, data_packet.address,
+               data_packet.is_translated, data_packet.asid[0]);
+  }
+
   return lower_level->add_rq(data_packet);
 }
 

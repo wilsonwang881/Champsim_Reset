@@ -87,7 +87,7 @@ public:
   std::vector<pscl_type> pscl;
   VirtualMemory* vmem;
 
-  uint64_t CR3_addr; // WL: was const uint64_t CR3_addr;
+  const uint64_t CR3_addr;
 
   class Builder
   {

@@ -133,10 +133,6 @@ int main(int argc, char** argv)
     reset_ins_count.push_back(4000000000);
     champsim::operable::reset_ins_count_global.push_back(4000000000);
 
-    for(auto var : reset_ins_count) {
-      std::cout << var << std::endl; 
-    }
-
     std::cout << "Number of resets: " << reset_ins_count.size() - 1 << std::endl;
     ins_number_every_4M_cycles_file.close();
   }

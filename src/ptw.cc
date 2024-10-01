@@ -119,9 +119,13 @@ auto PageTableWalker::step_translation(const mshr_type& source) -> std::optional
   packet.type = access_type::TRANSLATION;
   packet.instr_id = source.instr_id; // WL
 
-  //std::cout << "Attempt to step_translation with instr_id: " << packet.instr_id << std::endl; // WL
-
   bool success = lower_level->add_rq(packet);
+
+  // WL 
+  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+    fmt::print("[{}] {} instr_id: {} address: {:#x} v_address: {:#x} current: {} packet asid: {} success: {}\n", NAME, __func__,
+               packet.instr_id, packet.address, packet.v_address, current_cycle, packet.asid[0], success);
+  }
 
   if (success)
     return source;
@@ -175,6 +179,12 @@ long PageTableWalker::operate()
   }
 
   MSHR.insert(std::cend(MSHR), std::begin(next_steps), std::end(next_steps));
+
+  // WL
+  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+    std::cout << "PTW MSHR Size = " << MSHR.size() << std::endl;
+  }
+
   return progress;
 }
 

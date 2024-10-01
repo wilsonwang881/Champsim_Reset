@@ -340,6 +340,7 @@ bool CACHE::handle_write(const tag_lookup_type& handle_pkt)
 template <bool UpdateRequest>
 auto CACHE::initiate_tag_check(champsim::channel* ul)
 {
+
   return [cycle = current_cycle + (warmup ? 0 : HIT_LATENCY), ul, this](const auto& entry) {
     CACHE::tag_lookup_type retval{entry};
     retval.event_cycle = cycle;
@@ -395,12 +396,14 @@ long CACHE::operate()
 
   // Initiate tag checks
   auto tag_bw = std::max(0ll, std::min<long long>(static_cast<long long>(MAX_TAG), MAX_TAG * HIT_LATENCY - std::size(inflight_tag_check)));
+
   auto can_translate = [avail = (std::size(translation_stash) < static_cast<std::size_t>(MSHR_SIZE))](const auto& entry) {
     return avail || entry.is_translated;
   };
   auto stash_bandwidth_consumed = champsim::transform_while_n(
       translation_stash, std::back_inserter(inflight_tag_check), tag_bw, [](const auto& entry) { return entry.is_translated; }, initiate_tag_check<false>());
   tag_bw -= stash_bandwidth_consumed;
+
   progress += stash_bandwidth_consumed;
   std::vector<long long> channels_bandwidth_consumed{};
   for (auto* ul : upper_levels) {
@@ -446,14 +449,18 @@ long CACHE::operate()
 
   impl_prefetcher_cycle_operate();
 
-  /*
-  if constexpr (champsim::debug_print) {
+  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print("[{}] {} cycle completed: {} tags checked: {} remaining: {} stash consumed: {} remaining: {} channel consumed: {} pq consumed {} unused consume bw {}\n", NAME, __func__, current_cycle,
         tag_bw_consumed, std::size(inflight_tag_check),
         stash_bandwidth_consumed, std::size(translation_stash),
         channels_bandwidth_consumed, pq_bandwidth_consumed, tag_bw);
+
+    std::cout << NAME << " [Translation Stash]" << std::endl;
+
+    for(auto var : translation_stash) {
+      std::cout << "instr_id: " << var.instr_id << " address: " << var.address << " v_address " << var.v_address << " is_translated: " << var.is_translated << " translate_issued: " << var.translate_issued << " asid: " << var.asid[0] << std::endl; 
+    }
   }
-  */
 
   // WL 
   reset_components();
@@ -591,8 +598,12 @@ void CACHE::finish_translation(const response_type& packet)
      WL: end original code */
 
   // WL: modified matches_vpage
-  auto matches_vpage = [page_num = packet.v_address >> LOG2_PAGE_SIZE, asid = packet.asid](const auto& entry) {
-    return ((entry.v_address >> LOG2_PAGE_SIZE) == page_num) && (asid == entry.asid[0]) && (!entry.is_translated); // WL: add !entry.is_translated
+  auto matches_vpage = [page_num = packet.v_address >> LOG2_PAGE_SIZE, asid = packet.asid, name = this->NAME](const auto& entry) {
+    if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+      fmt::print("[{}_TRANSLATE] finish_translation paddr matches_vpage: {:#x} vaddr: {:#x} instr_id: {} page_num: {} entry page_num: {} pkt asid: {} entry asid: {} is_translated: {}\n", name, entry.address, entry.v_address, entry.instr_id, page_num, entry.v_address >> LOG2_PAGE_SIZE, asid, entry.asid[0], entry.is_translated);
+    }
+
+    return ((entry.v_address >> LOG2_PAGE_SIZE) == page_num) && (asid == entry.asid[0]) && !entry.is_translated; // WL: added !entry.is_translated
   };
   auto mark_translated = [p_page = packet.data, this](auto& entry) {
     entry.address = champsim::splice_bits(p_page, entry.v_address, LOG2_PAGE_SIZE); // translated address
@@ -600,7 +611,7 @@ void CACHE::finish_translation(const response_type& packet)
 
     // WL: capture the translated address, the physical address, here 
     if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
-      fmt::print("[{}_TRANSLATE] finish_translation paddr: {:#x} vaddr: {:#x} cycle: {}\n", this->NAME, entry.address, entry.v_address, this->current_cycle);
+      fmt::print("[{}_TRANSLATE] finish_translation paddr: {:#x} vaddr: {:#x} cycle: {} instr_id: {}\n", this->NAME, entry.address, entry.v_address, this->current_cycle, entry.instr_id);
     }
   };
 
