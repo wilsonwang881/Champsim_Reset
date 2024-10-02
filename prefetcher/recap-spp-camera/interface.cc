@@ -24,7 +24,8 @@ void CACHE::prefetcher_initialize()
   // WL 
   auto &pref = ::SPP[{this, cpu}];
   pref.prefetcher_state_file.open("prefetcher_states.txt", std::ios::out);
-  pref.page_bitmap.init();
+  pref.recap.init();
+  std::cout << NAME << "-> Prefetcher RECAP initialized @ cycle " << current_cycle << "." << std::endl;
   // WL 
 }
 
@@ -38,9 +39,14 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     pref.initiate_lookahead(base_addr);
   }
 
-  //if (cache_hit) 
-  {
-    pref.page_bitmap.update(base_addr);
+  if (pref.recap.BLOCK_REUSE_MODE) {
+
+    if (cache_hit) 
+      pref.recap.update(base_addr);
+  }
+  else {
+    pref.recap.update(base_addr);
+    pref.recap.update_reuse(base_addr);
   }
 
   return metadata_in;
@@ -48,28 +54,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
 uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
 {
-  uint32_t blk_asid_match = metadata_in >> 2; 
-  uint32_t blk_pfed = (metadata_in >> 1 & 0x1); 
-  uint32_t pkt_pfed = metadata_in & 0x1;
-
-  auto &pref = ::SPP[{this, cpu}];
-
-  if (blk_asid_match) 
-  {
-    /*
-    if (!blk_pfed) 
-      pref.update(evicted_addr); 
-      */
-
-    if (!pkt_pfed)
-    {
-
-      if (addr != 0)
-        pref.page_bitmap.update(addr);
-      //pref.update(evicted_addr);
-    }
-  }
-
   return metadata_in;
 }
 
@@ -124,8 +108,6 @@ void CACHE::prefetcher_cycle_operate()
           champsim::operable::L2C_have_issued_context_switch_prefetches = true;
           champsim::operable::cache_clear_counter = 0;
           pref.context_switch_prefetch_gathered = false;
-          pref.page_bitmap.clear_pg_access_status();
-          pref.page_bitmap.update_bitmap_store();
           std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
         }
       }

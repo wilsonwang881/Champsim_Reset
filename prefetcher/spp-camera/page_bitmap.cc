@@ -31,6 +31,7 @@ void spp::SPP_PAGE_BITMAP::update_lru(std::size_t i)
     if (var.lru_bits >= (std::numeric_limits<uint16_t>::max() & 0xFFFF)) 
     {
       half = true;
+      /*
       var.valid = false;
       var.aft_cs_acc = true;
 
@@ -39,18 +40,17 @@ void spp::SPP_PAGE_BITMAP::update_lru(std::size_t i)
         var.bitmap[j] = false;
         var.bitmap_store[j] = false;
       }
+      */
 
       break;
     } 
   }
 
-  /*
   if (half) 
   {
     for(auto &var : tb)
       var.lru_bits = var.lru_bits >> 1; 
   }
-  */
 
   tb[i].lru_bits = 0;
 
