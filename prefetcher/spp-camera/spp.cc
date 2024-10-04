@@ -310,7 +310,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   */
 
   cache->clear_internal_PQ();
-  std::vector<uint64_t> tmpp_pf = page_bitmap.gather_pf();
+  std::vector<uint64_t> tmpp_pf; // = page_bitmap.gather_pf();
   issue_queue.clear();
   for(auto var : tmpp_pf) {
     context_switch_issue_queue.push_back(std::make_pair(var, true)); 

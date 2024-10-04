@@ -43,8 +43,8 @@ long int transform_while_n(R& queue, Output out, long int sz, F&& test_func, G&&
   auto retval = std::distance(begin, end);
   
   // WL 
-  if (queue.size() == 1 && begin == end && begin != std::end(queue))
-    end++; 
+  //if (queue.size() == 1 && begin == end && begin != std::end(queue))
+  //  end++; 
 
   std::transform(begin, end, out, std::forward<G>(transform_func));
   queue.erase(begin, end);
