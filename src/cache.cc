@@ -945,8 +945,8 @@ void CACHE::reset_components()
     if (have_cleared_prefetcher && !L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready)
     {
       have_cleared_prefetcher = false;
-      std::cout << "L2C prefetcher not cleared." << std::endl;
-      //CACHE::reset_spp_camera_prefetcher();
+      std::cout << "L2C prefetcher cleared." << std::endl;
+      CACHE::reset_spp_camera_prefetcher();
     }
   }
 }
