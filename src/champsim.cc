@@ -201,7 +201,9 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
 	      for (auto pkt_count = cpu.IN_QUEUE_SIZE - static_cast<long>(std::size(cpu.input_queue)); !trace.eof() && pkt_count > 0; --pkt_count)
         {
           if (DUMP_INS_NUMBER_EVERY_4M_CYCLES > 0) {
-              cpu.input_queue.push_back(trace());
+            champsim::operable::cpu0_num_retired = cpu_0.num_retired;
+            cpu.input_queue.push_back(trace());
+            fed_in_instruction++;
           }
           else {
            if (fed_in_instruction < next_reset_moment) 
