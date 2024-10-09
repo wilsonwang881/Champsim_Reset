@@ -33,7 +33,7 @@ namespace spp
 
     public:
 
-    constexpr static bool BLOCK_REUSE_MODE = true;
+    constexpr static bool BLOCK_REUSE_MODE = false;
 
     // Context switch prefetch queue.
     std::vector<uint64_t> cs_pf; 
