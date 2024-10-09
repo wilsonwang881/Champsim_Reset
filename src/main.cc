@@ -80,7 +80,7 @@ bool champsim::operable::have_cleaned_DTLB = true;
 bool champsim::operable::have_cleaned_STLB = true;
 uint16_t champsim::operable::currently_active_thread_ID = 0;
 std::vector<uint64_t> champsim::operable::reset_ins_count_global;
-uint64_t champsim::operable::number_of_instructions_to_skip_before_log = 27571430;
+uint64_t champsim::operable::number_of_instructions_to_skip_before_log = 1450820;
 uint64_t champsim::operable::cpu0_num_retired = 0;
 // WL
 

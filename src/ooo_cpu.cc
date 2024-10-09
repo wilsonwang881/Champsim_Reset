@@ -161,9 +161,9 @@ void O3_CPU::dump_after_reset_data_accesses()
 // WL 
 uint16_t O3_CPU::calculate_asid(uint64_t instr_id)
 {
-  uint16_t asid;
+  uint16_t asid = 0;
 
-  for (size_t i = 0; i <= champsim::operable::reset_ins_count_global.size(); i++) {
+  for (size_t i = 0; i < champsim::operable::reset_ins_count_global.size(); i++) {
 
     asid = i;
 
@@ -172,13 +172,13 @@ uint16_t O3_CPU::calculate_asid(uint64_t instr_id)
       break;
     }
     // Case B: 0 < i < max
-    else if (i > 0 && i < champsim::operable::reset_ins_count_global.size() &&
+    else if (i > 0 && i < (champsim::operable::reset_ins_count_global.size() - 1) &&
         (champsim::operable::reset_ins_count_global[i] > instr_id) &&
         (champsim::operable::reset_ins_count_global[i - 1] <= instr_id)) {
       break;  
     }
     // Case C: i == max
-    else if (i == champsim::operable::reset_ins_count_global.size()) {
+    else if (i == (champsim::operable::reset_ins_count_global.size() - 1)) {
       break;
     }
   }
@@ -244,7 +244,7 @@ void O3_CPU::initialize_instruction()
     // But exclude ASID calculation in the baseline
     // where the reset instruction numbers need to be recorded
     if (DUMP_INS_NUMBER_EVERY_4M_CYCLES == 0) 
-      input_queue.front().asid[0] = calculate_asid(input_queue.front().instr_id);
+      input_queue.front().asid[0] = champsim::operable::currently_active_thread_ID; //calculate_asid(input_queue.front().instr_id);
 
     if (champsim::debug_print && DUMP_INS_NUMBER_EVERY_4M_CYCLES == 0 && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
       fmt::print("[initialize_instruction] instr_id: {} ip: {} packet asid: {} should be: {}\n", input_queue.front().instr_id, input_queue.front().ip, input_queue.front().asid[0], calculate_asid(input_queue.front().instr_id));
@@ -310,6 +310,9 @@ bool O3_CPU::do_predict_branch(ooo_model_instr& arch_instr)
       sim_stats.branch_type_misses[arch_instr.branch_type]++;
       if (!warmup) {
         fetch_resume_cycle = std::numeric_limits<uint64_t>::max();
+      if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+            fmt::print("[BRANCH_MISPREDICT] instr_id: {} ip: {:#x} taken: {}; prediction: {}; type: {} == Conditional type: {} packet asid: {}\n", arch_instr.instr_id, arch_instr.ip, arch_instr.branch_taken, arch_instr.branch_prediction, arch_instr.branch_type, BRANCH_CONDITIONAL, arch_instr.asid[0]);
+          }
         stop_fetch = true;
         arch_instr.branch_mispredicted = 1;
       }
@@ -861,6 +864,7 @@ void O3_CPU::print_deadlock()
     return std::tuple{entry.instr_id, +entry.fetched, +entry.scheduled, +entry.executed, +entry.num_reg_dependent, entry.num_mem_ops() - entry.completed_mem_ops, entry.event_cycle};
   };
   std::string_view instr_fmt{"instr_id: {} fetched: {} scheduled: {} executed: {} num_reg_dependent: {} num_mem_ops: {} event: {}"};
+  std::cout << "Fetch resume cycle " << std::hex << fetch_resume_cycle << std::dec << std::endl;
   champsim::range_print_deadlock(IFETCH_BUFFER, "cpu" + std::to_string(cpu) + "_IFETCH", instr_fmt, instr_pack);
   champsim::range_print_deadlock(DECODE_BUFFER, "cpu" + std::to_string(cpu) + "_DECODE", instr_fmt, instr_pack);
   champsim::range_print_deadlock(DISPATCH_BUFFER, "cpu" + std::to_string(cpu) + "_DISPATCH", instr_fmt, instr_pack);
