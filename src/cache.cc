@@ -896,8 +896,8 @@ void CACHE::reset_components()
       if (champsim::operable::cache_clear_counter == 6) {
         have_cleared_prefetcher = false;
       
-        std::cout << "L2C prefetcher not cleared." << std::endl;
-        //CACHE::reset_spp_camera_prefetcher();
+        std::cout << "L2C prefetcher cleared." << std::endl;
+        CACHE::reset_spp_camera_prefetcher();
         clear_internal_PQ();
         champsim::operable::cache_clear_counter++;
       }
