@@ -38,7 +38,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     pref.initiate_lookahead(base_addr);
   }
 
-  //if (cache_hit) 
+  if (cache_hit) 
   {
     pref.page_bitmap.update(base_addr);
   }
@@ -116,9 +116,9 @@ void CACHE::prefetcher_cycle_operate()
       {
         if (!champsim::operable::have_cleared_BTB
             && !champsim::operable::have_cleared_BP
-            && champsim::operable::have_cleared_prefetcher
-            && champsim::operable::cpu_side_reset_ready) {
-            //&& champsim::operable::cache_clear_counter == 7) {
+            && !champsim::operable::have_cleared_prefetcher
+            && champsim::operable::cpu_side_reset_ready
+            && champsim::operable::cache_clear_counter == 6) {
           champsim::operable::context_switch_mode = false;
           champsim::operable::cpu_side_reset_ready = false;
           champsim::operable::L2C_have_issued_context_switch_prefetches = true;

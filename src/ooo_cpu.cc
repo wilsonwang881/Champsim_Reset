@@ -173,7 +173,7 @@ uint16_t O3_CPU::calculate_asid(uint64_t instr_id)
     }
     // Case B: 0 < i < max
     else if (i > 0 && i < champsim::operable::reset_ins_count_global.size() &&
-        (champsim::operable::reset_ins_count_global[i] >= instr_id) &&
+        (champsim::operable::reset_ins_count_global[i] > instr_id) &&
         (champsim::operable::reset_ins_count_global[i - 1] <= instr_id)) {
       break;  
     }

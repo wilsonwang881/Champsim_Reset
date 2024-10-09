@@ -465,7 +465,6 @@ long CACHE::operate()
   // WL 
   reset_components();
 
-  //clean_components();
   record_hit_miss_select_cache();
 
   if ((L1I_name.compare(NAME) == 0 ||
@@ -888,6 +887,7 @@ void CACHE::reset_components()
     }
   }
 
+  /*
   if (SIMULATE_WITH_CACHE_RESET)
   {
     if (have_cleared_L1I && !L1I_name.compare(NAME) && champsim::operable::cpu_side_reset_ready)
@@ -939,6 +939,7 @@ void CACHE::reset_components()
       champsim::operable::cache_clear_counter++;
     }
   }
+  */
 
   if (SIMULATE_WITH_PREFETCHER_RESET)
   {
@@ -947,27 +948,12 @@ void CACHE::reset_components()
       have_cleared_prefetcher = false;
       std::cout << "L2C prefetcher cleared." << std::endl;
       CACHE::reset_spp_camera_prefetcher();
+      clear_internal_PQ();
+      champsim::operable::cache_clear_counter++;
     }
-  }
-}
-
-// WL
-void CACHE::invalidate_all_cache_blocks()
-{
-  std::cout << "=> CACHE " << NAME << " cleared at cycle " << current_cycle << std::endl;
-
-  for (size_t i = 0; i < NUM_SET * NUM_WAY; i++)
-    block[i].valid = 0;
-}
-
-// WL 
-void CACHE::clean_all_cache_blocks()
-{
-  std::cout << "=> CACHE " << NAME << " cleaned at cycle " << current_cycle << std::endl;
-
-  for (size_t i = 0; i < NUM_SET * NUM_WAY; i++) {
-    if (block[i].valid && block[i].dirty) {
-      block[i].dirty = false;
+    if (have_cleared_prefetcher && L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready) {
+      clear_internal_PQ(); 
+      champsim::operable::cache_clear_counter++;
     }
   }
 }
@@ -1091,56 +1077,6 @@ void CACHE::record_hit_miss_update(uint64_t tag_checks)
         record_hit_miss_write_to_file(false);
         have_recorded_after_reset_hit_miss_number_LLC = false;
       }
-    }
-  }
-}
-
-// WL 
-void CACHE::clean_components()
-{
-  // Only clean the cache in non-reset settings.
-  if (!SIMULATE_WITH_CACHE_RESET)
-  {
-    if (!have_cleaned_L1I && !L1I_name.compare(NAME))
-    {
-      have_cleaned_L1I = true;
-      CACHE::clean_all_cache_blocks();
-    }
-
-    if (!have_cleaned_L1D && !L1D_name.compare(NAME))
-    {
-      have_cleaned_L1D = true;
-      CACHE::clean_all_cache_blocks();
-    }
-
-    if (!have_cleaned_L2C && !L2C_name.compare(NAME))
-    {
-      have_cleaned_L2C = true;
-      CACHE::clean_all_cache_blocks();
-    }
-
-    if (!have_cleaned_LLC && !LLC_name.compare(NAME))
-    {
-      have_cleaned_LLC = true;
-      CACHE::clean_all_cache_blocks();
-    }
-
-    if (!have_cleaned_ITLB && !ITLB_name.compare(NAME))
-    {
-      have_cleaned_ITLB = true;  
-      CACHE::clean_all_cache_blocks();
-    }
-
-    if (!have_cleaned_DTLB && !DTLB_name.compare(NAME))
-    {
-      have_cleaned_DTLB = true;
-      CACHE::clean_all_cache_blocks();
-    }
-
-    if (!have_cleaned_STLB && !STLB_name.compare(NAME))
-    {
-      have_cleaned_STLB = true;
-      CACHE::clean_all_cache_blocks();
     }
   }
 }
