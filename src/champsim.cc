@@ -130,13 +130,6 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
         champsim::operable::have_recorded_L1I_states = true;
         champsim::operable::have_recorded_L1D_states = true;
         champsim::operable::context_switch_mode = false;
-        champsim::operable::have_cleaned_L1I = false;
-        champsim::operable::have_cleaned_L1D = false;
-        champsim::operable::have_cleaned_L2C = false;
-        champsim::operable::have_cleaned_LLC = false;
-        champsim::operable::have_cleaned_ITLB = false;
-        champsim::operable::have_cleaned_DTLB = false;
-        champsim::operable::have_cleaned_STLB = false;
         champsim::operable::cpu0_num_retired = cpu_0.num_retired;
         reset_misc::can_record_after_access = true;
       }
@@ -161,13 +154,6 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       champsim::operable::have_recorded_prefetcher_states = true;
       champsim::operable::have_recorded_L1I_states = true;
       champsim::operable::have_recorded_L1D_states = true;
-      champsim::operable::have_cleared_L1I = false;
-      champsim::operable::have_cleared_L1D = false;
-      champsim::operable::have_cleared_L2C = false;
-      champsim::operable::have_cleared_LLC = false;
-      champsim::operable::have_cleared_ITLB = true;
-      champsim::operable::have_cleared_DTLB = true;
-      champsim::operable::have_cleared_STLB = true;
       champsim::operable::have_cleared_prefetcher = true;
       champsim::operable::have_cleared_BTB = true;
       champsim::operable::have_cleared_BP = true;

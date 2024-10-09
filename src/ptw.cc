@@ -181,9 +181,11 @@ long PageTableWalker::operate()
   MSHR.insert(std::cend(MSHR), std::begin(next_steps), std::end(next_steps));
 
   // WL
+  /*
   if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     std::cout << "PTW MSHR Size = " << MSHR.size() << std::endl;
   }
+  */
 
   return progress;
 }

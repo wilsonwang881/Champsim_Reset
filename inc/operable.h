@@ -116,24 +116,9 @@ public:
   static bool have_recorded_L1I_states;
   static bool have_recorded_L1D_states;
   static uint64_t context_switch_start_cycle;
-  static bool have_cleared_L1I;
-  static bool have_cleared_L1D;
-  static bool have_cleared_L2C;
-  static bool have_cleared_LLC;
-  static bool have_cleared_ITLB;
-  static bool have_cleared_DTLB;
-  static bool have_cleared_STLB;
   static bool have_cleared_BTB;
   static bool have_cleared_BP;
   static uint64_t cache_clear_counter;
-
-  static bool have_cleaned_L1I;
-  static bool have_cleaned_L1D;
-  static bool have_cleaned_L2C;
-  static bool have_cleaned_LLC;
-  static bool have_cleaned_ITLB;
-  static bool have_cleaned_DTLB;
-  static bool have_cleaned_STLB;
 
   const std::string L1I_name = "cpu0_L1I";
   const std::string L1D_name = "cpu0_L1D";
@@ -142,6 +127,8 @@ public:
   const std::string DTLB_name = "cpu0_DTLB";
   const std::string ITLB_name = "cpu0_ITLB";
   const std::string STLB_name = "cpu0_STLB";
+
+  static std::vector<std::string> emptied_cache;
 
   static bool have_cleared_prefetcher;
 

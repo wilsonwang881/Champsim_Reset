@@ -455,11 +455,13 @@ long CACHE::operate()
         stash_bandwidth_consumed, std::size(translation_stash),
         channels_bandwidth_consumed, pq_bandwidth_consumed, tag_bw);
 
+    /*
     std::cout << NAME << " [Translation Stash]" << std::endl;
 
     for(auto var : translation_stash) {
       std::cout << "instr_id: " << var.instr_id << " address: " << var.address << " v_address " << var.v_address << " is_translated: " << var.is_translated << " translate_issued: " << var.translate_issued << " asid: " << var.asid[0] << std::endl; 
     }
+    */
   }
 
   // WL 
@@ -889,17 +891,21 @@ void CACHE::reset_components()
 
   if (SIMULATE_WITH_PREFETCHER_RESET)
   {
-    if (have_cleared_prefetcher && !L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready)
+    if (have_cleared_prefetcher && !L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready && MSHR.size() == 0 && std::find(champsim::operable::emptied_cache.begin(), champsim::operable::emptied_cache.end(), NAME) == champsim::operable::emptied_cache.end())
     {
-      have_cleared_prefetcher = false;
-      std::cout << "L2C prefetcher not cleared." << std::endl;
-      //CACHE::reset_spp_camera_prefetcher();
-      clear_internal_PQ();
-      champsim::operable::cache_clear_counter++;
+      if (champsim::operable::cache_clear_counter == 6) {
+        have_cleared_prefetcher = false;
+      
+        std::cout << "L2C prefetcher not cleared." << std::endl;
+        //CACHE::reset_spp_camera_prefetcher();
+        clear_internal_PQ();
+        champsim::operable::cache_clear_counter++;
+      }
     }
-    if (have_cleared_prefetcher && L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready) {
+    if (have_cleared_prefetcher && L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready && MSHR.size() == 0 && std::find(champsim::operable::emptied_cache.begin(), champsim::operable::emptied_cache.end(), NAME) == champsim::operable::emptied_cache.end()) {
       clear_internal_PQ(); 
       champsim::operable::cache_clear_counter++;
+      champsim::operable::emptied_cache.push_back(NAME);
     }
   }
 }
