@@ -50,7 +50,7 @@ void spp::prefetcher::issue(CACHE* cache)
 
     if (prefetched) {
       context_switch_issue_queue.pop_front();
-      filter.update_issue(addr, cache->get_set(addr));
+      //filter.update_issue(addr, cache->get_set(addr));
       context_switch_issued++;
     }
 
@@ -456,9 +456,8 @@ void spp::prefetcher::context_switch_issue(CACHE* cache)
     // If this fails, the queue was full.
     bool prefetched = cache->prefetch_line(addr, priority, 0);
     if (prefetched) {
-      filter.update_issue(addr, cache->get_set(addr)); // Update the filter
+      //filter.update_issue(addr, cache->get_set(addr)); // Update the filter
       context_switch_issue_queue.pop_front();
-      issue_queue.clear();
     }
     /*
     else {
