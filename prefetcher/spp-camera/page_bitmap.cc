@@ -257,6 +257,8 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
     }
   }
 
+  cs_pf.resize(cs_pf.size() / 2);
+
   for(auto var : filter) 
   {
     if (var.valid)
@@ -285,18 +287,23 @@ void spp::SPP_PAGE_BITMAP::filter_update_lru(std::size_t i)
 
   for(auto var : filter) 
   {
-    if (var.lru_bits == std::numeric_limits<uint8_t>::max()) 
+    if (var.lru_bits >= 0xFFFF) 
     {
+      /*
       half = true;
       break;
+      */
+      var.valid = false;
     } 
   }
 
+  /*
   if (half) 
   {
     for(auto &var : filter) 
       var.lru_bits = var.lru_bits >> 1; 
   }
+  */
 
   filter[i].lru_bits = 0;
 

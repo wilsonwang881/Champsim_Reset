@@ -315,10 +315,10 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 
   for (size_t i = 0; i < tmpp_pf.size(); i++) 
   {
-    if (i <= (tmpp_pf.size() / 2))
+    //if (i <= (tmpp_pf.size() / 2))
       context_switch_issue_queue.push_back(std::make_pair(tmpp_pf[i], true)); 
-    else 
-       context_switch_issue_queue.push_back(std::make_pair(tmpp_pf[i], false)); 
+    //else 
+       //context_switch_issue_queue.push_back(std::make_pair(tmpp_pf[i], false)); 
   }
 
   filter.clear();
