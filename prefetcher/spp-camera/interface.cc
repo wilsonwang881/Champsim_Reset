@@ -127,8 +127,8 @@ void CACHE::prefetcher_cycle_operate()
           pref.page_bitmap.clear_pg_access_status();
           pref.page_bitmap.update_bitmap_store();
           champsim::operable::emptied_cache.clear();
-          pref.clear_states();
-          std::cout << "SPP states cleared." << std::endl;
+          //pref.clear_states();
+          std::cout << "SPP states not cleared." << std::endl;
           std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
         }
       }
