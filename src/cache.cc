@@ -893,7 +893,7 @@ void CACHE::reset_components()
   {
     if (have_cleared_prefetcher && !L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready && MSHR.size() == 0 && std::find(champsim::operable::emptied_cache.begin(), champsim::operable::emptied_cache.end(), NAME) == champsim::operable::emptied_cache.end())
     {
-      if (champsim::operable::cache_clear_counter == 6) {
+      if (champsim::operable::cache_clear_counter >= 5) {
         have_cleared_prefetcher = false;
       
         std::cout << "L2C prefetcher not cleared." << std::endl;
@@ -902,7 +902,7 @@ void CACHE::reset_components()
         champsim::operable::cache_clear_counter++;
       }
     }
-    if (have_cleared_prefetcher && L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready && MSHR.size() == 0 && std::find(champsim::operable::emptied_cache.begin(), champsim::operable::emptied_cache.end(), NAME) == champsim::operable::emptied_cache.end()) {
+    if (have_cleared_prefetcher && L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready && MSHR.size() == 0 && std::find(champsim::operable::emptied_cache.begin(), champsim::operable::emptied_cache.end(), NAME) == champsim::operable::emptied_cache.end() && STLB_name.compare(NAME)) {
       clear_internal_PQ(); 
       champsim::operable::cache_clear_counter++;
       champsim::operable::emptied_cache.push_back(NAME);
