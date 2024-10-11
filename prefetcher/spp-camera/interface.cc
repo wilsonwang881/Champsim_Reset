@@ -139,6 +139,11 @@ void CACHE::prefetcher_cycle_operate()
     {
       pref.issue(this);
       pref.step_lookahead();
+
+      if (current_cycle == (context_switch_start_cycle + 2000000)) {
+        pref.page_bitmap.clear_pg_access_status();
+        pref.page_bitmap.update_bitmap_store();
+      }
     }
   }
   else {
