@@ -51,6 +51,10 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     } 
   }
 
+  for(auto var : pref.context_switch_issue_queue) {
+    pref.available_prefetches.erase(var); 
+  }
+
   return metadata_in;
 }
 
