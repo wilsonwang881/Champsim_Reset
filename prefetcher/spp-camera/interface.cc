@@ -43,6 +43,14 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     pref.page_bitmap.update(base_addr);
   }
 
+  uint64_t page_addr = base_addr >> 12;
+
+  for(auto var : pref.available_prefetches) {
+    if ((var.first >> 12) == page_addr) {
+      pref.context_switch_issue_queue.push_back(var); 
+    } 
+  }
+
   return metadata_in;
 }
 
@@ -140,7 +148,7 @@ void CACHE::prefetcher_cycle_operate()
       pref.issue(this);
       pref.step_lookahead();
 
-      if (current_cycle == (context_switch_start_cycle + 2000000)) {
+      if (current_cycle == (context_switch_start_cycle + 3000000)) {
         pref.page_bitmap.clear_pg_access_status();
         pref.page_bitmap.update_bitmap_store();
       }

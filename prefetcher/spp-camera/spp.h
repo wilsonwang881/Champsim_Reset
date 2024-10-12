@@ -36,7 +36,6 @@ namespace spp {
     PATTERN_TABLE pattern_table;
     SPP_PREFETCH_FILTER filter;
     std::deque<std::pair<uint64_t, bool>> issue_queue;
-    std::deque<std::pair<uint64_t, bool>> context_switch_issue_queue; // WL
 
     struct pfqueue_entry_t
     {
@@ -58,6 +57,9 @@ namespace spp {
 
     public:
 
+    std::set<std::pair<uint64_t, bool>> available_prefetches;
+    std::deque<std::pair<uint64_t, bool>> context_switch_issue_queue; // WL
+                                                                      //
     SPP_PAGE_BITMAP page_bitmap; // WL
                                  //
     bool warmup = true;

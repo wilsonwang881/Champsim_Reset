@@ -312,14 +312,18 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   std::vector<uint64_t> tmpp_pf = page_bitmap.gather_pf();
 
   issue_queue.clear();
+  available_prefetches.clear();
 
   for (size_t i = 0; i < tmpp_pf.size(); i++) 
   {
     //if (i <= (tmpp_pf.size() / 2))
       context_switch_issue_queue.push_back(std::make_pair(tmpp_pf[i], true)); 
+      available_prefetches.insert(std::make_pair(tmpp_pf[i], true));
     //else 
        //context_switch_issue_queue.push_back(std::make_pair(tmpp_pf[i], false)); 
   }
+
+  context_switch_issue_queue.clear();
 
   filter.clear();
   std::cout << "SPP issue queue and filter cleared." << std::endl;

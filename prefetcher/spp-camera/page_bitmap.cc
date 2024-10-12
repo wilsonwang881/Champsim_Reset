@@ -28,7 +28,7 @@ void spp::SPP_PAGE_BITMAP::update_lru(std::size_t i)
 
   for(auto &var : tb) 
   {
-    if (var.lru_bits >= (std::numeric_limits<uint16_t>::max() & 0xFFFF)) 
+    if (var.lru_bits >= (std::numeric_limits<uint16_t>::max() & 0x7FFF)) 
     {
       //half = true;
       var.valid = false;
@@ -257,7 +257,7 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
     }
   }
 
-  cs_pf.resize(cs_pf.size() / 2);
+  //cs_pf.resize(cs_pf.size() / 2);
 
   for(auto var : filter) 
   {
@@ -287,7 +287,7 @@ void spp::SPP_PAGE_BITMAP::filter_update_lru(std::size_t i)
 
   for(auto var : filter) 
   {
-    if (var.lru_bits >= 0xFFFF) 
+    if (var.lru_bits >= (uint16_t)0x3FFF) 
     {
       /*
       half = true;
