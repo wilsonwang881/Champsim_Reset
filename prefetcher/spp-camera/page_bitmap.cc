@@ -217,24 +217,16 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
       if (PAGE_BITMAP_DEBUG_PRINT) 
         std::cout << "Page " << std::hex << tb[i].page_no << std::dec << " ["; 
 
-      int no_blks = 0;
-
       for (size_t j = 0; j < BITMAP_SIZE; j++) 
       {
         if (tb[i].bitmap[j] && tb[i].bitmap_store[j])
         {
           cs_pf.push_back(page_addr + (j << 6)); 
-          no_blks++;
 
           if (PAGE_BITMAP_DEBUG_PRINT)
             std::cout << " " << j;
         }
       } 
-
-      /*
-      if (no_blks == 1) 
-        cs_pf.pop_back();
-        */
 
       if (PAGE_BITMAP_DEBUG_PRINT) 
         std::cout << " ]" << std::endl;

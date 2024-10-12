@@ -328,8 +328,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   filter.clear();
   std::cout << "SPP issue queue and filter cleared." << std::endl;
 
-  return;
-  std::cout << "Filter cleared" << std::endl;
+  //return;
 
   std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature(1.0 * filter.pf_useful / filter.pf_issued);
 
@@ -410,10 +409,10 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   context_switch_issue_queue.clear();
 
   for(auto var : tmpp_issue_queue) {
-    context_switch_issue_queue.push_back(var); 
+    available_prefetches.insert(var); 
   }
 
-  std::cout << "L2C SPP Gathered " << context_switch_issue_queue.size() << " prefetches." << std::endl;
+  std::cout << "L2C SPP Gathered " << tmpp_issue_queue.size() << " prefetches." << std::endl;
 }
 
 // WL 
