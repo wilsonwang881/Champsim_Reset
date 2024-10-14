@@ -243,7 +243,6 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
 
       for(auto pg : tb) {
         if (tb[i].page_no == pg.page_no_store) {
-          uint64_t page_addr = tb[i].page_no << 12;
 
           for (size_t j = 0; j < BITMAP_SIZE; j++) 
           {
@@ -283,7 +282,7 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
 
 void spp::SPP_PAGE_BITMAP::filter_update_lru(std::size_t i)
 {
-  bool half = false;
+  //bool half = false;
 
   for(auto var : filter) 
   {

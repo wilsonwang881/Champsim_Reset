@@ -44,15 +44,23 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   }
 
   uint64_t page_addr = base_addr >> 12;
+  std::pair<uint64_t, bool> demand_itself = std::make_pair(0, false);
 
   for(auto var : pref.available_prefetches) {
-    if ((var.first >> 12) == page_addr) {
+    if (((var.first >> 12) == page_addr) && (var.first >> 6 != base_addr >> 6)) {
       pref.context_switch_issue_queue.push_back(var); 
     } 
+    else if (((var.first >> 12) == page_addr) && (var.first >> 6 == base_addr >> 6)) {
+      demand_itself = var;
+    }
   }
 
   for(auto var : pref.context_switch_issue_queue) {
     pref.available_prefetches.erase(var); 
+  }
+
+  if (demand_itself.first != 0) {
+    pref.available_prefetches.erase(demand_itself);
   }
 
   return metadata_in;
