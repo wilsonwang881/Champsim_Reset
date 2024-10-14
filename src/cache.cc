@@ -910,7 +910,7 @@ void CACHE::reset_components()
     }
     */
 
-    if (have_cleared_prefetcher && champsim::operable::cpu_side_reset_ready && MSHR.size() == 0 && std::find(champsim::operable::emptied_cache.begin(), champsim::operable::emptied_cache.end(), NAME) == champsim::operable::emptied_cache.end())
+    if (have_cleared_prefetcher && champsim::operable::cpu_side_reset_ready && std::find(champsim::operable::emptied_cache.begin(), champsim::operable::emptied_cache.end(), NAME) == champsim::operable::emptied_cache.end()) //&& MSHR.size() == 0 
     {
       clear_internal_PQ();
       champsim::operable::cache_clear_counter++;

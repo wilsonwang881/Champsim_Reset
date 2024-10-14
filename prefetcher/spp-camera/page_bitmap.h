@@ -14,7 +14,7 @@ namespace spp
   {
     constexpr static std::size_t TABLE_SIZE = 1024;
     constexpr static std::size_t BITMAP_SIZE = 64;
-    constexpr static std::size_t FILTER_SIZE = 256;
+    constexpr static std::size_t FILTER_SIZE = 2048;
     constexpr static std::size_t COUNTER_SIZE = 2048;
     constexpr static bool PAGE_BITMAP_DEBUG_PRINT = false;
 
