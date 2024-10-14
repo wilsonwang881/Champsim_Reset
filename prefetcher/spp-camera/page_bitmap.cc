@@ -233,6 +233,14 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
     }
     else 
     {
+      uint64_t page_addr = tb[i].page_no << 12;
+
+      for (size_t j = 0; j < BITMAP_SIZE; j++) 
+      {
+        if (tb[i].bitmap[j])
+          cs_pf.push_back(page_addr + (j << 6)); 
+      }
+
       for(auto pg : tb) {
         if (tb[i].page_no == pg.page_no_store) {
           uint64_t page_addr = tb[i].page_no << 12;
