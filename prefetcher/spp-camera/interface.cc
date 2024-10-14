@@ -83,11 +83,13 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
     if (!pkt_pfed)
     {
-
       if (addr != 0)
+      {
         pref.page_bitmap.update(addr);
-      //pref.update(evicted_addr);
+      }
     }
+
+    pref.page_bitmap.evict(evicted_addr);
   }
 
   return metadata_in;

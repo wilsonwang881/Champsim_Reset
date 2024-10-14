@@ -147,6 +147,33 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr)
   update_lru(index);
 }
 
+void spp::SPP_PAGE_BITMAP::evict(uint64_t addr)
+{
+  uint64_t page = addr >> 12;
+  uint64_t block = (addr & 0xFFF) >> 6;
+
+  // Check tb first.
+  for (size_t i = 0; i < TABLE_SIZE; i++)
+  {
+    if (tb[i].valid &&
+        tb[i].page_no == page)
+    {
+      tb[i].bitmap[block] = false;
+    }
+  }
+
+  // Check filter.
+  for (size_t i = 0; i < FILTER_SIZE; i++) 
+  {
+    if (filter[i].page_no == page && filter[i].block_no == block) 
+    {
+      filter[i].valid = false;
+      filter[i].page_no = 0;
+      filter[i].block_no = 0;
+    }
+  }
+}
+
 void spp::SPP_PAGE_BITMAP::update_bitmap(uint64_t addr)
 {
   uint64_t page = addr >> 12;
