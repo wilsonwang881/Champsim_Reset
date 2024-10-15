@@ -74,23 +74,11 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
   auto &pref = ::SPP[{this, cpu}];
 
-  if (blk_asid_match) 
-  {
-    /*
-    if (!blk_pfed) 
-      pref.update(evicted_addr); 
-      */
+  if (!pkt_pfed && addr != 0)
+    pref.page_bitmap.update(addr);
 
-    if (!pkt_pfed)
-    {
-      if (addr != 0)
-      {
-        pref.page_bitmap.update(addr);
-      }
-    }
-
-    pref.page_bitmap.evict(evicted_addr);
-  }
+  if (blk_asid_match && !blk_pfed) 
+      pref.page_bitmap.evict(evicted_addr);
 
   return metadata_in;
 }
@@ -162,25 +150,30 @@ void CACHE::prefetcher_cycle_operate()
       pref.issue(this);
       pref.step_lookahead();
 
+      /*
       if (!reset_misc::dq_prefetch_communicate.empty()) {
 
         if (pref.available_prefetches.empty()) {
           reset_misc::dq_prefetch_communicate.clear(); 
         }
         else {
-          uint64_t page_addr = reset_misc::dq_prefetch_communicate.front().first >> 12;
 
-          for(auto var : pref.available_prefetches) {
-            if ((var.first >> 12) == page_addr) {
-              pref.context_switch_issue_queue.push_back(var); 
-            } 
+          for (size_t i = 0; i < reset_misc::dq_prefetch_communicate.size(); i++) {
+            
+            uint64_t page_addr = reset_misc::dq_prefetch_communicate.front().first >> 12;
+
+            for(auto var : pref.available_prefetches) {
+              if ((var.first >> 12) == page_addr) {
+                pref.context_switch_issue_queue.push_back(var); 
+              } 
+            }
+
+            for(auto var : pref.context_switch_issue_queue) {
+              pref.available_prefetches.erase(var); 
+            }
+
+            reset_misc::dq_prefetch_communicate.pop_front();
           }
-
-          for(auto var : pref.context_switch_issue_queue) {
-            pref.available_prefetches.erase(var); 
-          }
-
-          reset_misc::dq_prefetch_communicate.pop_front();
         }
       }
 
@@ -188,14 +181,17 @@ void CACHE::prefetcher_cycle_operate()
         pref.page_bitmap.clear_pg_access_status();
         pref.page_bitmap.update_bitmap_store();
       }
+      */
     }
   }
+  /*
   else {
     if (!champsim::operable::context_switch_mode) {
       pref.issue(this);
       pref.step_lookahead();
     }
   }
+  */
 }
 
 void CACHE::prefetcher_final_stats()

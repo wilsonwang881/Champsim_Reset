@@ -29,7 +29,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 
     for(auto var : reset_misc::dq_prefetch_communicate) {
       if ((var.first >> 12) == page_no) {
-        return 0; 
+        return metadata_in; 
       }  
     }
     reset_misc::dq_prefetch_communicate.push_back(std::make_pair(((addr >> 6) << 6), true)); 

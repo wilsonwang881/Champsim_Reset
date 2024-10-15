@@ -28,7 +28,7 @@ void spp::SPP_PAGE_BITMAP::update_lru(std::size_t i)
 
   for(auto &var : tb) 
   {
-    if (var.lru_bits >= (std::numeric_limits<uint16_t>::max() & 0x9FFF)) 
+    if (var.lru_bits >= (std::numeric_limits<uint16_t>::max() & 0xFFFF)) 
     {
       half = true;
 
@@ -233,6 +233,8 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
       return left.second < right.second;
       });
 
+  int page_match = 0;
+
   // Get the prefetches.
   for(auto var : i_lru_vec) 
   {
@@ -240,6 +242,7 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
 
     if (tb[i].page_no == tb[i].page_no_store) 
     {
+      page_match++;
       uint64_t page_addr = tb[i].page_no << 12;
 
       if (PAGE_BITMAP_DEBUG_PRINT) 
@@ -272,6 +275,8 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
       for(auto pg : tb) {
         if (tb[i].page_no == pg.page_no_store) {
 
+          page_match++;
+
           for (size_t j = 0; j < BITMAP_SIZE; j++) 
           {
             if (tb[i].bitmap[j] && pg.bitmap_store[j])
@@ -283,11 +288,16 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
       } 
     }
   }
+  
+  std::cout << "Page bitmap page matches: " << page_match << std::endl;
+
+  int pf_from_filter = 0;
 
   for(auto var : filter) 
   {
     if (var.valid)
     {
+      pf_from_filter++;
       //std::cout << (unsigned)var.page_no << " " << (unsigned)var.block_no << std::endl;
       uint64_t addr = (var.page_no << 12) + (var.block_no << 6);
       cs_pf.push_back(addr);
@@ -301,6 +311,7 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
     pf.push_back(var); 
   }
   
+  std::cout << "Page bitmap gathered " << pf_from_filter << " prefetches from filter." << std::endl;
   std::cout << "Page bitmap gathered " << cs_pf.size() << " prefetches from past accesses." << std::endl;
 
   return pf;
@@ -312,7 +323,7 @@ void spp::SPP_PAGE_BITMAP::filter_update_lru(std::size_t i)
 
   for(auto var : filter) 
   {
-    if (var.lru_bits >= (uint16_t)0x3FFF) 
+    if (var.lru_bits >= (uint16_t)0xFFFF) 
     {
       half = true;
       break;

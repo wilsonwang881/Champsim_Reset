@@ -52,7 +52,7 @@ void spp::prefetcher::issue(CACHE* cache)
     if (prefetched) {
       context_switch_issue_queue.pop_front();
       context_switch_issued++;
-      issue_queue.clear();
+      //issue_queue.clear();
     }
 
     return;
@@ -319,7 +319,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   {
     //if (i <= (tmpp_pf.size() / 2))
       context_switch_issue_queue.push_back(std::make_pair(tmpp_pf[i], true)); 
-      available_prefetches.insert(std::make_pair(tmpp_pf[i], true));
+      available_prefetches.insert(std::make_pair(tmpp_pf[i], false));
     //else 
        //context_switch_issue_queue.push_back(std::make_pair(tmpp_pf[i], false)); 
   }
