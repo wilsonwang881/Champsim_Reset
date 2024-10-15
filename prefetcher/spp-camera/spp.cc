@@ -47,11 +47,12 @@ void spp::prefetcher::issue(CACHE* cache)
 
     auto [addr, priority] = context_switch_issue_queue.front();
     bool prefetched = cache->prefetch_line(addr, priority, 0);
-    filter.update_issue(addr, cache->get_set(addr));
+    //filter.update_issue(addr, cache->get_set(addr));
 
     if (prefetched) {
       context_switch_issue_queue.pop_front();
       context_switch_issued++;
+      issue_queue.clear();
     }
 
     return;

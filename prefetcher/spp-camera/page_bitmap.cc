@@ -24,13 +24,15 @@ void spp::SPP_PAGE_BITMAP::init()
 
 void spp::SPP_PAGE_BITMAP::update_lru(std::size_t i)
 {
-  //bool half = false;
+  bool half = false;
 
   for(auto &var : tb) 
   {
-    if (var.lru_bits >= (std::numeric_limits<uint16_t>::max() & 0x7FFF)) 
+    if (var.lru_bits >= (std::numeric_limits<uint16_t>::max() & 0x9FFF)) 
     {
-      //half = true;
+      half = true;
+
+      /*
       var.valid = false;
       var.aft_cs_acc = true;
 
@@ -39,18 +41,17 @@ void spp::SPP_PAGE_BITMAP::update_lru(std::size_t i)
         var.bitmap[j] = false;
         //var.bitmap_store[j] = false;
       }
+      */
 
-      //break;
+      break;
     } 
   }
 
-  /*
   if (half) 
   {
     for(auto &var : tb)
       var.lru_bits = var.lru_bits >> 1; 
   }
-  */
 
   tb[i].lru_bits = 0;
 
@@ -283,8 +284,6 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
     }
   }
 
-  //cs_pf.resize(cs_pf.size() / 2);
-
   for(auto var : filter) 
   {
     if (var.valid)
@@ -309,27 +308,23 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
 
 void spp::SPP_PAGE_BITMAP::filter_update_lru(std::size_t i)
 {
-  //bool half = false;
+  bool half = false;
 
   for(auto var : filter) 
   {
     if (var.lru_bits >= (uint16_t)0x3FFF) 
     {
-      /*
       half = true;
       break;
-      */
-      var.valid = false;
+      //var.valid = false;
     } 
   }
 
-  /*
   if (half) 
   {
     for(auto &var : filter) 
       var.lru_bits = var.lru_bits >> 1; 
   }
-  */
 
   filter[i].lru_bits = 0;
 
@@ -405,7 +400,7 @@ bool spp::SPP_PAGE_BITMAP::filter_operate(uint64_t addr)
 
   filter[index].page_no = page;
   filter[index].block_no = block;
-  filter[index].lru_bits = 0;
+  filter_update_lru(index);
 
   return false;
 }
