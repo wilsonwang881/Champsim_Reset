@@ -162,6 +162,28 @@ void CACHE::prefetcher_cycle_operate()
       pref.issue(this);
       pref.step_lookahead();
 
+      if (!reset_misc::dq_prefetch_communicate.empty()) {
+
+        if (pref.available_prefetches.empty()) {
+          reset_misc::dq_prefetch_communicate.clear(); 
+        }
+        else {
+          uint64_t page_addr = reset_misc::dq_prefetch_communicate.front().first >> 12;
+
+          for(auto var : pref.available_prefetches) {
+            if ((var.first >> 12) == page_addr) {
+              pref.context_switch_issue_queue.push_back(var); 
+            } 
+          }
+
+          for(auto var : pref.context_switch_issue_queue) {
+            pref.available_prefetches.erase(var); 
+          }
+
+          reset_misc::dq_prefetch_communicate.pop_front();
+        }
+      }
+
       if (current_cycle == (context_switch_start_cycle + 3500000)) {
         pref.page_bitmap.clear_pg_access_status();
         pref.page_bitmap.update_bitmap_store();
