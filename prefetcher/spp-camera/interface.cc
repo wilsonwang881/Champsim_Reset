@@ -43,13 +43,17 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     pref.page_bitmap.update(base_addr);
   }
 
+  if (pref.issued_cs_pf.find((base_addr >> 6) << 6) != pref.issued_cs_pf.end()) {
+    pref.issued_cs_pf_hit++; 
+    pref.issued_cs_pf.erase((base_addr >> 6) << 6);
+  }
+
   uint64_t page_addr = base_addr >> 12;
   std::pair<uint64_t, bool> demand_itself = std::make_pair(0, false);
 
   for(auto var : pref.available_prefetches) {
     if (((var.first >> 12) == page_addr) && (var.first >> 6 != base_addr >> 6)) {
       pref.context_switch_issue_queue.push_back(var); 
-      //reset_misc::dq_prefetch_communicate.push_back(var);
     } 
     else if (((var.first >> 12) == page_addr) && ((var.first >> 6) == (base_addr >> 6))) {
       demand_itself = var;
@@ -103,7 +107,6 @@ void CACHE::prefetcher_cycle_operate()
       {
         pref.context_switch_gather_prefetches(this);
         pref.context_switch_prefetch_gathered = true;
-        pref.context_switch_issued = 0;
       }
      
       // Issue prefetches until the queue is empty.
@@ -135,9 +138,9 @@ void CACHE::prefetcher_cycle_operate()
           champsim::operable::L2C_have_issued_context_switch_prefetches = true;
           champsim::operable::cache_clear_counter = 0;
           pref.context_switch_prefetch_gathered = false;
-          pref.page_bitmap.clear_pg_access_status();
           pref.page_bitmap.update_bitmap_store();
           champsim::operable::emptied_cache.clear();
+          pref.issued_cs_pf.clear();
           //pref.clear_states();
           std::cout << "SPP states not cleared." << std::endl;
           std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
@@ -177,12 +180,11 @@ void CACHE::prefetcher_cycle_operate()
           }
         }
       }
+      */
 
-      if (current_cycle == (context_switch_start_cycle + 3500000)) {
-        pref.page_bitmap.clear_pg_access_status();
+      if (current_cycle == (champsim::operable::context_switch_start_cycle + 3500000)) {
         pref.page_bitmap.update_bitmap_store();
       }
-      */
     }
   }
   /*
@@ -201,6 +203,9 @@ void CACHE::prefetcher_final_stats()
   std::cout << std::endl;
 
   ::SPP[{this, cpu}].print_stats(std::cout);
+
+  // WL 
+  std::cout << "Context switch prefetch accuracy: " << ::SPP[{this, cpu}].issued_cs_pf_hit << "/" << ::SPP[{this, cpu}].total_issued_cs_pf << "." << std::endl;
 }
 
 // WL

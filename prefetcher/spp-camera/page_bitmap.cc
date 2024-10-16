@@ -5,7 +5,6 @@ void spp::SPP_PAGE_BITMAP::init()
   for(size_t i = 0; i < TABLE_SIZE; i++)
   {
     tb[i].valid = false;
-    tb[i].aft_cs_acc = true;
     
     for (size_t j = 0; j < BITMAP_SIZE; j++) 
     {
@@ -135,7 +134,6 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr)
   }
 
   tb[index].page_no = page;
-  tb[index].aft_cs_acc = false;
 
   for(auto &var : tb[index].bitmap)
     var = false;
@@ -198,21 +196,23 @@ void spp::SPP_PAGE_BITMAP::update_bitmap_store()
   {
     if (tb[i].valid) 
     {
-      tb[i].page_no_store = tb[i].page_no;
 
       for (size_t j = 0; j < BITMAP_SIZE; j++) 
       {
-        tb[i].bitmap_store[j] = tb[i].bitmap[j];
+        if (tb[i].page_no_store == tb[i].page_no) 
+        {
+          tb[i].bitmap_store[j] = tb[i].bitmap[j] | tb[i].bitmap_store[j];
+        }
+        else {
+           tb[i].bitmap_store[j] = tb[i].bitmap[j];
+        }
+
         tb[i].bitmap[j] = false;
       }
+
+      tb[i].page_no_store = tb[i].page_no;
     }
   }
-}
-
-void spp::SPP_PAGE_BITMAP::clear_pg_access_status()
-{
-  for(auto &var : tb)
-    var.aft_cs_acc = true; 
 }
 
 std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf()

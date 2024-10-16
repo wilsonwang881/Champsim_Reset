@@ -82,11 +82,10 @@ namespace spp {
     void context_switch_queue_clear();
     void context_switch_issue(CACHE* cache);
     void record_spp_states();
-    float CUTOFF_THRESHOLD = 0.2;
-    uint64_t context_switch_issued = 0;
-    uint64_t retry_limit = 10;
-    uint64_t retry_attempt = 0;
-    int waited = 0;
+    float CUTOFF_THRESHOLD = 0.1;
+    std::set<uint64_t> issued_cs_pf;
+    uint64_t issued_cs_pf_hit;
+    uint64_t total_issued_cs_pf;
     // WL 
   };
 } // namespace spp

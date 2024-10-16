@@ -27,7 +27,6 @@ namespace spp
       bool bitmap[BITMAP_SIZE];
       bool bitmap_store[BITMAP_SIZE];
       uint16_t lru_bits;
-      bool aft_cs_acc;
     };
 
     page_r tb[TABLE_SIZE];
@@ -66,7 +65,6 @@ namespace spp
     void evict(uint64_t addr);
     void update_bitmap(uint64_t addr);
     void update_bitmap_store();
-    void clear_pg_access_status();
     std::vector<std::pair<uint64_t, bool>> gather_pf();
     bool pf_q_empty();
     void filter_update_lru(std::size_t i);
