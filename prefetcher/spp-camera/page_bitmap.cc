@@ -33,7 +33,6 @@ void spp::SPP_PAGE_BITMAP::update_lru(std::size_t i)
 
       /*
       var.valid = false;
-      var.aft_cs_acc = true;
 
       for (size_t j = 0; j < BITMAP_SIZE; j++) 
       {
@@ -204,7 +203,7 @@ void spp::SPP_PAGE_BITMAP::update_bitmap_store()
           tb[i].bitmap_store[j] = tb[i].bitmap[j] | tb[i].bitmap_store[j];
         }
         else {
-           tb[i].bitmap_store[j] = tb[i].bitmap[j];
+          tb[i].bitmap_store[j] = tb[i].bitmap[j];
         }
 
         tb[i].bitmap[j] = false;

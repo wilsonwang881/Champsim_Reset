@@ -180,11 +180,12 @@ void CACHE::prefetcher_cycle_operate()
           }
         }
       }
-      */
 
       if (current_cycle == (champsim::operable::context_switch_start_cycle + 3500000)) {
         pref.page_bitmap.update_bitmap_store();
       }
+
+      */
     }
   }
   /*
