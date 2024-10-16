@@ -58,7 +58,7 @@ namespace spp
     public:
 
     // Context switch prefetch queue.
-    std::deque<uint64_t> cs_pf; 
+    std::deque<std::pair<uint64_t, bool>> cs_pf; 
 
     void init();
     void update_lru(std::size_t i);
@@ -67,7 +67,7 @@ namespace spp
     void update_bitmap(uint64_t addr);
     void update_bitmap_store();
     void clear_pg_access_status();
-    std::vector<uint64_t> gather_pf();
+    std::vector<std::pair<uint64_t, bool>> gather_pf();
     bool pf_q_empty();
     void filter_update_lru(std::size_t i);
     bool filter_operate(uint64_t addr);

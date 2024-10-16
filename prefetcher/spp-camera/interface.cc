@@ -50,7 +50,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     if (((var.first >> 12) == page_addr) && (var.first >> 6 != base_addr >> 6)) {
       pref.context_switch_issue_queue.push_back(var); 
     } 
-    else if (((var.first >> 12) == page_addr) && (var.first >> 6 == base_addr >> 6)) {
+    else if (((var.first >> 12) == page_addr) && ((var.first >> 6) == (base_addr >> 6))) {
       demand_itself = var;
     }
   }
