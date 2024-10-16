@@ -252,7 +252,7 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf()
       {
         if (tb[i].bitmap[j] && tb[i].bitmap_store[j])
         {
-          cs_pf.push_back(std::make_pair(page_addr + (j << 6), true)); 
+          cs_pf.push_back(std::make_pair(page_addr + (j << 6), false)); 
 
           if (PAGE_BITMAP_DEBUG_PRINT)
             std::cout << " " << j;
@@ -281,7 +281,7 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf()
           {
             if (tb[i].bitmap[j] && pg.bitmap_store[j])
             {
-              cs_pf.push_back(std::make_pair(page_addr + (j << 6), true)); 
+              cs_pf.push_back(std::make_pair(page_addr + (j << 6), false)); 
             }
           }   
         } 
