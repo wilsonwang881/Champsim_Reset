@@ -195,21 +195,41 @@ void spp::SPP_PAGE_BITMAP::update_bitmap_store()
   {
     if (tb[i].valid) 
     {
-
-      for (size_t j = 0; j < BITMAP_SIZE; j++) 
+      if (tb[i].page_no_store == tb[i].page_no) 
       {
-        if (tb[i].page_no_store == tb[i].page_no) 
-        {
-          tb[i].bitmap_store[j] = tb[i].bitmap[j] | tb[i].bitmap_store[j];
-        }
-        else {
-          tb[i].bitmap_store[j] = tb[i].bitmap[j];
-        }
+        for (size_t j = 0; j < BITMAP_SIZE; j++) 
+          tb[i].bitmap_store[j] = tb[i].bitmap[j]; // | tb[i].bitmap_store[j];
 
-        tb[i].bitmap[j] = false;
+        tb[i].page_no_store = tb[i].page_no;
       }
+      else 
+      {
+        bool found = false;
 
-      tb[i].page_no_store = tb[i].page_no;
+        for (size_t k = 0; k < TABLE_SIZE; k++) 
+        {
+          if (tb[k].page_no == tb[i].page_no_store) 
+          {
+            for (size_t j = 0; j < BITMAP_SIZE; j++) 
+              tb[i].bitmap_store[j] = tb[k].bitmap[j]; // | tb[i].bitmap_store[j];
+
+            found = true;
+            break;
+          }
+        }
+
+        if (!found) 
+        {
+          for (size_t j = 0; j < BITMAP_SIZE; j++) 
+          {
+            tb[i].bitmap_store[j] = tb[i].bitmap[j]; // | tb[i].bitmap_store[j];
+            tb[i].bitmap[j] = false;
+          }
+
+          tb[i].page_no_store = tb[i].page_no;
+        }
+
+      }
     }
   }
 }

@@ -38,7 +38,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     pref.initiate_lookahead(base_addr);
   }
 
-  if (cache_hit) 
+  //if (cache_hit) 
   {
     pref.page_bitmap.update(base_addr);
   }

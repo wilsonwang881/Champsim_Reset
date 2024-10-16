@@ -45,18 +45,21 @@ void spp::prefetcher::issue(CACHE* cache)
   //if (!reset_misc::dq_prefetch_communicate.empty()) {
   if (!context_switch_queue_empty()) {
 
-    auto [addr, priority] = context_switch_issue_queue.front();
-    bool prefetched = cache->prefetch_line(addr, priority, 0);
-    //filter.update_issue(addr, cache->get_set(addr));
+    if (cache->get_pq_occupancy().size() <= 12) {
 
-    if (prefetched) {
-      context_switch_issue_queue.pop_front();
-      issued_cs_pf.insert(addr);
-      total_issued_cs_pf++;
-      //issue_queue.clear();
+      auto [addr, priority] = context_switch_issue_queue.front();
+      bool prefetched = cache->prefetch_line(addr, priority, 0);
+      //filter.update_issue(addr, cache->get_set(addr));
+
+      if (prefetched) {
+        context_switch_issue_queue.pop_front();
+        issued_cs_pf.insert(addr);
+        total_issued_cs_pf++;
+        //issue_queue.clear();
+      }
     }
 
-    //return;
+    return;
   }
 
 //    issue_queue.clear();
