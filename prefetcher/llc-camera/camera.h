@@ -8,6 +8,9 @@
 #include <set>
 #include <fstream>
 #include <deque>
+#include <algorithm>
+#include <iostream>
+#include <limits>
 
 class CACHE;
 
@@ -15,27 +18,22 @@ namespace camera
 {
   class prefetcher
   {
-    /*
-    std::unordered_set<uint64_t> uniq_prefetch_address;
-    std::ofstream L1D_access_file;
-    uint64_t data_size = 0;
-
-    std::deque<reset_misc::access> non_uniq_ip;
-    std::deque<reset_misc::access> non_uniq_data;
-    bool after_cs_ip_recorded = true;
-    bool after_cs_data_recorded = true;
-    bool cs_moment = false;
-    bool after_cs_moment = false;
-    bool previous_can_record = false;
-    std::set<uint64_t> ip_duplicate_check, data_duplicate_check;
+    struct pg{
+      bool valid;
+      uint64_t page_no;
+      std::deque<uint8_t> blk;
+    };
 
     public:
 
-    void initialize_record_file();
-    void duplicate_check(std::deque<reset_misc::access> &non_uniq_dq, std::set<uint64_t> &check_set, uint64_t limit);
-    void record_non_uniq(uint64_t addr, std::deque<reset_misc::access> &non_uniq_dq, std::set<uint64_t> &duplicate_set, uint64_t current_cycle, uint64_t limit);
-    void write_to_file(std::string file_name, std::deque<reset_misc::access> dq, std::string seperator);
-    */
+    std::deque<pg> acc;
+    std::set<uint64_t> cs_pf;
+    std::set<uint64_t> issued_cs_pf;
+    std::deque<uint64_t> cs_q;
+    uint64_t issued;
+
+    void init();
+    void acc_operate(uint64_t addr);
   };
 }
 

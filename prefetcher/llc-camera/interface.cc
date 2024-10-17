@@ -1,42 +1,45 @@
 #include "cache.h"
-#include "oracle_recorder.h"
+#include "camera.h"
 
-//using unique_key = std::pair<CACHE*, uint32_t>;
+using unique_key = std::pair<CACHE*, uint32_t>;
 
-/*
 namespace {
-  std::map<unique_key, oracle_recorder::prefetcher> ORACLE_RECORDER;
+  std::map<unique_key, camera::prefetcher> CAMERA;
 }
-*/
 
 void CACHE::prefetcher_initialize()
 {
-  /*
-  auto &pref = ::ORACLE_RECORDER[{this, cpu}];
+  auto &pref = ::CAMERA[{this, cpu}];
   pref.init();
 
-  std::cout << NAME << "-> Prefetcher Oracle Recorder initialized @ cycle " << current_cycle << "." << std::endl;
-  */
+  std::cout << NAME << "-> Prefetcher LLC Camera initialized @ cycle " << current_cycle << "." << std::endl;
 }
 
 uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
 {
-  //auto &pref = ::ORACLE_RECORDER[{this, cpu}];
-  
-  /*
-  if (!cache_hit) {
+  auto &pref = ::CAMERA[{this, cpu}];
 
-    uint64_t page_no = addr >> 12;
-
-    for(auto var : reset_misc::dq_prefetch_communicate) {
-      if ((var.first >> 12) == page_no) {
-        return metadata_in; 
-      }  
-    }
-    reset_misc::dq_prefetch_communicate.push_back(std::make_pair(((addr >> 6) << 6), true)); 
+  if (type == champsim::to_underlying(access_type::LOAD) || type == champsim::to_underlying(access_type::WRITE))
+  {
+    pref.acc_operate(addr);
   }
-  */
 
+  uint64_t pg_no = addr >> 12;
+
+  for(auto var : pref.cs_pf) 
+  {
+    if ((var >> 12) == pg_no && (var >> 6) != (addr >> 6))
+    {
+      pref.cs_q.push_back(var); 
+    } 
+  }
+
+  for(auto var : pref.cs_q) {
+    pref.cs_pf.erase(var); 
+  }
+  
+  pref.cs_pf.erase((addr >> 6) << 6);
+  
   return metadata_in;
 }
 
@@ -47,43 +50,81 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
 void CACHE::prefetcher_cycle_operate()
 {
-  if (!reset_misc::dq_prefetch_communicate.empty()) {
-   
-    for (size_t i = 0; i < reset_misc::dq_prefetch_communicate.size(); i++) {
+  auto &pref = ::CAMERA[{this, cpu}];
 
-      auto [addr, priority] = reset_misc::dq_prefetch_communicate.front();
-      bool res = prefetch_line(addr, priority, 0); 
-
-      if (res) {
-        reset_misc::dq_prefetch_communicate.pop_front(); 
-      }
-    }
-  }
-  /*
-  auto &pref = ::ORACLE_RECORDER[{this, cpu}];
-
-  if (champsim::operable::context_switch_mode
-      && !champsim::operable::have_cleared_BTB
-      && !champsim::operable::have_cleared_BP
-      && !champsim::operable::have_cleared_prefetcher
-      && champsim::operable::cpu_side_reset_ready) {
-    
-    champsim::operable::context_switch_mode = false;
-    reset_misc::can_record_after_access = true;
-  }
-  else 
+  if (reset_misc::can_record_after_access) 
   {
-    if (!pref.cs_pf.empty()) {
-      bool prefetched = prefetch_line(pref.cs_pf.front(), 1, 0);
+    pref.cs_pf.clear();
+    pref.cs_q.clear();
 
-      if (prefetched) 
+    // Walk the cache to gather prefetches.
+    for (size_t i = 0; i < NUM_SET; i++){
+      
+      for (size_t j = 0; j < 5; j++) {
+      
+        auto begin = std::next(std::begin(champsim::operable::lru_states), i * NUM_WAY);
+        auto end = std::next(begin, NUM_WAY);
+
+        // Find the way whose last use cycle is most distant
+        auto target = std::min_element(begin, end);
+        assert(begin <= target);
+        assert(target < end);
+
+        int index = target - std::begin(champsim::operable::lru_states);
+
+        if (block[index].valid &&
+            block[index].address != 0 &&
+            block[index].asid == (champsim::operable::currently_active_thread_ID - 1)) 
+        {
+          pref.cs_pf.insert((block[index].address >> 6) << 6); 
+        }
+
+        *target = std::numeric_limits<uint64_t>::max();
+      }
+    }
+
+    /*
+    for(auto var : pref.cs_pf) {
+      pref.cs_q.push_back(var); 
+    }
+    */
+
+    pref.acc.clear();
+    pref.issued_cs_pf.clear();
+    reset_misc::can_record_after_access = false; 
+    std::cout << "LLC Camera gathered " << pref.cs_pf.size() << " prefetches." << std::endl;
+  }
+
+  if (!pref.cs_q.empty()) 
+  {
+    auto pq = this->get_pq_occupancy();
+
+    /*
+    for(auto var : pq) {
+      if (pref.cs_q.front() == var.address) {
+        pref.cs_q.pop_front(); 
+      } 
+    }
+    */
+
+    //if(pq[2] <= 20)
+    {
+      bool res = this->prefetch_line(pref.cs_q.front(), true, 0);
+
+      if (res)
       {
-        pref.cs_pf.pop_front(); 
+        pref.issued++;
+        pref.issued_cs_pf.insert(pref.cs_q.front());
+        pref.cs_q.pop_front();
       }
     }
   }
-  */
 }
 
-void CACHE::prefetcher_final_stats() {}
+void CACHE::prefetcher_final_stats() 
+{
+  auto &pref = ::CAMERA[{this, cpu}];
+
+  std::cout << "LLC Camera issued " << pref.issued << " prefetches." << std::endl;
+}
 

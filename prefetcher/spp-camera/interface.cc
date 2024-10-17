@@ -38,7 +38,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     pref.initiate_lookahead(base_addr);
   }
 
-  //if (cache_hit) 
+  if (cache_hit && type != champsim::to_underlying(access_type::TRANSLATION)) 
   {
     pref.page_bitmap.update(base_addr);
   }
@@ -52,7 +52,13 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   std::pair<uint64_t, bool> demand_itself = std::make_pair(0, false);
 
   for(auto var : pref.available_prefetches) {
-    if (((var.first >> 12) == page_addr) && (var.first >> 6 != base_addr >> 6)) {
+
+    uint64_t var_blk_no = (var.first >> 6) & 0x3F;
+    uint64_t blk_no = (base_addr >> 6) & 0x3F;
+
+    if (((var.first >> 12) == page_addr) && 
+        var_blk_no != blk_no){ //&&
+        //((var_blk_no >= (blk_no - 16)) && (var_blk_no <= (blk_no + 16))))  {
       pref.context_switch_issue_queue.push_back(var); 
     } 
     else if (((var.first >> 12) == page_addr) && ((var.first >> 6) == (base_addr >> 6))) {
@@ -142,6 +148,7 @@ void CACHE::prefetcher_cycle_operate()
           champsim::operable::emptied_cache.clear();
           pref.issued_cs_pf.clear();
           //pref.clear_states();
+          reset_misc::can_record_after_access = true;
           std::cout << "SPP states not cleared." << std::endl;
           std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
         }
