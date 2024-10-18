@@ -34,10 +34,11 @@ void CACHE::update_replacement_state(uint32_t triggering_cpu, uint32_t set, uint
 
   // WL 
   // Update the communication channel to be used by the LLC prefetcher.
+  /*
   if (!NAME.compare(champsim::operable::LLC_name)) {
-    champsim::operable::lru_states.clear();
-    copy(::last_used_cycles[this].begin(), ::last_used_cycles[this].end(), std::back_inserter(champsim::operable::lru_states)); 
+    champsim::operable::lru_states[set * NUM_WAY + way] = current_cycle;
   }
+  */
   // WL 
 }
 
