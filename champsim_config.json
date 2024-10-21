@@ -117,14 +117,14 @@
         "ways": 12,
         "rq_size": 32,
         "wq_size": 32,
-        "pq_size": 10,
+        "pq_size": 0,
         "mshr_size": 16,
         "latency": 8,
         "max_tag_check": 1,
         "max_fill": 1,
         "prefetch_as_load": false,
         "prefetch_activate": "TRANSLATION",
-        "prefetcher": "stlb-pf"
+        "prefetcher": "no"
     },
 
 	"PTW": {
