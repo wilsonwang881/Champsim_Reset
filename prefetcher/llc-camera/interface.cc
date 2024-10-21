@@ -109,7 +109,7 @@ void CACHE::prefetcher_cycle_operate()
 
     //if(pq[2] <= 20)
     {
-      bool res = this->prefetch_line(pref.cs_q.front(), true, 0);
+      bool res = this->prefetch_line(pref.cs_q.front(), false, 0);
 
       if (res)
       {

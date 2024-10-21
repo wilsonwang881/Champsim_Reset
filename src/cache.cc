@@ -891,6 +891,26 @@ void CACHE::reset_components()
 
   if (SIMULATE_WITH_PREFETCHER_RESET)
   {
+    if (have_cleared_prefetcher && champsim::operable::cpu_side_reset_ready && !STLB_name.compare(NAME)) {
+      
+      for(auto &var : block) {
+        var.asid = champsim::operable::currently_active_thread_ID; 
+      }
+    }
+
+    if (have_cleared_prefetcher && champsim::operable::cpu_side_reset_ready && !ITLB_name.compare(NAME)) {
+      
+      for(auto &var : block) {
+        var.asid = champsim::operable::currently_active_thread_ID; 
+      }
+    }
+
+    if (have_cleared_prefetcher && champsim::operable::cpu_side_reset_ready && !DTLB_name.compare(NAME)) {
+      
+      for(auto &var : block) {
+        var.asid = champsim::operable::currently_active_thread_ID; 
+      }
+    }
     /*
     if (have_cleared_prefetcher && !L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready && MSHR.size() == 0 && std::find(champsim::operable::emptied_cache.begin(), champsim::operable::emptied_cache.end(), NAME) == champsim::operable::emptied_cache.end())
     {
