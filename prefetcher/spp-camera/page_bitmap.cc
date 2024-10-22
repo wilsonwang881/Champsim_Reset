@@ -1,4 +1,6 @@
 #include "page_bitmap.h"
+//#include "spp.h"
+//#include "page_interface.h"
 
 void spp::SPP_PAGE_BITMAP::init()
 {
@@ -90,7 +92,7 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr)
   // Allocate new entry for the new page with 2 blocks.
   size_t block_2 = 0;
 
-  for(auto &var : filter)
+  for(auto &var : filter) //????
   {
     if (var.valid &&
         var.page_no == page) 
@@ -265,7 +267,10 @@ std::vector<uint64_t> spp::SPP_PAGE_BITMAP::gather_pf()
       uint64_t addr = (var.page_no << 12) + (var.block_no << 6);
       cs_pf.push_back(addr);
     }
+      
+      //cs_pf.push_back(addr);
   }
+  //}
 
   //cs_pf.clear();
 

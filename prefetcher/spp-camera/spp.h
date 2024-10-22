@@ -6,6 +6,7 @@
 #include "patterntable.h"
 #include "filter.h"
 #include "page_bitmap.h" // WL
+#include "page_interface.h"//filter
 
 #include <cstdlib>
 #include <deque>
@@ -37,7 +38,7 @@ namespace spp {
     SPP_PREFETCH_FILTER filter;
     std::deque<std::pair<uint64_t, bool>> issue_queue;
     std::deque<std::pair<uint64_t, bool>> context_switch_issue_queue; // WL
-
+    
     struct pfqueue_entry_t
     {
       uint32_t sig = 0;
@@ -59,6 +60,9 @@ namespace spp {
     public:
 
     SPP_PAGE_BITMAP page_bitmap; // WL
+    PREFETCH_FILTER FILTER;
+    //PERCEPTRON PERC;
+    uint64_t get_hash(uint64_t key);
                                  //
     bool warmup = true;
     

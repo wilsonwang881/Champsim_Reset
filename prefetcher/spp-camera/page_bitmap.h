@@ -1,3 +1,4 @@
+#ifndef _SPP_PAGE_BITMAP
 #include <cstdint>
 #include <cstddef>
 #include <map>
@@ -10,6 +11,7 @@
 
 namespace spp 
 {
+
   class SPP_PAGE_BITMAP 
   {
     constexpr static std::size_t TABLE_SIZE = 1024;
@@ -27,6 +29,7 @@ namespace spp
       bool bitmap[BITMAP_SIZE];
       bool bitmap_store[BITMAP_SIZE];
       uint16_t lru_bits;
+      uint64_t perc_sum;
       bool aft_cs_acc;
     };
 
@@ -74,4 +77,4 @@ namespace spp
     void counter_update(uint64_t addr);
   };
 }
-
+#endif

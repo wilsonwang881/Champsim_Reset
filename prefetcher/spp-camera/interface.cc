@@ -1,5 +1,6 @@
 #include "cache.h"
 #include "spp.h"
+//#include "page_interface.h"
 
 #include <map>
 
@@ -41,6 +42,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   if (cache_hit) 
   {
     pref.page_bitmap.update(base_addr);
+    //pref.FILTER.check(base_addr, 0, spp::PREFETCH_FILTER::L2C_DEMAND, 0);
+    
   }
 
   return metadata_in;
@@ -53,7 +56,8 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   uint32_t pkt_pfed = metadata_in & 0x1;
 
   auto &pref = ::SPP[{this, cpu}];
-
+  //pref.FILTER.check(evicted_addr, 0, spp::PREFETCH_FILTER::L2C_EVICT, 0);
+  
   if (blk_asid_match) 
   {
     /*

@@ -4,7 +4,7 @@
 #include <array>
 #include <iostream>
 #include <map>
-#include <numeric>
+#include <numeric> 
 
 using unique_key = std::pair<CACHE*, uint32_t>;
 
@@ -267,7 +267,23 @@ void spp::prefetcher::clear_states()
   active_lookahead.reset();
   //std::cout << "Cleared signature_table, bootstrap_table, pattern_table, filter, issue_queue, active_lookahead" << std::endl;
 }
+uint64_t spp::prefetcher::get_hash(uint64_t key)
+{
+  // Robert Jenkins' 32 bit mix function
+  key += (key << 12);
+  key ^= (key >> 22);
+  key += (key << 4);
+  key ^= (key >> 9);
+  key += (key << 10);
+  key ^= (key >> 2);
+  key += (key << 7);
+  key ^= (key >> 12);
 
+  // Knuth's multiplicative method
+  key = (key >> 3) * 2654435761;
+
+  return key;
+}
 // WL
 void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 {
@@ -311,8 +327,28 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 
   //cache->clear_internal_PQ();
   std::vector<uint64_t> tmpp_pf = page_bitmap.gather_pf();
+  //std::cout<<"The tmpp front is"<<tmpp_pf.front()<<std::endl;
+  FILTER.train_neg = 1;
+
   issue_queue.clear();
   for(auto var : tmpp_pf) {
+    /*
+    int32_t perc_sum= FILTER.perc_predict(var);
+
+    std::cout<<"The sum is"<<perc_sum<<std::endl;
+      if(perc_sum >= PERC_THRESHOLD_LO)
+      {
+        context_switch_issue_queue.push_back(std::make_pair(var, true)); 
+        if(perc_sum>=PERC_THRESHOLD_HI)
+        {
+          FILTER.add_to_filter(var,var,spp::PREFETCH_FILTER::SPP_L2C_PREFETCH,perc_sum);
+        }
+      }
+      if(perc_sum<PERC_THRESHOLD_HI)
+      {
+        FILTER.check(var,var,spp::PREFETCH_FILTER::SPP_PERC_REJECT,perc_sum);
+      }
+    */
     context_switch_issue_queue.push_back(std::make_pair(var, true)); 
   }
   filter.clear();
