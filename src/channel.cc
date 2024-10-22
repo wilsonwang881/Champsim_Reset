@@ -178,7 +178,7 @@ bool champsim::channel::add_pq(const request_type& packet)
 {
   sim_stats.PQ_ACCESS++;
 
-  //std::cout << "Attempt to do_add_queue in add_pq" << std::endl; // WL 
+  //std::cout << "Attempt to do_add_queue in add_pq PQ_SIZE = " << PQ_SIZE << std::endl; // WL 
 
   auto fwd_pkt = packet;
   auto result = do_add_queue(PQ, PQ_SIZE, fwd_pkt);

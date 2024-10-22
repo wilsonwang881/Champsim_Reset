@@ -91,7 +91,7 @@
         "ways": 4,
         "rq_size": 16,
         "wq_size": 16,
-        "pq_size": 0,
+        "pq_size": 10,
         "mshr_size": 8,
         "latency": 1,
         "max_tag_check": 2,
@@ -111,8 +111,8 @@
         "max_fill": 2,
         "prefetch_as_load": false,
         "virtual_prefetch": false,
-        "prefetch_activate": "LOAD, TRANSLATION",
-        "prefetcher": "stlb-pf"
+        "prefetch_activate": "LOAD",
+        "prefetcher": "no"
 
     },
 
@@ -126,10 +126,10 @@
         "latency": 8,
         "max_tag_check": 1,
         "max_fill": 1,
-        "prefetch_as_load": false,
+        "prefetch_as_load": true,
         "virtual_prefetch": false,
-        "prefetch_activate": "LOAD, TRANSLATION",
-        "prefetcher": "no"
+        "prefetch_activate": "LOAD",
+        "prefetcher": "stlb-pf"
     },
 
 	"PTW": {
@@ -142,6 +142,7 @@
 		"pscl2_set": 4,
 		"pscl2_way": 8,
 		"rq_size": 16,
+    "pq_size": 10,
 		"mshr_size": 5,
 		"max_read": 2,
 		"max_write": 2

@@ -18,7 +18,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 
   uint64_t page_num = addr >> 12;
 
-  if (!cache_hit) 
+  if (cache_hit) 
   {
     bool found = false;
 
@@ -34,7 +34,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
     if (!found) 
       pref.translations.push_back(page_num);
 
-    if (pref.translations.size() > 35) 
+    if (pref.translations.size() > 1024) 
       pref.translations.pop_front();
     
   }
