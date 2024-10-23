@@ -109,7 +109,7 @@
         "latency": 1,
         "max_tag_check": 2,
         "max_fill": 2,
-        "prefetch_as_load": false,
+        "prefetch_as_load": true,
         "virtual_prefetch": false,
         "prefetch_activate": "LOAD",
         "prefetcher": "no"

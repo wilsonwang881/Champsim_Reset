@@ -17,6 +17,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   auto &pref = ::STLB_PF[{this, cpu}];
 
   uint64_t page_num = addr >> 12;
+  uint64_t mega_page_num = addr >> 24;
 
   if (cache_hit) 
   {
@@ -36,7 +37,32 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 
     if (pref.translations.size() > 1024) 
       pref.translations.pop_front();
-    
+  }
+
+  if (!cache_hit)
+  {
+    std::vector<uint64_t> tmpp;
+
+    for(auto var : pref.available_pf) 
+    {
+      if ((var >> 24) == mega_page_num) 
+        tmpp.push_back(var);  
+    } 
+
+    std::vector<uint64_t> new_pf_q;
+
+    for(auto var : tmpp)
+    {
+       pref.available_pf.erase(var);
+       new_pf_q.push_back(var);
+    }
+
+    for(auto var : pref.cs_q) {
+      if (std::find(new_pf_q.begin(), new_pf_q.end(), var) == new_pf_q.end()) {
+        new_pf_q.push_back(var); 
+      } 
+    }
+
   }
 
   return metadata_in;
@@ -56,12 +82,22 @@ void CACHE::prefetcher_cycle_operate()
   if (reset_misc::can_record_after_access) 
   {
     pref.cs_q.clear();
+    pref.available_pf.clear();
 
     for(int i = pref.translations.size() - 1; i >= 0; i--) {
       pref.cs_q.push_back(pref.translations[i] << 12); 
+      pref.available_pf.insert(pref.translations[i] << 12);
     }
 
     pref.translations.clear();
+
+    /*
+    for(auto var : pref.available_pf) {
+      std::cout << std::hex << var << std::endl; 
+    }
+
+    std::cout << std::dec;
+    */
 
     reset_misc::can_record_after_access = false;
 
@@ -74,6 +110,7 @@ void CACHE::prefetcher_cycle_operate()
     
     if (pf_res) 
     {
+      pref.available_pf.erase(pref.cs_q.front());
       pref.cs_q.pop_front(); 
     }
   }

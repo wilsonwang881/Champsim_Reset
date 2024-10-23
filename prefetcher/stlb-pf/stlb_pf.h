@@ -41,6 +41,8 @@ namespace stlb_pf
     std::set<uint64_t> pf_blks;
     std::set<uint64_t> hit_blks;
 
+    std::set<uint64_t> available_pf;
+
     // Context switch prefetch queue.
     std::deque<uint64_t> translations; 
     std::deque<uint64_t> cs_q;
