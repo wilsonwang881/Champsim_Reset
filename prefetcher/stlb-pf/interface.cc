@@ -17,7 +17,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   auto &pref = ::STLB_PF[{this, cpu}];
 
   uint64_t page_num = addr >> 12;
-  uint64_t mega_page_num = addr >> 24;
+  //uint64_t mega_page_num = addr >> 30;
 
   if (cache_hit) 
   {
@@ -39,15 +39,22 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
       pref.translations.pop_front();
   }
 
+   /*
   if (!cache_hit)
   {
     std::vector<uint64_t> tmpp;
 
     for(auto var : pref.available_pf) 
     {
-      if ((var >> 24) == mega_page_num) 
-        tmpp.push_back(var);  
+      if ((var >> 30) == mega_page_num) 
+        pref.cs_q.push_back(var);  
     } 
+
+
+    for(auto var : pref.cs_q) 
+    {
+      pref.available_pf.erase(var);
+    }
 
     std::vector<uint64_t> new_pf_q;
 
@@ -64,6 +71,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
     }
 
   }
+  */
 
   return metadata_in;
 }
