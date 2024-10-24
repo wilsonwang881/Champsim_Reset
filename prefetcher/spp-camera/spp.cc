@@ -300,6 +300,14 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 
   context_switch_issue_queue.clear();
 
+  for(auto var : reset_misc::dq_prefetch_communicate) {
+    context_switch_issue_queue.push_back(var); 
+  }
+
+  std::cout << "Gathered " << context_switch_issue_queue.size() << " prefetches via STLB prefetcher." << std::endl;
+
+  reset_misc::dq_prefetch_communicate.clear();
+
   filter.clear();
   std::cout << "SPP issue queue and filter cleared." << std::endl;
 

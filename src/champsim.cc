@@ -79,7 +79,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
     next_reset_moment = cpu_0.current_cycle + 4000000;
   }
 
-  std::cout << "Resetting start at cycle " << next_reset_moment << " number of resets = " << reset_ins_count.size() << std::endl;
+  std::cout << "Resetting start at cycle " << next_reset_moment << std::endl;
   // WL
 
   // Perform phase

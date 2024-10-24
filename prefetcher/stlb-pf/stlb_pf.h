@@ -1,7 +1,6 @@
 #ifndef STLB_PF_H 
 #define STLB_PF_H
 
-
 #include <cstdint>
 #include <cstddef>
 #include <map>
@@ -21,7 +20,7 @@ namespace stlb_pf
 {
   class prefetcher
   {
-    static const uint64_t CACHED_TRANSLATIONS;
+    constexpr static std::size_t DQ_SIZE = 1024;
 
     struct translation
     {
@@ -45,7 +44,10 @@ namespace stlb_pf
     // Context switch prefetch queue.
     std::deque<uint64_t> translations; 
     std::deque<uint64_t> cs_q;
-
+    
+    void update(uint64_t addr);
+    void gather_pf();
+    void issue(CACHE* cache);
   };
 }
 
