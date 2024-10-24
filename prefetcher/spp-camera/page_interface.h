@@ -34,8 +34,8 @@ namespace spp
 #define PERC_ENTRIES 4096 //Upto 12-bit addressing in hashed perceptron
 #define PERC_FEATURES 4 //Keep increasing based on new features
 #define PERC_COUNTER_MAX 15 //-16 to +15: 5 bits counter 
-#define PERC_THRESHOLD_HI  -5
-#define PERC_THRESHOLD_LO  -15
+#define PERC_THRESHOLD_HI  -25
+#define PERC_THRESHOLD_LO  -30
 #define POS_UPDT_THRESHOLD  90
 #define NEG_UPDT_THRESHOLD -80
 

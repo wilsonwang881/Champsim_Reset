@@ -1,23 +1,41 @@
 #include "cache.h"
 #include "oracle_recorder.h"
 
-using unique_key = std::pair<CACHE*, uint32_t>;
+//using unique_key = std::pair<CACHE*, uint32_t>;
 
+/*
 namespace {
   std::map<unique_key, oracle_recorder::prefetcher> ORACLE_RECORDER;
 }
+*/
 
 void CACHE::prefetcher_initialize()
 {
+  /*
   auto &pref = ::ORACLE_RECORDER[{this, cpu}];
   pref.init();
 
   std::cout << NAME << "-> Prefetcher Oracle Recorder initialized @ cycle " << current_cycle << "." << std::endl;
+  */
 }
 
 uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
 {
-  auto &pref = ::ORACLE_RECORDER[{this, cpu}];
+  //auto &pref = ::ORACLE_RECORDER[{this, cpu}];
+  
+  /*
+  if (!cache_hit) {
+
+    uint64_t page_no = addr >> 12;
+
+    for(auto var : reset_misc::dq_prefetch_communicate) {
+      if ((var.first >> 12) == page_no) {
+        return metadata_in; 
+      }  
+    }
+    reset_misc::dq_prefetch_communicate.push_back(std::make_pair(((addr >> 6) << 6), true)); 
+  }
+  */
 
   return metadata_in;
 }
@@ -29,6 +47,19 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
 void CACHE::prefetcher_cycle_operate()
 {
+  if (!reset_misc::dq_prefetch_communicate.empty()) {
+   
+    for (size_t i = 0; i < reset_misc::dq_prefetch_communicate.size(); i++) {
+
+      auto [addr, priority] = reset_misc::dq_prefetch_communicate.front();
+      bool res = prefetch_line(addr, priority, 0); 
+
+      if (res) {
+        reset_misc::dq_prefetch_communicate.pop_front(); 
+      }
+    }
+  }
+  /*
   auto &pref = ::ORACLE_RECORDER[{this, cpu}];
 
   if (champsim::operable::context_switch_mode
@@ -51,6 +82,7 @@ void CACHE::prefetcher_cycle_operate()
       }
     }
   }
+  */
 }
 
 void CACHE::prefetcher_final_stats() {}

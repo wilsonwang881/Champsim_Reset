@@ -45,50 +45,25 @@ void spp::prefetcher::issue(CACHE* cache)
   //if (!reset_misc::dq_prefetch_communicate.empty()) {
   if (!context_switch_queue_empty()) {
 
-    auto [addr, priority] = context_switch_issue_queue.front();
-    bool prefetched = cache->prefetch_line(addr, priority, 0);
+    auto q_occupancy = cache->get_pq_occupancy();
 
-    if (prefetched) {
-      context_switch_issue_queue.pop_front();
+    if (q_occupancy[2] <= 8) {
+
+      auto [addr, priority] = context_switch_issue_queue.front();
+      bool prefetched = cache->prefetch_line(addr, priority, 0);
       //filter.update_issue(addr, cache->get_set(addr));
-      context_switch_issued++;
+
+      if (prefetched) {
+        context_switch_issue_queue.pop_front();
+        issued_cs_pf.insert(addr);
+        total_issued_cs_pf++;
+        //issue_queue.clear();
+      }
     }
 
     return;
   }
-    /*
-    if (waited == 1) {
-      auto [addr, priority] = reset_misc::dq_prefetch_communicate.front();
 
-      // If this fails, the queue was full.
-      bool prefetched = cache->prefetch_line(addr, priority, 0);
-      if (prefetched) {
-        reset_misc::dq_prefetch_communicate.pop_front();
-        filter.update_issue(addr, cache->get_set(addr));
-        context_switch_issued++;
-
-        retry_attempt = 0;
-
-        //std::cout << "L2C prefetched " << (unsigned)addr << " at cycle " << cache->current_cycle << std::endl;
-
-        if (context_switch_issued % 500 == 0) {
-          std::cout << "L2C Have prefetched " << (unsigned)context_switch_issued << " blocks" << std::endl; 
-        }
-      }
-      else {
-        if (retry_attempt >= retry_limit) {
-          reset_misc::dq_prefetch_communicate.pop_front();
-          retry_attempt = 0;
-          context_switch_issued++;
-        } 
-      }
-      waited = 0;
-    }
-    else {
-      waited++;
-    }
-
-    */
 //    issue_queue.clear();
 //    return;
   //}
@@ -325,20 +300,25 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   }
   */
 
-  //cache->clear_internal_PQ();
-  std::vector<uint64_t> tmpp_pf = page_bitmap.gather_pf();
-  //std::cout<<"The tmpp front is"<<tmpp_pf.front()<<std::endl;
-  FILTER.train_neg = 1;
+   
+  std::vector<std::pair<uint64_t, bool>> tmpp_pf = page_bitmap.gather_pf();
 
   issue_queue.clear();
-  for(auto var : tmpp_pf) {
-    /*
+  available_prefetches.clear();
+  FILTER.train_neg = 1;
+
+  for (auto el:tmpp_pf) 
+  {
+    int64_t var=el.first;
+        
     int32_t perc_sum= FILTER.perc_predict(var);
 
-    std::cout<<"The sum is"<<perc_sum<<std::endl;
+    //std::cout<<"The sum is"<<perc_sum<<std::endl;
       if(perc_sum >= PERC_THRESHOLD_LO)
       {
-        context_switch_issue_queue.push_back(std::make_pair(var, true)); 
+        std::cout<<"The sum is"<<perc_sum<<std::endl;
+        context_switch_issue_queue.push_back(std::make_pair(var, true));
+        available_prefetches.insert(el); 
         if(perc_sum>=PERC_THRESHOLD_HI)
         {
           FILTER.add_to_filter(var,var,spp::PREFETCH_FILTER::SPP_L2C_PREFETCH,perc_sum);
@@ -348,14 +328,17 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
       {
         FILTER.check(var,var,spp::PREFETCH_FILTER::SPP_PERC_REJECT,perc_sum);
       }
-    */
-    context_switch_issue_queue.push_back(std::make_pair(var, true)); 
+    
+      //context_switch_issue_queue.push_back(tmpp_pf[i]); 
+      //available_prefetches.insert(tmpp_pf[i]);
   }
+
+  context_switch_issue_queue.clear();
+
   filter.clear();
   std::cout << "SPP issue queue and filter cleared." << std::endl;
 
-  return;
-  std::cout << "Filter cleared" << std::endl;
+  //return;
 
   std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature(1.0 * filter.pf_useful / filter.pf_issued);
 
@@ -436,10 +419,10 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   context_switch_issue_queue.clear();
 
   for(auto var : tmpp_issue_queue) {
-    context_switch_issue_queue.push_back(var); 
+    available_prefetches.insert(var); 
   }
 
-  std::cout << "L2C SPP Gathered " << context_switch_issue_queue.size() << " prefetches." << std::endl;
+  std::cout << "L2C SPP Gathered " << tmpp_issue_queue.size() << " prefetches." << std::endl;
 }
 
 // WL 

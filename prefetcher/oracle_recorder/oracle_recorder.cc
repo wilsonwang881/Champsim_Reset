@@ -1,3 +1,4 @@
+/*
 #include "oracle_recorder.h"
 
 void oracle_recorder::prefetcher::initialize_record_file()
@@ -227,4 +228,4 @@ void CACHE::prefetcher_cycle_operate()
 
 void CACHE::prefetcher_final_stats() {}
 
-
+*/

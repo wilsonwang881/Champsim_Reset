@@ -65,7 +65,7 @@
         "max_tag_check": 2,
         "max_fill": 2,
         "prefetch_as_load": false,
-        "virtual_prefetch": false,
+        "virtual_prefetch": true,
         "prefetch_activate": "LOAD,PREFETCH",
         "prefetcher": "no"
     },
@@ -81,7 +81,7 @@
         "max_tag_check": 1,
         "max_fill": 1,
         "prefetch_as_load": false,
-        "virtual_prefetch": true,
+        "virtual_prefetch": false,
         "prefetch_activate": "LOAD,PREFETCH",
         "prefetcher": "spp-camera"
     },
@@ -91,7 +91,7 @@
         "ways": 4,
         "rq_size": 16,
         "wq_size": 16,
-        "pq_size": 0,
+        "pq_size": 10,
         "mshr_size": 8,
         "latency": 1,
         "max_tag_check": 2,
@@ -104,12 +104,16 @@
         "ways": 4,
         "rq_size": 16,
         "wq_size": 16,
-        "pq_size": 0,
+        "pq_size": 10,
         "mshr_size": 8,
         "latency": 1,
         "max_tag_check": 2,
         "max_fill": 2,
-        "prefetch_as_load": false
+        "prefetch_as_load": false,
+        "virtual_prefetch": false,
+        "prefetch_activate": "LOAD",
+        "prefetcher": "no"
+
     },
 
     "STLB": {
@@ -117,12 +121,15 @@
         "ways": 12,
         "rq_size": 32,
         "wq_size": 32,
-        "pq_size": 0,
+        "pq_size": 10,
         "mshr_size": 16,
         "latency": 8,
         "max_tag_check": 1,
         "max_fill": 1,
-        "prefetch_as_load": false
+        "prefetch_as_load": true,
+        "virtual_prefetch": false,
+        "prefetch_activate": "LOAD",
+        "prefetcher": "no"
     },
 
 	"PTW": {
@@ -135,6 +142,7 @@
 		"pscl2_set": 4,
 		"pscl2_way": 8,
 		"rq_size": 16,
+    "pq_size": 10,
 		"mshr_size": 5,
 		"max_read": 2,
 		"max_write": 2

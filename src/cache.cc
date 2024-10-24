@@ -545,7 +545,7 @@ int CACHE::prefetch_line(uint64_t pf_addr, bool fill_this_level, uint32_t prefet
   pf_packet.v_address = virtual_prefetch ? pf_addr : 0;
   pf_packet.is_translated = !virtual_prefetch;
   pf_packet.asid[0] = champsim::operable::currently_active_thread_ID; // WL: added ASID
-  pf_packet.instr_id = 0xFFFFFFFFFFFFFFF; // WL: add a different instr_id
+  //pf_packet.instr_id = 0xFFFFFFFFFFFFFFF; // WL: add a different instr_id
 
   internal_PQ.emplace_back(pf_packet, true, !fill_this_level);
   ++sim_stats.pf_issued;
@@ -891,9 +891,36 @@ void CACHE::reset_components()
 
   if (SIMULATE_WITH_PREFETCHER_RESET)
   {
+    /*
+    if (have_cleared_prefetcher && champsim::operable::cpu_side_reset_ready && !STLB_name.compare(NAME)) {
+      
+      for(auto &var : block) {
+        if (var.valid) 
+          var.asid = champsim::operable::currently_active_thread_ID; 
+      }
+    }
+
+    if (have_cleared_prefetcher && champsim::operable::cpu_side_reset_ready && !ITLB_name.compare(NAME)) {
+      
+      for(auto &var : block) {
+        if (var.valid) 
+          var.asid = champsim::operable::currently_active_thread_ID; 
+      }
+    }
+
+    if (have_cleared_prefetcher && champsim::operable::cpu_side_reset_ready && !DTLB_name.compare(NAME)) {
+      
+      for(auto &var : block) {
+        if (var.valid) 
+          var.asid = champsim::operable::currently_active_thread_ID; 
+      }
+    }
+    */ 
+
+    /*
     if (have_cleared_prefetcher && !L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready && MSHR.size() == 0 && std::find(champsim::operable::emptied_cache.begin(), champsim::operable::emptied_cache.end(), NAME) == champsim::operable::emptied_cache.end())
     {
-      if (champsim::operable::cache_clear_counter == 6) {
+      if (champsim::operable::cache_clear_counter >= 5) {
         have_cleared_prefetcher = false;
       
         std::cout << "L2C prefetcher not cleared." << std::endl;
@@ -902,10 +929,22 @@ void CACHE::reset_components()
         champsim::operable::cache_clear_counter++;
       }
     }
-    if (have_cleared_prefetcher && L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready && MSHR.size() == 0 && std::find(champsim::operable::emptied_cache.begin(), champsim::operable::emptied_cache.end(), NAME) == champsim::operable::emptied_cache.end()) {
+    if (have_cleared_prefetcher && L2C_name.compare(NAME) && champsim::operable::cpu_side_reset_ready && MSHR.size() == 0 && std::find(champsim::operable::emptied_cache.begin(), champsim::operable::emptied_cache.end(), NAME) == champsim::operable::emptied_cache.end() && STLB_name.compare(NAME)) {
       clear_internal_PQ(); 
       champsim::operable::cache_clear_counter++;
       champsim::operable::emptied_cache.push_back(NAME);
+    }
+    */
+
+    if (have_cleared_prefetcher && champsim::operable::cpu_side_reset_ready && std::find(champsim::operable::emptied_cache.begin(), champsim::operable::emptied_cache.end(), NAME) == champsim::operable::emptied_cache.end()) //&& MSHR.size() == 0 
+    {
+      clear_internal_PQ();
+      champsim::operable::cache_clear_counter++;
+      champsim::operable::emptied_cache.push_back(NAME);
+
+      if (champsim::operable::emptied_cache.size() == 7) {
+        have_cleared_prefetcher = false; 
+      }
     }
   }
 }
