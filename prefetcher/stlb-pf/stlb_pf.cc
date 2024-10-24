@@ -28,14 +28,18 @@ void stlb_pf::prefetcher::update(uint64_t addr)
     translations.pop_front();
 }
 
+void stlb_pf::prefetcher::evict(uint64_t addr)
+{
+  uint64_t page_num = addr >> 12;
+
+}
+
 void stlb_pf::prefetcher::gather_pf()
 {
   cs_q.clear();
-  available_pf.clear();
 
   for(int i = translations.size() - 1; i >= 0; i--) {
     cs_q.push_back(translations[i] << 12); 
-    available_pf.insert(translations[i] << 12);
   }
 }
 
@@ -44,6 +48,28 @@ void stlb_pf::prefetcher::issue(CACHE* cache)
   bool pf_res = cache->prefetch_line(cs_q.front(), true, 0); 
   
   if (pf_res) 
+  {
+    pf_blks.insert(cs_q.front());
     cs_q.pop_front(); 
+  }
+}
+
+void stlb_pf::prefetcher::check_hit(uint64_t addr)
+{
+  addr = addr & 0xFFF;
+
+  if (pf_blks.find(addr) != pf_blks.end())
+  {
+    std::cout << "Hit" << std::endl;
+    hit_blks.insert(addr); 
+  }
+}
+
+void stlb_pf::prefetcher::update_pf_stats()
+{
+  pf_issued += pf_blks.size();
+  pf_blks.clear();
+  pf_hit += hit_blks.size();
+  hit_blks.clear();
 }
 

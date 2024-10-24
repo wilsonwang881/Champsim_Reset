@@ -22,32 +22,23 @@ namespace stlb_pf
   {
     constexpr static std::size_t DQ_SIZE = 1024;
 
-    struct translation
-    {
-      bool valid;
-      uint64_t page_no;
-      uint8_t block_no;
-      uint8_t lru_bits;
-    };
-
     public:
 
-    int pf_count = 0;
-    int pf_useful = 0;
-    uint64_t threshold_cycle = 0;
-
+    uint64_t pf_issued = 0;
+    uint64_t pf_hit = 0;
     std::set<uint64_t> pf_blks;
     std::set<uint64_t> hit_blks;
-
-    std::set<uint64_t> available_pf;
 
     // Context switch prefetch queue.
     std::deque<uint64_t> translations; 
     std::deque<uint64_t> cs_q;
-    
+
     void update(uint64_t addr);
+    void evict(uint64_t addr);
     void gather_pf();
     void issue(CACHE* cache);
+    void check_hit(uint64_t addr);
+    void update_pf_stats();
   };
 }
 

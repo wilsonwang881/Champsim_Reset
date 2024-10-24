@@ -45,7 +45,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   }
   */
 
-  if (cache_hit && type != champsim::to_underlying(access_type::TRANSLATION)) 
+  if (cache_hit) 
   {
     pref.page_bitmap.update(base_addr);
   }
@@ -156,7 +156,6 @@ void CACHE::prefetcher_cycle_operate()
           pref.issued_cs_pf.clear();
           //pref.clear_states();
           reset_misc::can_record_after_access = true;
-          reset_misc::can_record_after_access_1 = true;
           std::cout << "SPP states not cleared." << std::endl;
           std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
         }

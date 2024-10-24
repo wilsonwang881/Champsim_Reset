@@ -19,6 +19,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   if (cache_hit) 
     pref.update(addr);
 
+  pref.check_hit(addr);
+
   return metadata_in;
 }
 
@@ -36,6 +38,7 @@ void CACHE::prefetcher_cycle_operate()
   if (reset_misc::can_record_after_access) 
   {
     pref.gather_pf();
+    pref.update_pf_stats();
     reset_misc::can_record_after_access = false;
     std::cout << NAME << " STLB Prefetcher gathered " << pref.cs_q.size() << " prefetches." << std::endl;
   }
@@ -44,4 +47,9 @@ void CACHE::prefetcher_cycle_operate()
     pref.issue(this);
 }
 
-void CACHE::prefetcher_final_stats() {}
+void CACHE::prefetcher_final_stats() 
+{
+  auto &pref = ::STLB_PF[{this, cpu}];
+
+  std::cout << "STLB prefetcher stats: " << pref.pf_hit << " / " << pref.pf_issued << std::endl;
+}

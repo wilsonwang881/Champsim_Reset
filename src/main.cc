@@ -96,7 +96,6 @@ namespace reset_misc {
   std::deque<addr_occr> dq_after_knn;
   std::deque<std::pair<uint64_t, bool>> dq_prefetch_communicate;
   bool can_record_after_access = false;
-  bool can_record_after_access_1 = false;
 }
 // WL
 
