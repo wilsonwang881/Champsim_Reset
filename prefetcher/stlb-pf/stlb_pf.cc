@@ -32,15 +32,22 @@ void stlb_pf::prefetcher::evict(uint64_t addr)
 {
   uint64_t page_num = addr >> 12;
 
+  auto evict_pos = std::find(translations.begin(), translations.end(), page_num);
+
+  if (evict_pos != translations.end())
+    translations.erase(evict_pos);
 }
 
 void stlb_pf::prefetcher::gather_pf()
 {
   cs_q.clear();
+  pf_blks.clear();
+  hit_blks.clear();
 
-  for(int i = translations.size() - 1; i >= 0; i--) {
+  for(int i = translations.size() - 1; i >= 0; i--)
     cs_q.push_back(translations[i] << 12); 
-  }
+
+  translations.clear();
 }
 
 void stlb_pf::prefetcher::issue(CACHE* cache)
@@ -56,20 +63,15 @@ void stlb_pf::prefetcher::issue(CACHE* cache)
 
 void stlb_pf::prefetcher::check_hit(uint64_t addr)
 {
-  addr = addr & 0xFFF;
+  uint64_t page_no = (addr >> 12) << 12;
 
-  if (pf_blks.find(addr) != pf_blks.end())
-  {
-    std::cout << "Hit" << std::endl;
+  if (pf_blks.find(page_no) != pf_blks.end())
     hit_blks.insert(addr); 
-  }
 }
 
 void stlb_pf::prefetcher::update_pf_stats()
 {
   pf_issued += pf_blks.size();
-  pf_blks.clear();
   pf_hit += hit_blks.size();
-  hit_blks.clear();
 }
 

@@ -26,7 +26,9 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 
 uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
 {
-  //auto &pref = ::STLB_PF[{this, cpu}];
+  auto &pref = ::STLB_PF[{this, cpu}];
+
+  pref.evict(evicted_addr);
 
   return metadata_in;
 }
@@ -37,8 +39,8 @@ void CACHE::prefetcher_cycle_operate()
 
   if (reset_misc::can_record_after_access) 
   {
-    pref.gather_pf();
     pref.update_pf_stats();
+    pref.gather_pf();
     reset_misc::can_record_after_access = false;
     std::cout << NAME << " STLB Prefetcher gathered " << pref.cs_q.size() << " prefetches." << std::endl;
   }
