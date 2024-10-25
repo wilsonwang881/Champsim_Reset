@@ -3,7 +3,6 @@
 
 #include <map>
 
-#define L1D_PREFETCHER_IN_USE 0
 #define CONTEXT_SWITCH_PREFETCH_IN_USE 1
 
 using unique_key = std::pair<CACHE*, uint32_t>;
@@ -25,6 +24,7 @@ void CACHE::prefetcher_initialize()
   auto &pref = ::SPP[{this, cpu}];
   pref.prefetcher_state_file.open("prefetcher_states.txt", std::ios::out);
   pref.page_bitmap.init();
+  pref.oracle.init();
   // WL 
 }
 
@@ -36,6 +36,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   {
     pref.update_demand(base_addr,this->get_set_index(base_addr));
     pref.initiate_lookahead(base_addr);
+    pref.oracle.update(base_addr);
   }
   /*
   else if (pref.context_switch_queue_empty() && type == champsim::to_underlying(access_type::TRANSLATION)) 
@@ -112,104 +113,75 @@ void CACHE::prefetcher_cycle_operate()
   // TODO: should this be pref.warmup = warmup_complete[cpu]; instead of pref.warmup = warmup; ?
 
   // Gather and issue prefetches after a context switch.
-  if (!L1D_PREFETCHER_IN_USE) {
-    if (champsim::operable::context_switch_mode && !champsim::operable::L2C_have_issued_context_switch_prefetches)
+  if (champsim::operable::context_switch_mode && !champsim::operable::L2C_have_issued_context_switch_prefetches)
+  {
+    // Gather prefetches via the signature and pattern tables.
+    if (!pref.context_switch_prefetch_gathered)
     {
-      // Gather prefetches via the signature and pattern tables.
-      if (!pref.context_switch_prefetch_gathered)
-      {
-        pref.context_switch_gather_prefetches(this);
-        pref.context_switch_prefetch_gathered = true;
-      }
-     
-      // Issue prefetches until the queue is empty.
-      /*
-      if (!pref.context_switch_queue_empty())
-      {
-        if (champsim::operable::cpu_side_reset_ready
-            ) { //&& champsim::operable::cache_clear_counter == 7
-          if (CONTEXT_SWITCH_PREFETCH_IN_USE) {
-            pref.context_switch_issue(this);
-          }
-          else {
-            pref.context_switch_queue_clear();
-            std::cout << "No context switch prefetches issued." << std::endl;
-          }
-        }
-      }
-      // Toggle switches after all prefetches are issued.
-      else
-      */
-      {
-        if (!champsim::operable::have_cleared_BTB
-            && !champsim::operable::have_cleared_BP
-            && !champsim::operable::have_cleared_prefetcher
-            && champsim::operable::cpu_side_reset_ready
-            && champsim::operable::cache_clear_counter == 7) {
-          champsim::operable::context_switch_mode = false;
-          champsim::operable::cpu_side_reset_ready = false;
-          champsim::operable::L2C_have_issued_context_switch_prefetches = true;
-          champsim::operable::cache_clear_counter = 0;
-          pref.context_switch_prefetch_gathered = false;
-          pref.page_bitmap.update_bitmap_store();
-          champsim::operable::emptied_cache.clear();
-          pref.issued_cs_pf.clear();
-          //pref.clear_states();
-          reset_misc::can_record_after_access = true;
-          std::cout << "SPP states not cleared." << std::endl;
-          std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
-        }
-      }
+      pref.context_switch_gather_prefetches(this);
+      pref.context_switch_prefetch_gathered = true;
     }
-    // Normal operation.
-    // No prefetch gathering via the signature and pattern tables.
-    else
-    {
-      pref.issue(this);
-      pref.step_lookahead();
-
-      /*
-      if (!reset_misc::dq_prefetch_communicate.empty()) {
-
-        if (pref.available_prefetches.empty()) {
-          reset_misc::dq_prefetch_communicate.clear(); 
-        }
-        else {
-
-          for (size_t i = 0; i < reset_misc::dq_prefetch_communicate.size(); i++) {
-            
-            uint64_t page_addr = reset_misc::dq_prefetch_communicate.front().first >> 12;
-
-            for(auto var : pref.available_prefetches) {
-              if ((var.first >> 12) == page_addr) {
-                pref.context_switch_issue_queue.push_back(var); 
-              } 
-            }
-
-            for(auto var : pref.context_switch_issue_queue) {
-              pref.available_prefetches.erase(var); 
-            }
-
-            reset_misc::dq_prefetch_communicate.pop_front();
-          }
-        }
-      }
-
-      if (current_cycle == (champsim::operable::context_switch_start_cycle + 3500000)) {
-        pref.page_bitmap.update_bitmap_store();
-      }
-
-      */
+   
+    if (!champsim::operable::have_cleared_BTB
+        && !champsim::operable::have_cleared_BP
+        && !champsim::operable::have_cleared_prefetcher
+        && champsim::operable::cpu_side_reset_ready
+        && champsim::operable::cache_clear_counter == 7) {
+      champsim::operable::context_switch_mode = false;
+      champsim::operable::cpu_side_reset_ready = false;
+      champsim::operable::L2C_have_issued_context_switch_prefetches = true;
+      champsim::operable::cache_clear_counter = 0;
+      pref.context_switch_prefetch_gathered = false;
+      pref.page_bitmap.update_bitmap_store();
+      champsim::operable::emptied_cache.clear();
+      pref.issued_cs_pf.clear();
+      pref.clear_states();
+      //std::cout << "SPP states not cleared." << std::endl;
+      pref.oracle.file_write();
+      reset_misc::can_record_after_access = true;
+      std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
     }
   }
-  /*
-  else {
-    if (!champsim::operable::context_switch_mode) {
-      pref.issue(this);
-      pref.step_lookahead();
+  // Normal operation.
+  // No prefetch gathering via the signature and pattern tables.
+  else
+  {
+    pref.issue(this);
+    pref.step_lookahead();
+
+    /*
+    if (!reset_misc::dq_prefetch_communicate.empty()) {
+
+      if (pref.available_prefetches.empty()) {
+        reset_misc::dq_prefetch_communicate.clear(); 
+      }
+      else {
+
+        for (size_t i = 0; i < reset_misc::dq_prefetch_communicate.size(); i++) {
+          
+          uint64_t page_addr = reset_misc::dq_prefetch_communicate.front().first >> 12;
+
+          for(auto var : pref.available_prefetches) {
+            if ((var.first >> 12) == page_addr) {
+              pref.context_switch_issue_queue.push_back(var); 
+            } 
+          }
+
+          for(auto var : pref.context_switch_issue_queue) {
+            pref.available_prefetches.erase(var); 
+          }
+
+          reset_misc::dq_prefetch_communicate.pop_front();
+        }
+      }
     }
+
+    if (current_cycle == (champsim::operable::context_switch_start_cycle + 3500000)) {
+      pref.page_bitmap.update_bitmap_store();
+    }
+
+    */
   }
-  */
 }
 
 void CACHE::prefetcher_final_stats()

@@ -240,62 +240,28 @@ void spp::prefetcher::clear_states()
   filter.clear();
   issue_queue.clear();
   active_lookahead.reset();
-  //std::cout << "Cleared signature_table, bootstrap_table, pattern_table, filter, issue_queue, active_lookahead" << std::endl;
+  std::cout << "Cleared signature_table, bootstrap_table, pattern_table, filter, issue_queue, active_lookahead" << std::endl;
 }
 
 // WL
 void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 {
-  // Gather unique page addresses.
-  /*
-  std::vector<uint64_t> uniq_page_address;
+  std::vector<std::pair<uint64_t, bool>> tmpp_pf = oracle.file_read();
 
-  for(auto var : reset_misc::before_reset_on_demand_ins_access) {
-    uint64_t page_addr = var.ip >> 11;
-    
-    for (size_t i = 0; i < uniq_page_address.size(); i++) {
-      if (uniq_page_address.at(i) == page_addr) {
-        uniq_page_address.erase(uniq_page_address.begin() + i); 
-      } 
-    }
+  for(auto var : tmpp_pf)
+    context_switch_issue_queue.push_back(var); 
 
-    uniq_page_address.push_back(page_addr);
-  }
+  return;
 
-  int num_page_addr = uniq_page_address.size();
-
-  if (num_page_addr > 12) {
-    for (size_t i = 0; i < num_page_addr - 12; i++) {
-      uniq_page_address.erase(uniq_page_address.begin());
-  }
-   
-  }
-  if (uniq_page_address.size() <= 12) {
-    for(auto var : uniq_page_address) {
-      for (size_t page_offset = 0; page_offset < (2048 - 64); page_offset += 64) {
-        context_switch_issue_queue.push_back({(var + page_offset), true});
-      }
-    }
-
-    std::cout << "Ready to issue prefetches for " << uniq_page_address.size() << " half page(s)" << std::endl;
-  }
-  else {
-    std::cout << "Too many pages for context switch prefetching" << std::endl;
-  }
-  */
-
-  std::vector<std::pair<uint64_t, bool>> tmpp_pf = page_bitmap.gather_pf();
+  tmpp_pf = page_bitmap.gather_pf();
 
   issue_queue.clear();
   available_prefetches.clear();
 
   for (size_t i = 0; i < tmpp_pf.size(); i++) 
   {
-    //if (i <= (tmpp_pf.size() / 2))
       context_switch_issue_queue.push_back(tmpp_pf[i]); 
       available_prefetches.insert(tmpp_pf[i]);
-    //else 
-       //context_switch_issue_queue.push_back(std::make_pair(tmpp_pf[i], false)); 
   }
 
   context_switch_issue_queue.clear();
@@ -336,9 +302,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 
       if (found_in_return_data) {
         uint64_t current_prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + (el_last_offset << LOG2_BLOCK_SIZE);
-        //std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)current_prefetch_address << std::dec << " initial " << std::endl;
 
-        //std::cout << std::bitset<16>((el_sig << 12) >> 12) << std::dec << std::endl;
         context_switch_issue_queue.push_back({current_prefetch_address, true}); 
 
         // Use the signature and offset to index into the pattern table.
@@ -355,7 +319,6 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
           if ((prefetch_address >= (el_last_accessed_page_num << LOG2_PAGE_SIZE)) && 
               (prefetch_address <= (el_last_accessed_page_num + 1) << LOG2_PAGE_SIZE)) {
 
-            //std::cout << std::hex << "0x" << (unsigned)(el_last_accessed_page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " last_offset " << std::dec << (unsigned)el_last_offset << " delta " << pt_query_res.value() << " c_delta " << (unsigned)c_delta << " c_sig " << (unsigned)c_sig << std::dec << " confidence " << confidence << std::endl;
             context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE), true});
 
             // Second level lookahead prefetching.
@@ -413,7 +376,6 @@ std::optional<uint64_t> spp::prefetcher::context_switch_aux(uint32_t &sig, int32
         (prefetch_address <= (page_num + 1) << LOG2_PAGE_SIZE) &&
         confidence >= CUTOFF_THRESHOLD) {
 
-      //std::cout << std::hex << "0x" << (unsigned)(page_num << LOG2_PAGE_SIZE) << " 0x" << (unsigned)prefetch_address << " last_offset " << std::dec << (unsigned)last_offset << " delta " << tmpp_pt_query_res.value() << " c_delta " << (unsigned)tmpp_c_delta << " c_sig " << (unsigned)tmpp_c_sig << std::dec << " confidence " << confidence << std::endl;
       context_switch_issue_queue.push_back({prefetch_address, true});
       last_offset += tmpp_pt_query_res.value();
       return tmpp_pt_query_res.value();
@@ -430,39 +392,6 @@ std::optional<uint64_t> spp::prefetcher::context_switch_aux(uint32_t &sig, int32
 bool spp::prefetcher::context_switch_queue_empty()
 {
   return context_switch_issue_queue.empty();
-}
-
-// WL 
-void spp::prefetcher::context_switch_queue_clear()
-{
-  context_switch_issue_queue.clear();
-}
-
-// WL
-void spp::prefetcher::context_switch_issue(CACHE* cache)
-{
-  // Issue eligible outstanding prefetches
-  if (!std::empty(context_switch_issue_queue)) {
-    auto [addr, priority] = context_switch_issue_queue.front();
-
-    // If this fails, the queue was full.
-    bool prefetched = cache->prefetch_line(addr, priority, 0);
-    if (prefetched) {
-      //filter.update_issue(addr, cache->get_set(addr)); // Update the filter
-      context_switch_issue_queue.pop_front();
-    }
-    /*
-    else {
-      // If the current level of prefetch queue is full, issue to the lower level.
-      bool prefetched_retry = cache->prefetch_line(addr, !priority, 0);
-
-      if (prefetched_retry) {
-        filter.update_issue(addr, cache->get_set(addr)); // Update the filter
-        context_switch_issue_queue.pop_front();
-      }
-    }
-    */
-  }
 }
 
 // WL 
