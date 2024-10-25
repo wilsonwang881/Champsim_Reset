@@ -28,7 +28,7 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 {
   auto &pref = ::STLB_PF[{this, cpu}];
 
-  if (metadata_in == 1)
+  //if (metadata_in == 1)
     pref.evict(evicted_addr);
 
   return metadata_in;
