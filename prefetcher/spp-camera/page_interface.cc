@@ -380,13 +380,13 @@ void spp::GLOBAL_REGISTER::update_entry(uint32_t pf_sig, uint32_t pf_confidence,
   void spp::PREFETCH_FILTER::get_perc_index(uint64_t base_addr, uint64_t perc_set[PERC_FEATURES])
   {
     // Returns the imdexes for the perceptron tables
-    uint64_t page_number=base_addr>>12;
-    uint64_t block_number=(base_addr & 0xFFF) >> 6;
+    uint64_t page_no=base_addr>>12;
+    uint64_t block_no=(base_addr & 0xFFF) >> 6;
     uint64_t  pre_hash[PERC_FEATURES];
 
-    pre_hash[0] = page_number;
-    pre_hash[1] = block_number;
-    pre_hash[2] = block_number^page_number;
+    pre_hash[0] = page_no;
+    pre_hash[1] = block_no;
+    pre_hash[2] = block_no^page_no;
     pre_hash[3] = base_addr;
 
     for (int i = 0; i < PERC_FEATURES; i++) {
@@ -424,7 +424,7 @@ void spp::GLOBAL_REGISTER::update_entry(uint32_t pf_sig, uint32_t pf_confidence,
     return sum;
   }
 
-  void 	spp::PREFETCH_FILTER::perc_update(uint64_t base_addr, bool direction, int32_t perc_sum)
+  void 	spp::PREFETCH_FILTER::perc_update(uint64_t base_addr, bool direction, int32_t perc_sum_tmpp)
   {
 
     uint64_t perc_set[PERC_FEATURES];
@@ -437,7 +437,7 @@ void spp::GLOBAL_REGISTER::update_entry(uint32_t pf_sig, uint32_t pf_confidence,
       perc_touched[perc_set[i]][i] = 1;	
     }
     // Restore the sum that led to the prediction
-    sum = perc_sum;
+    sum = perc_sum_tmpp;
 
     if (!direction) { // direction = 1 means the sum was in the correct direction, 0 means it was in the wrong direction
       // Prediction wrong

@@ -92,8 +92,10 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
     pref.page_bitmap.update(addr);
 
   if (blk_asid_match && !blk_pfed) 
+  {
       pref.page_bitmap.evict(evicted_addr);
       pref.FILTER.check(evicted_addr, 0, spp::PREFETCH_FILTER::L2C_EVICT, 0);
+  }
 
   return metadata_in;
 }
