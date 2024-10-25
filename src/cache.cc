@@ -142,7 +142,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       uint32_t blk_asid_match = way->asid == currently_active_thread_ID ? 1 : 0; 
       uint32_t blk_pfed = way->prefetch ? 1 : 0; 
       uint32_t pkt_pfed = fill_mshr.type == access_type::PREFETCH;
-      uint32_t pf_feed = (!NAME.compare(DTLB_name) || !NAME.compare(ITLB_name)) ? 1 : 0;//(blk_asid_match << 2) + (blk_pfed << 1) + pkt_pfed;
+      uint32_t pf_feed = (!NAME.compare(DTLB_name) || !NAME.compare(ITLB_name)) ? 1 : ((blk_asid_match << 2) + (blk_pfed << 1) + pkt_pfed);
       // WL
 
       if (fill_mshr.type == access_type::PREFETCH)
@@ -160,7 +160,10 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
   } else {
     // Bypass
     assert(fill_mshr.type != access_type::WRITE);
-    uint32_t pf_feed = (!NAME.compare(DTLB_name) || !NAME.compare(ITLB_name)) ? 1 : 0;//(blk_asid_match << 2) + (blk_pfed << 1) + pkt_pfed;
+    uint32_t blk_asid_match = way->asid == currently_active_thread_ID ? 1 : 0; 
+    uint32_t blk_pfed = way->prefetch ? 1 : 0; 
+    uint32_t pkt_pfed = fill_mshr.type == access_type::PREFETCH;
+    uint32_t pf_feed = (!NAME.compare(DTLB_name) || !NAME.compare(ITLB_name)) ? 1 : ((blk_asid_match << 2) + (blk_pfed << 1) + pkt_pfed);
 
     metadata_thru =
         impl_prefetcher_cache_fill(pkt_address, get_set_index(fill_mshr.address), way_idx, fill_mshr.type == access_type::PREFETCH, 0, pf_feed); // WL: last was metadata_thru
