@@ -16,7 +16,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 {
   auto &pref = ::STLB_PF[{this, cpu}];
 
-  if (cache_hit && (metadata_in == 1)) 
+  if (cache_hit) // && (metadata_in == 1)) 
     pref.update(addr);
 
   pref.check_hit(addr);
@@ -28,7 +28,8 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 {
   auto &pref = ::STLB_PF[{this, cpu}];
 
-  pref.evict(evicted_addr);
+  if (metadata_in == 1)
+    pref.evict(evicted_addr);
 
   return metadata_in;
 }

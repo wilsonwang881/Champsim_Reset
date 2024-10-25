@@ -142,7 +142,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       uint32_t blk_asid_match = way->asid == currently_active_thread_ID ? 1 : 0; 
       uint32_t blk_pfed = way->prefetch ? 1 : 0; 
       uint32_t pkt_pfed = fill_mshr.type == access_type::PREFETCH;
-      uint32_t pf_feed = (blk_asid_match << 2) + (blk_pfed << 1) + pkt_pfed;
+      uint32_t pf_feed = (!NAME.compare(DTLB_name) || !NAME.compare(ITLB_name)) ? 1 : 0;//(blk_asid_match << 2) + (blk_pfed << 1) + pkt_pfed;
       // WL
 
       if (fill_mshr.type == access_type::PREFETCH)
@@ -160,9 +160,10 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
   } else {
     // Bypass
     assert(fill_mshr.type != access_type::WRITE);
+    uint32_t pf_feed = (!NAME.compare(DTLB_name) || !NAME.compare(ITLB_name)) ? 1 : 0;//(blk_asid_match << 2) + (blk_pfed << 1) + pkt_pfed;
 
     metadata_thru =
-        impl_prefetcher_cache_fill(pkt_address, get_set_index(fill_mshr.address), way_idx, fill_mshr.type == access_type::PREFETCH, 0, metadata_thru);
+        impl_prefetcher_cache_fill(pkt_address, get_set_index(fill_mshr.address), way_idx, fill_mshr.type == access_type::PREFETCH, 0, pf_feed); // WL: last was metadata_thru
     impl_update_replacement_state(fill_mshr.cpu, get_set_index(fill_mshr.address), way_idx, fill_mshr.address, fill_mshr.ip, 0,
                                   champsim::to_underlying(fill_mshr.type), false);
   }
@@ -207,7 +208,7 @@ bool CACHE::try_hit(const tag_lookup_type& handle_pkt)
     uint64_t pf_base_addr = (virtual_prefetch ? handle_pkt.v_address : handle_pkt.address) & ~champsim::bitmask(match_offset_bits ? 0 : OFFSET_BITS);
 
     //WL 
-    if (!NAME.compare(champsim::operable::STLB_name))
+    if (!NAME.compare(champsim::operable::DTLB_name) || !NAME.compare(champsim::operable::ITLB_name))
       metadata_thru = impl_prefetcher_cache_operate(pf_base_addr, handle_pkt.ip, hit, useful_prefetch, champsim::to_underlying(handle_pkt.type), 1);
     else
        metadata_thru = impl_prefetcher_cache_operate(pf_base_addr, handle_pkt.ip, hit, useful_prefetch, champsim::to_underlying(handle_pkt.type), metadata_thru);
