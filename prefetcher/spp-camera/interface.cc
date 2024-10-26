@@ -24,7 +24,7 @@ void CACHE::prefetcher_initialize()
   auto &pref = ::SPP[{this, cpu}];
   pref.prefetcher_state_file.open("prefetcher_states.txt", std::ios::out);
   pref.page_bitmap.init();
-  pref.oracle.init();
+  //pref.oracle.init();
   // WL 
 }
 
@@ -36,7 +36,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   {
     pref.update_demand(base_addr,this->get_set_index(base_addr));
     pref.initiate_lookahead(base_addr);
-    pref.oracle.update(base_addr);
+    //pref.oracle.update(base_addr);
+    //pref.oracle.update(ip);
   }
   /*
   else if (pref.context_switch_queue_empty() && type == champsim::to_underlying(access_type::TRANSLATION)) 
@@ -49,11 +50,15 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   if (cache_hit) 
   {
     pref.page_bitmap.update(base_addr);
+    pref.page_bitmap.update(ip);
   }
 
-  if (pref.issued_cs_pf.find((base_addr >> 6) << 6) != pref.issued_cs_pf.end()) {
+  if ((pref.issued_cs_pf.find((base_addr >> 6) << 6) != pref.issued_cs_pf.end()) ||
+     (pref.issued_cs_pf.find((ip>> 6) << 6) != pref.issued_cs_pf.end()))
+  {
     pref.issued_cs_pf_hit++; 
     pref.issued_cs_pf.erase((base_addr >> 6) << 6);
+    pref.issued_cs_pf.erase((ip >> 6) << 6);
   }
 
   uint64_t page_addr = base_addr >> 12;
@@ -65,13 +70,10 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     uint64_t blk_no = (base_addr >> 6) & 0x3F;
 
     if (((var.first >> 12) == page_addr) && 
-        var_blk_no != blk_no){ //&&
-        //((var_blk_no >= (blk_no - 16)) && (var_blk_no <= (blk_no + 16))))  {
+        var_blk_no != blk_no)
       pref.context_switch_issue_queue.push_back(var); 
-    } 
-    else if (((var.first >> 12) == page_addr) && ((var.first >> 6) == (base_addr >> 6))) {
+    else if (((var.first >> 12) == page_addr) && ((var.first >> 6) == (base_addr >> 6))) 
       demand_itself = var;
-    }
   }
 
   for(auto var : pref.context_switch_issue_queue) {
@@ -99,6 +101,8 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   if (blk_asid_match && !blk_pfed) 
       pref.page_bitmap.evict(evicted_addr);
 
+  //pref.oracle.evict(evicted_addr);
+
   return metadata_in;
 }
 
@@ -106,8 +110,6 @@ void CACHE::prefetcher_cycle_operate()
 {
   auto &pref = ::SPP[{this, cpu}];
   //pref.warmup = warmup; 
-  //pref.issue(this);
-  //pref.step_lookahead();
 
   //pref.warmup = warmup_complete[cpu];
   // TODO: should this be pref.warmup = warmup_complete[cpu]; instead of pref.warmup = warmup; ?
@@ -135,9 +137,9 @@ void CACHE::prefetcher_cycle_operate()
       pref.page_bitmap.update_bitmap_store();
       champsim::operable::emptied_cache.clear();
       pref.issued_cs_pf.clear();
-      pref.clear_states();
-      //std::cout << "SPP states not cleared." << std::endl;
-      pref.oracle.file_write();
+      //pref.oracle.can_write = true;
+      //pref.clear_states();
+      std::cout << "SPP states not cleared." << std::endl;
       reset_misc::can_record_after_access = true;
       std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
     }
@@ -148,39 +150,6 @@ void CACHE::prefetcher_cycle_operate()
   {
     pref.issue(this);
     pref.step_lookahead();
-
-    /*
-    if (!reset_misc::dq_prefetch_communicate.empty()) {
-
-      if (pref.available_prefetches.empty()) {
-        reset_misc::dq_prefetch_communicate.clear(); 
-      }
-      else {
-
-        for (size_t i = 0; i < reset_misc::dq_prefetch_communicate.size(); i++) {
-          
-          uint64_t page_addr = reset_misc::dq_prefetch_communicate.front().first >> 12;
-
-          for(auto var : pref.available_prefetches) {
-            if ((var.first >> 12) == page_addr) {
-              pref.context_switch_issue_queue.push_back(var); 
-            } 
-          }
-
-          for(auto var : pref.context_switch_issue_queue) {
-            pref.available_prefetches.erase(var); 
-          }
-
-          reset_misc::dq_prefetch_communicate.pop_front();
-        }
-      }
-    }
-
-    if (current_cycle == (champsim::operable::context_switch_start_cycle + 3500000)) {
-      pref.page_bitmap.update_bitmap_store();
-    }
-
-    */
   }
 }
 
@@ -211,4 +180,5 @@ void CACHE::record_spp_camera_states()
   auto &pref = ::SPP[{this, cpu}];
   pref.cache_cycle = current_cycle;
   pref.record_spp_states();
+  pref.oracle.finish();
 }

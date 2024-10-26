@@ -17,7 +17,10 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   auto &pref = ::STLB_PF[{this, cpu}];
 
   if (cache_hit) // && (metadata_in == 1)) 
+  {
     pref.update(addr);
+    pref.update(ip);
+  }
 
   pref.check_hit(addr);
 

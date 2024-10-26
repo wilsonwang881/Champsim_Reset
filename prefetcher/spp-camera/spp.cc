@@ -47,7 +47,7 @@ void spp::prefetcher::issue(CACHE* cache)
 
     auto q_occupancy = cache->get_pq_occupancy();
 
-    if (q_occupancy[2] <= 8) {
+    if (q_occupancy[2] <= 10) {
 
       auto [addr, priority] = context_switch_issue_queue.front();
       bool prefetched = cache->prefetch_line(addr, priority, 0);
@@ -246,16 +246,18 @@ void spp::prefetcher::clear_states()
 // WL
 void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 {
+  std::vector<std::pair<uint64_t, bool>> tmpp_pf;
+  /*
   std::vector<std::pair<uint64_t, bool>> tmpp_pf = oracle.file_read();
 
   for(auto var : tmpp_pf)
     context_switch_issue_queue.push_back(var); 
 
   return;
+  */
 
   tmpp_pf = page_bitmap.gather_pf();
 
-  issue_queue.clear();
   available_prefetches.clear();
 
   for (size_t i = 0; i < tmpp_pf.size(); i++) 
@@ -266,14 +268,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 
   context_switch_issue_queue.clear();
 
-  for(auto var : reset_misc::dq_prefetch_communicate) {
-    context_switch_issue_queue.push_back(var); 
-  }
-
-  std::cout << "Gathered " << context_switch_issue_queue.size() << " prefetches via STLB prefetcher." << std::endl;
-
-  reset_misc::dq_prefetch_communicate.clear();
-
+  issue_queue.clear();
   filter.clear();
   std::cout << "SPP issue queue and filter cleared." << std::endl;
 

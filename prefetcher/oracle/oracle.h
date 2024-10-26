@@ -1,3 +1,6 @@
+#ifndef ORACLE_H 
+#define ORACLE_H
+
 #include <cstdint>
 #include <cstddef>
 #include <map>
@@ -10,12 +13,15 @@
 #include <set>
 #include <fstream>
 
-namespace spp 
+class CACHE;
+
+namespace oracle 
 {
-  class SPP_ORACLE
+
+  class prefetcher
   {
     constexpr static bool RECORD_OR_REPLAY = false;
-    constexpr static uint64_t ACCESS_LEN = 8000;
+    constexpr static uint64_t ACCESS_LEN = 1000;
     std::string L2C_PHY_ACC_FILE_NAME = "L2C_phy_acc.txt";
 
     std::fstream rec_file;
@@ -25,13 +31,14 @@ namespace spp
 
     bool can_write = false;
     std::deque<uint64_t> access;
+    std::deque<uint64_t> cs_pf;
 
     void init();
     void update(uint64_t addr);
-    void evict(uint64_t addr);
     void file_write();
-    std::vector<std::pair<uint64_t, bool>> file_read();
+    void file_read();
     void finish();
   };
 }
 
+#endif 

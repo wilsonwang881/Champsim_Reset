@@ -1,6 +1,12 @@
 #include "oracle.h"
 
-void spp::SPP_ORACLE::init() 
+using unique_key = std::pair<CACHE*, uint32_t>;
+
+namespace {
+  std::map<unique_key, oracle::prefetcher> ORACLE; 
+}
+
+void oracle::prefetcher::init() 
 {
   // Clear the L2C access file if in recording mode.
   if (RECORD_OR_REPLAY) 
@@ -12,7 +18,7 @@ void spp::SPP_ORACLE::init()
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ifstream::in);
 }
 
-void spp::SPP_ORACLE::update(uint64_t addr)
+void oracle::prefetcher::update(uint64_t addr)
 {
   if (RECORD_OR_REPLAY && can_write) 
   {
@@ -31,17 +37,7 @@ void spp::SPP_ORACLE::update(uint64_t addr)
   }
 }
 
-void spp::SPP_ORACLE::evict(uint64_t addr)
-{
-  uint64_t blk_addr = (addr >> 6) << 6;
-
-  auto evict_pos = std::find(access.begin(), access.end(), blk_addr);
-
-  if (evict_pos != access.end())
-    access.erase(evict_pos);
-}
-
-void spp::SPP_ORACLE::file_write()
+void oracle::prefetcher::file_write()
 {
   if (RECORD_OR_REPLAY) 
   {
@@ -52,15 +48,15 @@ void spp::SPP_ORACLE::file_write()
 
     rec_file << 0 << std::endl;
     rec_file.close();
-    std::cout << "Writing " << access.size() << " L2C accesses to file." << std::endl;
+    std::cout << "Writing " << access.size() << " accesses to file." << std::endl;
     dup_check.clear();
     access.clear();
   }
 }
 
-std::vector<std::pair<uint64_t, bool>> spp::SPP_ORACLE::file_read()
+void oracle::prefetcher::file_read()
 {
-  std::vector<std::pair<uint64_t, bool>> pf;
+  cs_pf.clear();
 
   if (!RECORD_OR_REPLAY) 
   {
@@ -73,16 +69,14 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_ORACLE::file_read()
       if (readin == 0)
         break; 
 
-      pf.push_back(std::make_pair(readin, true));
+      cs_pf.push_back(readin);
     }
 
-    std::cout << "Read " << pf.size() << " L2C accesses from file." << std::endl;
+    std::cout << "Read " << cs_pf.size() << " accesses from file." << std::endl;
   }
-
-  return pf;
 }
 
-void spp::SPP_ORACLE::finish()
+void oracle::prefetcher::finish()
 {
   if (!RECORD_OR_REPLAY)
     rec_file.close();
