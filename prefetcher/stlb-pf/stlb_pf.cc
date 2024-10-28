@@ -11,7 +11,7 @@ void stlb_pf::prefetcher::update(uint64_t addr)
 {
   uint64_t page_num = addr >> 12;
 
-  auto el = find(translations.begin(), translations.end(), page_num);
+  auto el = std::find(translations.begin(), translations.end(), page_num);
 
   if (el == translations.end()) 
     translations.push_back(page_num);
