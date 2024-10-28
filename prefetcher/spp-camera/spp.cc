@@ -47,7 +47,7 @@ void spp::prefetcher::issue(CACHE* cache)
 
     auto q_occupancy = cache->get_pq_occupancy();
 
-    if (q_occupancy[2] <= 16) {
+    if (q_occupancy[2] <= 8) {
 
       auto [addr, priority] = context_switch_issue_queue.front();
       bool prefetched = cache->prefetch_line(addr, priority, 0);

@@ -10,19 +10,16 @@ namespace {
 void stlb_pf::prefetcher::update(uint64_t addr)
 {
   uint64_t page_num = addr >> 12;
-  bool found = false;
 
-  for(auto var : translations) 
-  {
-    if (var == page_num) 
-    {
-      found = true;
-      break;
-    } 
-  }
+  auto el = translations.find(page_num);
 
-  if (!found) 
+  if (el == translations.end()) 
     translations.push_back(page_num);
+  else
+  {
+    translations.erase(el);
+    translations.push_back(page_num);
+  }
 
   if (translations.size() > DQ_SIZE) 
     translations.pop_front();
