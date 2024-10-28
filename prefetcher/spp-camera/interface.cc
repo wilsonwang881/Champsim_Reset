@@ -53,8 +53,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     //pref.page_bitmap.update(ip);
   }
 
-  if ((pref.issued_cs_pf.find((base_addr >> 6) << 6) != pref.issued_cs_pf.end()) ||
-     (pref.issued_cs_pf.find((ip>> 6) << 6) != pref.issued_cs_pf.end()))
+  if ((pref.issued_cs_pf.find((base_addr >> 6) << 6) != pref.issued_cs_pf.end())) // ||
+     //(pref.issued_cs_pf.find((ip>> 6) << 6) != pref.issued_cs_pf.end()))
   {
     pref.issued_cs_pf_hit++; 
     pref.issued_cs_pf.erase((base_addr >> 6) << 6);
@@ -95,7 +95,7 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
   auto &pref = ::SPP[{this, cpu}];
 
-  if (addr != 0) //!pkt_pfed && 
+  if (addr != 0 &&!pkt_pfed)
     pref.page_bitmap.update(addr);
 
   if (blk_asid_match && !blk_pfed) 

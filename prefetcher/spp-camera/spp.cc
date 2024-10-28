@@ -47,7 +47,7 @@ void spp::prefetcher::issue(CACHE* cache)
 
     auto q_occupancy = cache->get_pq_occupancy();
 
-    if (q_occupancy[2] <= 10) {
+    if (q_occupancy[2] <= 16) {
 
       auto [addr, priority] = context_switch_issue_queue.front();
       bool prefetched = cache->prefetch_line(addr, priority, 0);
@@ -262,7 +262,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 
   for (size_t i = 0; i < tmpp_pf.size(); i++) 
   {
-      context_switch_issue_queue.push_back(tmpp_pf[i]); 
+      //context_switch_issue_queue.push_back(tmpp_pf[i]); 
       available_prefetches.insert(tmpp_pf[i]);
   }
 
