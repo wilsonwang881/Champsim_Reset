@@ -23,7 +23,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 {
   //auto &pref = ::ORACLE_RECORDER[{this, cpu}];
   
-  /*
   if (!cache_hit) {
 
     uint64_t page_no = addr >> 12;
@@ -33,9 +32,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
         return metadata_in; 
       }  
     }
-    reset_misc::dq_prefetch_communicate.push_back(std::make_pair(((addr >> 6) << 6), true)); 
+    reset_misc::dq_prefetch_communicate.push_back(std::make_pair(((addr >> 6) << 6), false)); 
   }
-  */
 
   return metadata_in;
 }
@@ -47,6 +45,7 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
 void CACHE::prefetcher_cycle_operate()
 {
+  /*
   if (!reset_misc::dq_prefetch_communicate.empty()) {
    
     for (size_t i = 0; i < reset_misc::dq_prefetch_communicate.size(); i++) {
@@ -59,6 +58,7 @@ void CACHE::prefetcher_cycle_operate()
       }
     }
   }
+  */
   /*
   auto &pref = ::ORACLE_RECORDER[{this, cpu}];
 
