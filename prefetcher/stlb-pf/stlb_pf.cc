@@ -44,7 +44,7 @@ void stlb_pf::prefetcher::gather_pf()
   for(int i = translations.size() - 1; i >= 0; i--)
     cs_q.push_back(translations[i] << 12); 
 
-  translations.clear();
+  //translations.clear();
 }
 
 void stlb_pf::prefetcher::issue(CACHE* cache)
