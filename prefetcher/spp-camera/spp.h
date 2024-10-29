@@ -86,6 +86,9 @@ namespace spp {
     std::set<uint64_t> issued_cs_pf;
     uint64_t issued_cs_pf_hit;
     uint64_t total_issued_cs_pf;
+    uint64_t gathered_pf_this_round;
+    uint64_t issued_pf_this_round;
+    uint64_t hit_pf_this_round;
     // WL 
   };
 } // namespace spp

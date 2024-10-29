@@ -15,11 +15,13 @@ void stlb_pf::prefetcher::update(uint64_t addr)
 
   if (el == translations.end()) 
     translations.push_back(page_num);
+  /*
   else
   {
     translations.erase(el);
     translations.push_back(page_num);
   }
+  */
 
   if (translations.size() > DQ_SIZE) 
     translations.pop_front();

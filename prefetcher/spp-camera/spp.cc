@@ -57,6 +57,7 @@ void spp::prefetcher::issue(CACHE* cache)
         context_switch_issue_queue.pop_front();
         issued_cs_pf.insert(addr);
         total_issued_cs_pf++;
+        issued_pf_this_round++;
         //issue_queue.clear();
       }
     }
@@ -352,6 +353,9 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   for(auto var : tmpp_issue_queue) {
     available_prefetches.insert(var); 
   }
+
+  issued_pf_this_round = 0;
+  gathered_pf_this_round = available_prefetches.size();
 
   std::cout << "L2C SPP Gathered " << tmpp_issue_queue.size() << " prefetches." << std::endl;
 }
