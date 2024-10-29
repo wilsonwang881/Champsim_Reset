@@ -20,7 +20,7 @@ namespace stlb_pf
 {
   class prefetcher
   {
-    constexpr static std::size_t DQ_SIZE = 512;
+    constexpr static std::size_t DQ_SIZE = 1024;
 
     public:
 
