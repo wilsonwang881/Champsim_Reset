@@ -25,16 +25,24 @@ namespace oracle
     std::string L2C_PHY_ACC_FILE_NAME = "L2C_phy_acc.txt";
 
     std::fstream rec_file;
-    std::set<uint64_t> dup_check;
 
     public:
 
-    bool can_write = false;
-    std::deque<uint64_t> access;
-    std::deque<uint64_t> cs_pf;
+    struct acc_timestamp {
+      uint64_t cycle_diff;
+      uint64_t addr;
+    };
+
+    bool can_write = true;
+    std::deque<acc_timestamp> access;
+    std::deque<acc_timestamp> progress_q;
+    std::deque<acc_timestamp> cs_pf;
+    uint64_t interval_start_cycle = 0;
+    uint64_t cycles_speedup = 0;
 
     void init();
-    void update(uint64_t addr);
+    void update(uint64_t cycle, uint64_t addr);
+    void check_progress(uint64_t cycle, uint64_t addr);
     void file_write();
     void file_read();
     void finish();
