@@ -81,14 +81,15 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr)
 
   // Page not found.
   // Check or update filter first.
-  bool check_filter = filter_operate(addr);
+  //bool check_filter = filter_operate(addr);
 
-  if (!check_filter)
-    return; 
+  //if (!check_filter)
+   // return; 
 
   // Allocate new entry for the new page with 2 blocks.
-  size_t block_2 = 0;
+  //size_t block_2 = 0;
 
+  /*
   for(auto &var : filter)
   {
     if (var.valid &&
@@ -98,6 +99,7 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr)
       var.valid = false;
     } 
   }
+  */
 
   // Find an invalid entry for the page.
   for (size_t i = 0; i < TABLE_SIZE; i++) 
@@ -111,7 +113,7 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr)
         tb[i].bitmap[j] = false; 
 
       tb[i].bitmap[block] = true;
-      tb[i].bitmap[block_2] = true;
+      //tb[i].bitmap[block_2] = true;
       update_lru(i);
       return;
     }
@@ -141,7 +143,7 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr)
     var = false;
 
   tb[index].bitmap[block] = true;
-  tb[index].bitmap[block_2] = true;
+  //tb[index].bitmap[block_2] = true;
   update_lru(index);
 }
 

@@ -11,6 +11,7 @@ void CACHE::prefetcher_initialize()
 {
   auto &pref = ::ORACLE[{this, cpu}];
   pref.init();
+  pref.can_write = true;
   pref.file_read();
 
   std::cout << NAME << "-> Prefetcher Oracle initialized @ cycle " << current_cycle << "." << std::endl;
@@ -20,7 +21,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 {
   auto &pref = ::ORACLE[{this, cpu}];
  
-  if (!cache_hit) 
+  //if (!cache_hit) 
   {
     pref.update(this->current_cycle, addr);
   }
@@ -45,7 +46,8 @@ void CACHE::prefetcher_cycle_operate()
         && !champsim::operable::have_cleared_BP
         && !champsim::operable::have_cleared_prefetcher
         && champsim::operable::cpu_side_reset_ready
-        && champsim::operable::cache_clear_counter == 7) {
+        && champsim::operable::cache_clear_counter == 7) 
+    {
       champsim::operable::context_switch_mode = false;
       champsim::operable::cpu_side_reset_ready = false;
       champsim::operable::L2C_have_issued_context_switch_prefetches = true;
@@ -55,6 +57,8 @@ void CACHE::prefetcher_cycle_operate()
       pref.file_read();
       pref.file_write();
       pref.can_write = true;
+      pref.first_round = false;
+      pref.access.clear();
       pref.interval_start_cycle = this->current_cycle;
       std::cout << "cycles_speedup = " << pref.cycles_speedup << std::endl;
       pref.cycles_speedup = 0;
@@ -77,14 +81,28 @@ void CACHE::prefetcher_cycle_operate()
 
       //if ((tmpp.cycle_diff - pref.cycles_speedup - (this->current_cycle - pref.interval_start_cycle)) <= 2000)
       //if (pf_or_not) 
+      if(pref.first_round && (tmpp.cycle_diff - this->current_cycle) < 10000)
       {
         bool prefetched = prefetch_line(tmpp.addr, true, 0);
 
         if (prefetched) 
         {
           //std::cout << tmpp.cycle_diff << " <-> " << this->current_cycle - pref.interval_start_cycle << std::endl;
+          //std::cout << "Issued " << tmpp.addr << " at cycle " << this->current_cycle << std::endl;
           pref.cs_pf.pop_front(); 
         }
+      }
+      else if(!pref.first_round) 
+      {
+         bool prefetched = prefetch_line(tmpp.addr, true, 0);
+
+        if (prefetched) 
+        {
+          //std::cout << tmpp.cycle_diff << " <-> " << this->current_cycle - pref.interval_start_cycle << std::endl;
+          //std::cout << "Issued " << tmpp.addr << " at cycle " << this->current_cycle << std::endl;
+          pref.cs_pf.pop_front(); 
+        }
+       
       }
     }
   }

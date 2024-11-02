@@ -21,7 +21,7 @@ namespace oracle
   class prefetcher
   {
     constexpr static bool RECORD_OR_REPLAY = false;
-    constexpr static uint64_t ACCESS_LEN = 1000;
+    constexpr static uint64_t ACCESS_LEN = 28000;
     std::string L2C_PHY_ACC_FILE_NAME = "L2C_phy_acc.txt";
 
     std::fstream rec_file;
@@ -33,7 +33,8 @@ namespace oracle
       uint64_t addr;
     };
 
-    bool can_write = true;
+    bool can_write;
+    bool first_round = true;
     std::deque<acc_timestamp> access;
     std::deque<acc_timestamp> progress_q;
     std::deque<acc_timestamp> cs_pf;
