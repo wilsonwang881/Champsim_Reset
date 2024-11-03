@@ -218,6 +218,8 @@ bool CACHE::try_hit(const tag_lookup_type& handle_pkt)
                                   champsim::to_underlying(handle_pkt.type), true);
 
     response_type response{handle_pkt.address, handle_pkt.v_address, way->data, metadata_thru, handle_pkt.asid[0], handle_pkt.instr_depend_on_me}; // WL: added handle_pkt.asid[0]
+    assert(handle_pkt.asid[0] == way->asid); // WL
+ 
     for (auto ret : handle_pkt.to_return)
       ret->push_back(response);
 

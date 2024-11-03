@@ -11,8 +11,9 @@ void CACHE::prefetcher_initialize()
 {
   auto &pref = ::ORACLE[{this, cpu}];
   pref.init();
-  pref.can_write = true;
-  pref.file_read();
+  pref.can_write = false;
+  pref.allowed_pf = 200;
+  //pref.file_read();
 
   std::cout << NAME << "-> Prefetcher Oracle initialized @ cycle " << current_cycle << "." << std::endl;
 }
@@ -27,6 +28,30 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   }
 
   pref.check_progress(this->current_cycle - pref.interval_start_cycle, addr);
+
+  if (cache_hit && useful_prefetch)
+  {
+    //if (pref.allowed_pf <= 4000)
+    {
+      if (pref.first_round) 
+      {
+        pref.allowed_pf += 1; 
+      }
+      else 
+      {
+        pref.allowed_pf += 2;
+      }
+      //std::cout << this->current_cycle - pref.interval_start_cycle << " " << pref.allowed_pf << std::endl;
+    }
+    //std::cout << "Hit addr " << addr << " @cycle " << this->current_cycle << std::endl;
+  }
+
+  /*
+  if (cache_hit && !useful_prefetch) 
+  {
+    pref.allowed_pf--;  
+  }
+  */
 
   return metadata_in;
 }
@@ -57,11 +82,14 @@ void CACHE::prefetcher_cycle_operate()
       pref.file_read();
       pref.file_write();
       pref.can_write = true;
+      std::cout << "Issued " << pref.pf_issued - pref.pf_issued_last_round << " prefetches last round." << std::endl; 
+      pref.pf_issued_last_round = pref.pf_issued;
       pref.first_round = false;
       pref.access.clear();
       pref.interval_start_cycle = this->current_cycle;
-      std::cout << "cycles_speedup = " << pref.cycles_speedup << std::endl;
+      //std::cout << "cycles_speedup = " << pref.cycles_speedup << std::endl;
       pref.cycles_speedup = 0;
+      pref.allowed_pf = pref.PF_DEPTH;
     }
   }
 
@@ -81,7 +109,8 @@ void CACHE::prefetcher_cycle_operate()
 
       //if ((tmpp.cycle_diff - pref.cycles_speedup - (this->current_cycle - pref.interval_start_cycle)) <= 2000)
       //if (pf_or_not) 
-      if(pref.first_round && (tmpp.cycle_diff - this->current_cycle) < 10000)
+      /*
+      if(pref.first_round && pref.allowed_pf > 0)
       {
         bool prefetched = prefetch_line(tmpp.addr, true, 0);
 
@@ -90,19 +119,23 @@ void CACHE::prefetcher_cycle_operate()
           //std::cout << tmpp.cycle_diff << " <-> " << this->current_cycle - pref.interval_start_cycle << std::endl;
           //std::cout << "Issued " << tmpp.addr << " at cycle " << this->current_cycle << std::endl;
           pref.cs_pf.pop_front(); 
+          pref.allowed_pf--;
         }
       }
-      else if(!pref.first_round) 
+      */
+      if(pref.allowed_pf > 0) 
       {
-         bool prefetched = prefetch_line(tmpp.addr, true, 0);
+        bool prefetched = prefetch_line(tmpp.addr, true, 0);
 
         if (prefetched) 
         {
           //std::cout << tmpp.cycle_diff << " <-> " << this->current_cycle - pref.interval_start_cycle << std::endl;
           //std::cout << "Issued " << tmpp.addr << " at cycle " << this->current_cycle << std::endl;
           pref.cs_pf.pop_front(); 
+          pref.allowed_pf--;
+          //std::cout << pref.allowed_pf << " issued at " << this->current_cycle << std::endl;
+          pref.pf_issued++;
         }
-       
       }
     }
   }

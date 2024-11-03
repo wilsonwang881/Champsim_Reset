@@ -23,9 +23,9 @@ void oracle::prefetcher::update(uint64_t cycle, uint64_t addr)
   if (RECORD_OR_REPLAY && can_write) 
   {
     acc_timestamp tmpp;
-    tmpp.cycle_diff = cycle; // - interval_start_cycle;
+    tmpp.cycle_diff = cycle - interval_start_cycle;
     tmpp.addr = (addr >> 6) << 6;
-    int lookup_size = access.size() - 4000;
+    int lookup_size = access.size() - 2000;
     int lookup_start = std::max(0, lookup_size);
 
     bool found = false;
