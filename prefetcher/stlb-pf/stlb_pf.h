@@ -36,6 +36,7 @@ namespace stlb_pf
     std::deque<uint64_t> cs_q;
 
     void update(uint64_t addr);
+    void pop_pf(uint64_t addr);
     void evict(uint64_t addr);
     void gather_pf();
     void issue(CACHE* cache);

@@ -22,8 +22,11 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
     pref.hit_this_round = true;
     //pref.update(ip);
   }
-  else 
+  else
+  {
+    pref.pop_pf(addr);
     pref.hit_this_round = false;
+  }
 
   pref.check_hit(addr);
 

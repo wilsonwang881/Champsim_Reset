@@ -27,6 +27,16 @@ void stlb_pf::prefetcher::update(uint64_t addr)
     translations.pop_front();
 }
 
+void stlb_pf::prefetcher::pop_pf(uint64_t addr)
+{
+  addr = (addr >> 12) << 12;
+
+  auto el = std::find(cs_q.begin(), cs_q.end(), addr);
+
+  if (el != cs_q.end())
+    cs_q.erase(el);
+}
+
 void stlb_pf::prefetcher::evict(uint64_t addr)
 {
   uint64_t page_num = addr >> 12;
