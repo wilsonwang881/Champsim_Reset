@@ -257,7 +257,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   return;
   */
 
-  tmpp_pf = page_bitmap.gather_pf();
+  //tmpp_pf = page_bitmap.gather_pf();
 
   available_prefetches.clear();
 
@@ -273,7 +273,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   filter.clear();
   std::cout << "SPP issue queue and filter cleared." << std::endl;
 
-  //return;
+  return;
 
   std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature(1.0 * filter.pf_useful / filter.pf_issued);
 
