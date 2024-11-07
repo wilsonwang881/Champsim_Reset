@@ -142,7 +142,7 @@
 		"pscl2_set": 4,
 		"pscl2_way": 8,
 		"rq_size": 16,
-    "pq_size": 10,
+    "pq_size": 1,
 		"mshr_size": 5,
 		"max_read": 2,
 		"max_write": 2
