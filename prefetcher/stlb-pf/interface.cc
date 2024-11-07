@@ -64,6 +64,7 @@ void CACHE::prefetcher_cycle_operate()
     pref.update_pf_stats();
     pref.gather_pf();
     reset_misc::can_record_after_access = false;
+    pref.hit_this_round = true;
     std::cout << NAME << " STLB Prefetcher gathered " << pref.cs_q.size() << " prefetches." << std::endl;
   }
 

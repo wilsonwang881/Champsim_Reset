@@ -15,13 +15,11 @@ void stlb_pf::prefetcher::update(uint64_t addr)
 
   if (el == translations.end()) 
     translations.push_back(page_num);
-  /*
   else
   {
     translations.erase(el);
     translations.push_back(page_num);
   }
-  */
 
   if (translations.size() > DQ_SIZE) 
     translations.pop_front();
@@ -56,7 +54,7 @@ void stlb_pf::prefetcher::gather_pf()
   for(int i = translations.size() - 1; i >= 0; i--)
     cs_q.push_back(translations[i] << 12); 
 
-  //translations.clear();
+  translations.clear();
 }
 
 void stlb_pf::prefetcher::issue(CACHE* cache)
