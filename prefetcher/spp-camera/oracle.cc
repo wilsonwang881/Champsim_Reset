@@ -12,16 +12,29 @@ void spp::SPP_ORACLE::init()
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ifstream::in);
 }
 
-void spp::SPP_ORACLE::update(uint64_t addr)
+void spp::SPP_ORACLE::update(uint64_t cycle, uint64_t addr)
 {
   if (RECORD_OR_REPLAY && can_write) 
   {
-    uint64_t blk_addr = (addr >> 6) << 6; 
+    acc_timestamp tmpp;
+    tmpp.cycle_diff = cycle - interval_start_cycle;
+    tmpp.addr = (addr >> 6) << 6;
+    int lookup_size = access.size() - 2000;
+    int lookup_start = std::max(0, lookup_size);
 
-    auto set_check = dup_check.insert(blk_addr); 
+    bool found = false;
 
-    if (!set_check.second)
-      access.push_back(blk_addr); 
+    for (size_t i = lookup_start; i < access.size(); i++) 
+    {
+      if (access[i].addr == tmpp.addr)
+      {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) 
+      access.push_back(tmpp); 
 
     if (access.size() >= ACCESS_LEN) 
     {
@@ -31,59 +44,84 @@ void spp::SPP_ORACLE::update(uint64_t addr)
   }
 }
 
-void spp::SPP_ORACLE::evict(uint64_t addr)
+void spp::SPP_ORACLE::check_progress(uint64_t cycle, uint64_t addr)
 {
-  uint64_t blk_addr = (addr >> 6) << 6;
+  if (!RECORD_OR_REPLAY) 
+  {
+    addr = (addr >> 6) << 6;
+    size_t j;
+    bool found = false;
+    size_t q_size = progress_q.size();
+    size_t limit = 200;
+    size_t queue_lookup_limit = std::min(q_size, q_size);
 
-  auto evict_pos = std::find(access.begin(), access.end(), blk_addr);
+    for (size_t i = 0; i < queue_lookup_limit; i++) 
+    {
+      if (progress_q[i].addr == addr && progress_q[i].cycle_diff >= cycle) 
+      {
+        j = i;
+        found = true;
+        break;
+      }
+    }
 
-  if (evict_pos != access.end())
-    access.erase(evict_pos);
+    if (found)
+    {
+      cycles_speedup = progress_q[j].cycle_diff - cycle;
+      //std::cout << "Found at " << j << " with progress_q size = " << progress_q.size() << " cycle speedup = " << cycles_speedup << std::endl;
+      progress_q.erase(progress_q.begin(), progress_q.begin() + j);
+    }
+  }
 }
 
 void spp::SPP_ORACLE::file_write()
 {
-  if (RECORD_OR_REPLAY) 
+  if (RECORD_OR_REPLAY && can_write) 
   {
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::app);
 
     for(auto var : access) 
-      rec_file << var << std::endl;
+      rec_file << var.cycle_diff << " " << var.addr << std::endl;
 
-    rec_file << 0 << std::endl;
+    rec_file << 0 << " " << 0 << std::endl;
     rec_file.close();
-    std::cout << "Writing " << access.size() << " L2C accesses to file." << std::endl;
-    dup_check.clear();
+    std::cout << "Writing " << access.size() << " accesses to file." << std::endl;
     access.clear();
   }
 }
 
-std::vector<std::pair<uint64_t, bool>> spp::SPP_ORACLE::file_read()
+void spp::SPP_ORACLE::file_read()
 {
-  std::vector<std::pair<uint64_t, bool>> pf;
+  cs_pf.clear();
+  progress_q.clear();
 
   if (!RECORD_OR_REPLAY) 
   {
-    uint64_t readin;
+    uint64_t readin_cycle_diff, readin_addr;
 
     while(!rec_file.eof())
     {
-      rec_file >> readin;
+      rec_file >> readin_cycle_diff >> readin_addr;
 
-      if (readin == 0)
+      if (readin_addr == 0)
         break; 
 
-      pf.push_back(std::make_pair(readin, true));
+      acc_timestamp tmpp;
+      tmpp.cycle_diff = readin_cycle_diff;
+      tmpp.addr = readin_addr;
+
+      cs_pf.push_back(tmpp);
+      progress_q.push_back(tmpp);
     }
 
-    std::cout << "Read " << pf.size() << " L2C accesses from file." << std::endl;
+    std::cout << "Read " << cs_pf.size() << " accesses from file." << std::endl;
   }
-
-  return pf;
 }
 
 void spp::SPP_ORACLE::finish()
 {
   if (!RECORD_OR_REPLAY)
     rec_file.close();
+  else
+    file_write();
 }

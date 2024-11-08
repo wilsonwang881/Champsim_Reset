@@ -28,6 +28,8 @@ namespace stlb_pf
 
     uint64_t pf_issued = 0;
     uint64_t pf_hit = 0;
+    uint64_t to_be_pf_blks = 0;
+    uint64_t filled_blks = 0;
     std::set<uint64_t> pf_blks;
     std::set<uint64_t> hit_blks;
 
