@@ -452,20 +452,20 @@ long CACHE::operate()
 
   impl_prefetcher_cycle_operate();
 
+   /*
   if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     fmt::print("[{}] {} cycle completed: {} tags checked: {} remaining: {} stash consumed: {} remaining: {} channel consumed: {} pq consumed {} unused consume bw {}\n", NAME, __func__, current_cycle,
         tag_bw_consumed, std::size(inflight_tag_check),
         stash_bandwidth_consumed, std::size(translation_stash),
         channels_bandwidth_consumed, pq_bandwidth_consumed, tag_bw);
 
-    /*
     std::cout << NAME << " [Translation Stash]" << std::endl;
 
     for(auto var : translation_stash) {
       std::cout << "instr_id: " << var.instr_id << " address: " << var.address << " v_address " << var.v_address << " is_translated: " << var.is_translated << " translate_issued: " << var.translate_issued << " asid: " << var.asid[0] << std::endl; 
     }
-    */
   }
+  */
 
   // WL 
   reset_components();

@@ -199,7 +199,7 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
              fed_in_instruction++;
            }
           }
-          //cpu.input_queue.back().asid[0] = champsim::operable::currently_active_thread_ID;
+          cpu.input_queue.back().asid[0] = champsim::operable::currently_active_thread_ID;
           //std::cout << "[INS] ip 0x" << std::hex << (unsigned)cpu.input_queue.back().ip << " asid " << (unsigned)cpu.input_queue.back().asid[0] << std::endl;
         }
 		
