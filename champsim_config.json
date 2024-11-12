@@ -129,7 +129,7 @@
         "prefetch_as_load": true,
         "virtual_prefetch": false,
         "prefetch_activate": "LOAD",
-        "prefetcher": "stlb-pf"
+        "prefetcher": "no"
     },
 
 	"PTW": {

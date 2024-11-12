@@ -194,8 +194,8 @@ void PageTableWalker::finish_packet(const response_type& packet)
 {
   auto finish_step = [this](auto& mshr_entry) {
     uint64_t penalty;
-    // WL :: original code: std::tie(mshr_entry.data, penalty) = this->vmem->get_pte_pa(mshr_entry.cpu, mshr_entry.v_address, mshr_entry.translation_level);
-    std::tie(mshr_entry.data, penalty) = this->vmem->get_pte_pa(mshr_entry.asid[0], mshr_entry.v_address, mshr_entry.translation_level);
+    std::tie(mshr_entry.data, penalty) = this->vmem->get_pte_pa(mshr_entry.cpu, mshr_entry.v_address, mshr_entry.translation_level);
+    //std::tie(mshr_entry.data, penalty) = this->vmem->get_pte_pa(mshr_entry.asid[0], mshr_entry.v_address, mshr_entry.translation_level);
 
     mshr_entry.event_cycle = this->current_cycle + (this->warmup ? 0 : penalty + HIT_LATENCY);
 
@@ -207,9 +207,8 @@ void PageTableWalker::finish_packet(const response_type& packet)
 
   auto finish_last_step = [this](auto& mshr_entry) {
     uint64_t penalty;
-    // WL: following line is the original code
-    //std::tie(mshr_entry.data, penalty) = this->vmem->va_to_pa(mshr_entry.cpu, mshr_entry.v_address);
-    std::tie(mshr_entry.data, penalty) = this->vmem->va_to_pa(mshr_entry.asid[0], mshr_entry.v_address); // WL: this line is the modified code.
+    std::tie(mshr_entry.data, penalty) = this->vmem->va_to_pa(mshr_entry.cpu, mshr_entry.v_address);
+    //std::tie(mshr_entry.data, penalty) = this->vmem->va_to_pa(mshr_entry.asid[0], mshr_entry.v_address); // WL: this line is the modified code.
 
     mshr_entry.event_cycle = this->current_cycle + (this->warmup ? 0 : penalty + HIT_LATENCY);
 

@@ -247,6 +247,7 @@ void spp::prefetcher::clear_states()
 // WL
 void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 {
+  return;
   std::vector<std::pair<uint64_t, bool>> tmpp_pf;
   /*
   std::vector<std::pair<uint64_t, bool>> tmpp_pf = oracle.file_read();
