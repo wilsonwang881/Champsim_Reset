@@ -58,6 +58,7 @@ void O3_CPU::initialize_btb()
   ::CONDITIONAL_HISTORY[this] = 0;
 
   // WL 
+  ::RAS[this].clear();
   std::cout << "=> BTB initialized at cycle " << current_cycle << std::endl;
 }
 
