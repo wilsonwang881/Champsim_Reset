@@ -128,9 +128,9 @@ void CACHE::prefetcher_cycle_operate()
       pref.context_switch_prefetch_gathered = true;
     }
    
-    if (//!champsim::operable::have_cleared_BTB
-        //&& !champsim::operable::have_cleared_BP
-        !champsim::operable::have_cleared_prefetcher
+    if (!champsim::operable::have_cleared_BTB
+        && !champsim::operable::have_cleared_BP
+        && !champsim::operable::have_cleared_prefetcher
         && champsim::operable::cpu_side_reset_ready
         && champsim::operable::cache_clear_counter == 7) {
       champsim::operable::context_switch_mode = false;
@@ -142,8 +142,8 @@ void CACHE::prefetcher_cycle_operate()
       champsim::operable::emptied_cache.clear();
       pref.issued_cs_pf.clear();
       //pref.oracle.can_write = true;
-      pref.clear_states();
-      std::cout << "SPP states cleared." << std::endl;
+      //pref.clear_states();
+      std::cout << "SPP states not cleared." << std::endl;
       reset_misc::can_record_after_access = true;
       std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
       /*
