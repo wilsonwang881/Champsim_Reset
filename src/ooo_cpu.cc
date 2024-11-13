@@ -966,10 +966,10 @@ void O3_CPU::reset_components()
       champsim::operable::cpu_side_reset_ready = true;
 
       // Clear DIB 
-      DIB.clear_DIB();
+      //DIB.clear_DIB();
 
-      std::cout << "=> DIB cleared." << std::endl;
-      std::cout << "=> CPU side reset ready." << std::endl;
+      std::cout << "=> DIB not cleared." << std::endl;
+      std::cout << "=> CPU side no-reset ready." << std::endl;
     }
   }
 }
