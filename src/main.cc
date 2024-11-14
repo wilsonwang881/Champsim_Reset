@@ -67,7 +67,7 @@ uint64_t champsim::operable::cache_clear_counter = 0;
 uint16_t champsim::operable::currently_active_thread_ID = 0;
 std::vector<uint64_t> champsim::operable::reset_ins_count_global;
 std::vector<std::string> champsim::operable::emptied_cache;
-uint64_t champsim::operable::number_of_instructions_to_skip_before_log = 0;
+uint64_t champsim::operable::number_of_instructions_to_skip_before_log = 79566050;
 uint64_t champsim::operable::cpu0_num_retired = 0;
 std::vector<uint64_t> champsim::operable::lru_states(2048*16);
 // WL
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
     ins_number_every_4M_cycles_file.open("reset_ins_number.txt", std::ios::in);
 
     uint64_t reset_ins_count_readin;
-    std::cout << "Reset at instruction:" << std::endl;
+    //std::cout << "Reset at instruction:" << std::endl;
 
     while(ins_number_every_4M_cycles_file >> reset_ins_count_readin)
     {

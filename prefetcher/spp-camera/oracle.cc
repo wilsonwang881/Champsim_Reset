@@ -2,6 +2,11 @@
 
 void spp::SPP_ORACLE::init() 
 {
+  if (!ORACLE_ACTIVE) 
+    return;
+
+  can_write = false;
+
   // Clear the L2C access file if in recording mode.
   if (RECORD_OR_REPLAY) 
   {
@@ -14,6 +19,9 @@ void spp::SPP_ORACLE::init()
 
 void spp::SPP_ORACLE::update(uint64_t cycle, uint64_t addr)
 {
+  if (!ORACLE_ACTIVE) 
+    return;
+
   if (RECORD_OR_REPLAY && can_write) 
   {
     acc_timestamp tmpp;
@@ -44,38 +52,11 @@ void spp::SPP_ORACLE::update(uint64_t cycle, uint64_t addr)
   }
 }
 
-void spp::SPP_ORACLE::check_progress(uint64_t cycle, uint64_t addr)
-{
-  if (!RECORD_OR_REPLAY) 
-  {
-    addr = (addr >> 6) << 6;
-    size_t j;
-    bool found = false;
-    size_t q_size = progress_q.size();
-    size_t limit = 200;
-    size_t queue_lookup_limit = std::min(q_size, q_size);
-
-    for (size_t i = 0; i < queue_lookup_limit; i++) 
-    {
-      if (progress_q[i].addr == addr && progress_q[i].cycle_diff >= cycle) 
-      {
-        j = i;
-        found = true;
-        break;
-      }
-    }
-
-    if (found)
-    {
-      cycles_speedup = progress_q[j].cycle_diff - cycle;
-      //std::cout << "Found at " << j << " with progress_q size = " << progress_q.size() << " cycle speedup = " << cycles_speedup << std::endl;
-      progress_q.erase(progress_q.begin(), progress_q.begin() + j);
-    }
-  }
-}
-
 void spp::SPP_ORACLE::file_write()
 {
+  if (!ORACLE_ACTIVE) 
+    return;
+
   if (RECORD_OR_REPLAY && can_write) 
   {
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::app);
@@ -90,10 +71,12 @@ void spp::SPP_ORACLE::file_write()
   }
 }
 
-void spp::SPP_ORACLE::file_read()
+std::vector<std::pair<uint64_t, bool>> spp::SPP_ORACLE::file_read()
 {
-  cs_pf.clear();
-  progress_q.clear();
+  std::vector<std::pair<uint64_t, bool>> tmpp;
+
+  if (!ORACLE_ACTIVE) 
+    return tmpp;
 
   if (!RECORD_OR_REPLAY) 
   {
@@ -106,20 +89,20 @@ void spp::SPP_ORACLE::file_read()
       if (readin_addr == 0)
         break; 
 
-      acc_timestamp tmpp;
-      tmpp.cycle_diff = readin_cycle_diff;
-      tmpp.addr = readin_addr;
-
-      cs_pf.push_back(tmpp);
-      progress_q.push_back(tmpp);
+      tmpp.push_back(std::make_pair(readin_addr, 1));
     }
 
-    std::cout << "Read " << cs_pf.size() << " accesses from file." << std::endl;
+    std::cout << "Read " << tmpp.size() << " accesses from file." << std::endl;
   }
+
+  return tmpp;
 }
 
 void spp::SPP_ORACLE::finish()
 {
+  if (!ORACLE_ACTIVE) 
+    return;
+
   if (!RECORD_OR_REPLAY)
     rec_file.close();
   else

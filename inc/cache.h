@@ -500,7 +500,7 @@ public:
         module_pimpl(std::make_unique<module_model<P_FLAG, R_FLAG>>(this))
   {
     // WL
-    std::cout << "Initializing cache " << NAME << std::endl;
+    //std::cout << "Initializing cache " << NAME << std::endl;
 
     std::string L1D_file_name("cpu0_L1D_hit_miss_record.txt");
     std::string L1I_file_name("cpu0_L1I_hit_miss_record.txt");

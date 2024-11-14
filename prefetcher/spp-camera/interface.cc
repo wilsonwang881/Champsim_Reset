@@ -22,11 +22,7 @@ void CACHE::prefetcher_initialize()
   auto &pref = ::SPP[{this, cpu}];
   pref.prefetcher_state_file.open("prefetcher_states.txt", std::ios::out);
   pref.page_bitmap.init();
-  //pref.oracle.init();
-  //pref.oracle.can_write = false;
-  //pref.oracle.allowed_pf = 200;
-
-  //pref.oracle.init();
+  pref.oracle.init();
   // WL 
 }
 
@@ -34,22 +30,13 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 {
   auto &pref = ::SPP[{this, cpu}];
 
-  //pref.oracle.update(this->current_cycle, base_addr);
-
-  if (pref.context_switch_queue_empty()) // && type != champsim::to_underlying(access_type::TRANSLATION)) 
+  //if (pref.context_switch_queue_empty())
   {
     pref.update_demand(base_addr,this->get_set_index(base_addr));
     pref.initiate_lookahead(base_addr);
-    //pref.oracle.update(base_addr);
-    //pref.oracle.update(ip);
   }
-  /*
-  else if (pref.context_switch_queue_empty() && type == champsim::to_underlying(access_type::TRANSLATION)) 
-  {
-    pref.update_demand(base_addr, (base_addr >> champsim::lg2(1024)) & champsim::bitmask(champsim::lg2(NUM_SET)));
-    pref.initiate_lookahead(base_addr);
-  }
-  */
+
+  pref.oracle.update(this->current_cycle, base_addr);
 
   if (cache_hit) 
   {
@@ -146,13 +133,8 @@ void CACHE::prefetcher_cycle_operate()
       std::cout << "SPP states not cleared." << std::endl;
       reset_misc::can_record_after_access = true;
       std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
-      /*
-      pref.oracle.file_read();
-      pref.oracle.file_write();
-      pref.oracle.can_write = true;
       pref.oracle.first_round = false;
       pref.oracle.access.clear();
-      */
     }
   }
   // Normal operation.
@@ -191,8 +173,7 @@ void CACHE::record_spp_camera_states()
   auto &pref = ::SPP[{this, cpu}];
   pref.cache_cycle = current_cycle;
   pref.record_spp_states();
-  /*
+
   pref.oracle.file_write();
   pref.oracle.finish();
-  */
 }

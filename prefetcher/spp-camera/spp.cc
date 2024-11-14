@@ -41,6 +41,11 @@ namespace {
 
 void spp::prefetcher::issue(CACHE* cache)
 {
+  /*
+  if (oracle.ORACLE_ACTIVE && oracle.RECORD_OR_REPLAY)
+    return;
+    */
+    
   // WL: issue context switch prefetches first 
   //if (!reset_misc::dq_prefetch_communicate.empty()) {
   if (!context_switch_queue_empty()) {
@@ -51,23 +56,20 @@ void spp::prefetcher::issue(CACHE* cache)
 
       auto [addr, priority] = context_switch_issue_queue.front();
       bool prefetched = cache->prefetch_line(addr, priority, 0);
-      //filter.update_issue(addr, cache->get_set(addr));
+
+      issue_queue.clear();
 
       if (prefetched) {
         context_switch_issue_queue.pop_front();
         issued_cs_pf.insert(addr);
         total_issued_cs_pf++;
         issued_pf_this_round++;
-        //issue_queue.clear();
+        //filter.update_issue(addr, cache->get_set(addr));
       }
     }
 
     return;
   }
-
-//    issue_queue.clear();
-//    return;
-  //}
   // WL 
 
   // Issue eligible outstanding prefetches
@@ -256,7 +258,25 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 
   return;
   */
+  context_switch_issue_queue.clear();
+  tmpp_pf = oracle.file_read();
 
+  for(auto var : tmpp_pf)
+    context_switch_issue_queue.push_back(var);
+    
+  oracle.file_write();
+  oracle.can_write = true;
+  oracle.interval_start_cycle = cache->current_cycle;
+
+
+  issue_queue.clear();
+  filter.clear();
+  std::cout << "SPP issue queue and filter cleared." << std::endl;
+
+  if (oracle.ORACLE_ACTIVE)
+    return; 
+
+  tmpp_pf.clear();
   tmpp_pf = page_bitmap.gather_pf();
 
   available_prefetches.clear();
@@ -268,11 +288,6 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   }
 
   context_switch_issue_queue.clear();
-
-  issue_queue.clear();
-  filter.clear();
-  std::cout << "SPP issue queue and filter cleared." << std::endl;
-
   //return;
 
   std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature(1.0 * filter.pf_useful / filter.pf_issued);

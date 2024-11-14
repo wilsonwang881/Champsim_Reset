@@ -759,7 +759,7 @@ void CACHE::initialize()
 
 void CACHE::begin_phase()
 {
-  std::cout << "begin_phase() " << NAME << std::endl; // WL
+  //std::cout << "begin_phase() " << NAME << std::endl; // WL
   stats_type new_roi_stats, new_sim_stats;
 
   new_roi_stats.name = NAME;
@@ -857,7 +857,7 @@ void CACHE::print_deadlock()
 void CACHE::clear_internal_PQ()
 {
   internal_PQ.clear();
-  std::cout << NAME << " internal_PQ cleared" << std::endl;
+  //std::cout << NAME << " internal_PQ cleared" << std::endl;
 }
 
 // WL

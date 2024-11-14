@@ -62,7 +62,7 @@ namespace spp {
     std::deque<std::pair<uint64_t, bool>> context_switch_issue_queue; // WL
                                                                       //
     SPP_PAGE_BITMAP page_bitmap; // WL
-    //SPP_ORACLE oracle;           // WL 
+    SPP_ORACLE oracle;           // WL 
 
     bool warmup = true;
     

@@ -164,12 +164,12 @@ phase_stats do_phase(phase_info phase, environment& env, std::vector<tracereader
       champsim::operable::currently_active_thread_ID++;
       std::cout << "ASID incremented to " << (unsigned)champsim::operable::currently_active_thread_ID << std::endl;
       champsim::operable::reset_count++;
-      std::cout <<"Reset count is"<< reset_ins_count_readin_index <<std::endl;
+      //std::cout <<"Reset count is"<< reset_ins_count_readin_index <<std::endl;
 
       // prevent out of range index
       if (reset_ins_count_readin_index <= num_resets){
         next_reset_moment = reset_ins_count[reset_ins_count_readin_index];
-        std::cout << "reset_ins_count_readin_index = " << reset_ins_count_readin_index << " next_reset_moment = " << next_reset_moment << std::endl;
+        //std::cout << "reset_ins_count_readin_index = " << reset_ins_count_readin_index << " next_reset_moment = " << next_reset_moment << std::endl;
       }
 
       reset_ins_count_readin_index++;
