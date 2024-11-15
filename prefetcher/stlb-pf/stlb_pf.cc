@@ -51,7 +51,7 @@ void stlb_pf::prefetcher::gather_pf()
   pf_blks.clear();
   hit_blks.clear();
 
-  for(int i = translations.size() - 1; i >= 0; i--)
+  for(int i = 0; i < translations.size(); i++)
     cs_q.push_back(translations[i] << 12); 
 
   translations.clear();
