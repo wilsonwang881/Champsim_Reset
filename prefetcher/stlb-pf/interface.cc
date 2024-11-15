@@ -19,15 +19,19 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   if (cache_hit) // && (metadata_in == 1)) 
   {
     pref.update(addr);
-    pref.pop_pf(addr);
+    pref.update(ip);
     pref.hit_this_round = true;
-    //pref.update(ip);
   }
   else
   {
-    pref.pop_pf(addr);
     pref.hit_this_round = false;
   }
+
+  pref.pop_pf(addr);
+  pref.pop_pf(ip);
+
+  if (useful_prefetch)
+    pref.pf_hit++;
 
   pref.check_hit(addr);
 
@@ -74,6 +78,9 @@ void CACHE::prefetcher_cycle_operate()
 
   if (!pref.cs_q.empty() && pref.hit_this_round && (pref.filled_blks <= pref.to_be_pf_blks))
     pref.issue(this);
+
+  if (!pref.hit_this_round)
+    pref.hit_this_round = true; 
 }
 
 void CACHE::prefetcher_final_stats() 

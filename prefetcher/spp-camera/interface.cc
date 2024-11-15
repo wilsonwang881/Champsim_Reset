@@ -44,7 +44,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     //pref.page_bitmap.update(ip);
   }
 
-  if ((pref.issued_cs_pf.find((base_addr >> 6) << 6) != pref.issued_cs_pf.end())) // ||
+  if ((pref.issued_cs_pf.find((base_addr >> 6) << 6) != pref.issued_cs_pf.end()) && useful_prefetch) // ||
      //(pref.issued_cs_pf.find((ip>> 6) << 6) != pref.issued_cs_pf.end()))
   {
     pref.issued_cs_pf_hit++; 
@@ -60,8 +60,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     uint64_t var_blk_no = (var.first >> 6) & 0x3F;
     uint64_t blk_no = (base_addr >> 6) & 0x3F;
 
-    if (((var.first >> 12) == page_addr) && 
-        var_blk_no != blk_no)
+    if (((var.first >> 12) == page_addr) && var_blk_no != blk_no)
       pref.context_switch_issue_queue.push_back(var); 
     else if (((var.first >> 12) == page_addr) && ((var.first >> 6) == (base_addr >> 6))) 
       demand_itself = var;
@@ -89,7 +88,7 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   if ((!pkt_pfed) && (addr != 0))
     pref.page_bitmap.update(addr);
 
-  if (blk_asid_match && !blk_pfed) 
+  if (blk_asid_match)// && !blk_pfed 
       pref.page_bitmap.evict(evicted_addr);
 
   //pref.oracle.evict(evicted_addr);

@@ -51,7 +51,7 @@ void stlb_pf::prefetcher::gather_pf()
   pf_blks.clear();
   hit_blks.clear();
 
-  for(int i = 0; i < translations.size(); i++)
+  for(int i = translations.size() - 1; i >= 0; i--)
     cs_q.push_back(translations[i] << 12); 
 
   translations.clear();
@@ -65,6 +65,7 @@ void stlb_pf::prefetcher::issue(CACHE* cache)
   {
     pf_blks.insert(cs_q.front());
     cs_q.pop_front(); 
+    pf_issued++;
   }
 }
 
@@ -78,7 +79,7 @@ void stlb_pf::prefetcher::check_hit(uint64_t addr)
 
 void stlb_pf::prefetcher::update_pf_stats()
 {
-  pf_issued += pf_blks.size();
-  pf_hit += hit_blks.size();
+  //pf_issued += pf_blks.size();
+  //pf_hit += hit_blks.size();
 }
 

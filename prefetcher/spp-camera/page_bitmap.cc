@@ -312,6 +312,7 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf()
 
   int pf_from_filter = 0;
 
+  /*
   for(auto var : filter) 
   {
     if (var.valid)
@@ -322,8 +323,7 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf()
       cs_pf.push_back(std::make_pair(addr, false));
     }
   }
-
-  //cs_pf.clear();
+  */
 
   std::vector<std::pair<uint64_t, bool>> pf;
   for(auto var : cs_pf) {
