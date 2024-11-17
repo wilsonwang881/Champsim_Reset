@@ -51,7 +51,12 @@ void stlb_pf::prefetcher::gather_pf()
   pf_blks.clear();
   hit_blks.clear();
 
-  for(int i = translations.size() - 1; i >= 0; i--)
+  int limit = 0;
+
+  if (accuracy <= 0.5) 
+    limit = DQ_SIZE * (1 - accuracy);
+
+  for(int i = translations.size() - 1; i >= limit; i--)
     cs_q.push_back(translations[i] << 12); 
 
   translations.clear();
@@ -79,7 +84,15 @@ void stlb_pf::prefetcher::check_hit(uint64_t addr)
 
 void stlb_pf::prefetcher::update_pf_stats()
 {
-  //pf_issued += pf_blks.size();
-  //pf_hit += hit_blks.size();
+  if (first_round) 
+  {
+    first_round = false;
+    accuracy = 1.0;
+  }
+  else 
+    accuracy = (pf_hit - pf_hit_last_round + 1) / (pf_issued - pf_issued_last_round + 1) * 1.0;
+
+  pf_hit_last_round = pf_hit;
+  pf_issued_last_round = pf_issued;
 }
 

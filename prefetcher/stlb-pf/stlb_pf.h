@@ -20,12 +20,15 @@ namespace stlb_pf
 {
   class prefetcher
   {
-    constexpr static std::size_t DQ_SIZE = 1024;
-
     public:
 
+    bool first_round = true;
+    uint64_t DQ_SIZE = 1024;
     bool hit_this_round = false;
 
+    uint64_t pf_hit_last_round = 0;
+    uint64_t pf_issued_last_round = 0;
+    float accuracy;
     uint64_t pf_issued = 0;
     uint64_t pf_hit = 0;
     uint64_t to_be_pf_blks = 0;
