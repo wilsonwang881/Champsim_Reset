@@ -54,7 +54,7 @@ void stlb_pf::prefetcher::gather_pf()
   int limit = 0;
 
   if (accuracy <= 0.5) 
-    limit = DQ_SIZE * (1 - accuracy);
+    limit = translations.size() * (1 - accuracy);
 
   for(int i = translations.size() - 1; i >= limit; i--)
     cs_q.push_back(translations[i] << 12); 
