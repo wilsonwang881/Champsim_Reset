@@ -7,7 +7,7 @@ namespace {
   std::map<unique_key, stlb_pf::prefetcher> STLB_PF; 
 }
 
-void stlb_pf::prefetcher::update(uint64_t addr)
+void stlb_pf::prefetcher::update(uint64_t addr, uint64_t ip)
 {
   uint64_t page_num = addr >> 12;
 
@@ -23,6 +23,25 @@ void stlb_pf::prefetcher::update(uint64_t addr)
 
   if (translations.size() > DQ_SIZE) 
     translations.pop_front();
+
+  // Avoid duplicates in translations and translations_ip deques.
+  if (addr == ip)
+    return; 
+
+  page_num = ip >> 12;
+
+  el = std::find(translations_ip.begin(), translations_ip.end(), page_num);
+
+  if (el == translations_ip.end()) 
+    translations_ip.push_back(page_num);
+  else
+  {
+    translations_ip.erase(el);
+    translations_ip.push_back(page_num);
+  }
+
+  if (translations_ip.size() > DQ_IP_SIZE) 
+    translations_ip.pop_front();
 }
 
 void stlb_pf::prefetcher::pop_pf(uint64_t addr)
@@ -43,23 +62,38 @@ void stlb_pf::prefetcher::evict(uint64_t addr)
 
   if (evict_pos != translations.end())
     translations.erase(evict_pos);
+
+  evict_pos = std::find(translations_ip.begin(), translations_ip.end(), page_num);
+
+  if (evict_pos != translations_ip.end())
+    translations_ip.erase(evict_pos);
 }
 
 void stlb_pf::prefetcher::gather_pf()
 {
   cs_q.clear();
-  pf_blks.clear();
-  hit_blks.clear();
 
   int limit = 0;
 
   if (accuracy <= 0.4) 
     limit = std::round(translations.size() * (1 - accuracy));
 
+  int ip_translation_counter = translations_ip.size() - 1;
+
   for(int i = translations.size() - 1; i >= limit; i--)
+  {
     cs_q.push_back(translations[i] << 12); 
 
+    if (ip_translation_counter >= 0) 
+    {
+      cs_q.push_back(translations_ip[ip_translation_counter] << 12); 
+      ip_translation_counter--;
+      i--;
+    }
+  }
+
   translations.clear();
+  translations_ip.clear();
 }
 
 void stlb_pf::prefetcher::issue(CACHE* cache)
@@ -68,29 +102,14 @@ void stlb_pf::prefetcher::issue(CACHE* cache)
   
   if (pf_res) 
   {
-    pf_blks.insert(cs_q.front());
     cs_q.pop_front(); 
     pf_issued++;
   }
 }
 
-void stlb_pf::prefetcher::check_hit(uint64_t addr)
-{
-  uint64_t page_no = (addr >> 12) << 12;
-
-  if (pf_blks.find(page_no) != pf_blks.end())
-    hit_blks.insert(addr); 
-}
-
 void stlb_pf::prefetcher::update_pf_stats()
 {
-  if (first_round) 
-  {
-    first_round = false;
-    accuracy = 1.0;
-  }
-  else 
-    accuracy = (pf_hit - pf_hit_last_round + 1.0) / (pf_issued - pf_issued_last_round + 1.0) * 1.0;
+  accuracy = (pf_hit - pf_hit_last_round + 1.0) / (pf_issued - pf_issued_last_round + 1.0) * 1.0;
 
   printf("STLB PF accuracy = %f\n", accuracy);
 

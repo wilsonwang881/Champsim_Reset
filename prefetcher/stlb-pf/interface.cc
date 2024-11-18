@@ -18,8 +18,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 
   if (cache_hit) // && (metadata_in == 1)) 
   {
-    pref.update(addr);
-    pref.update(ip);
+    pref.update(addr, ip);
     pref.hit_this_round = true;
   }
   else
@@ -32,8 +31,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 
   if (useful_prefetch)
     pref.pf_hit++;
-
-  pref.check_hit(addr);
 
   return metadata_in;
 }
@@ -74,14 +71,16 @@ void CACHE::prefetcher_cycle_operate()
     pref.filled_blks = 0;
     pref.to_be_pf_blks = pref.cs_q.size();
     std::cout << NAME << " STLB Prefetcher gathered " << pref.cs_q.size() << " prefetches." << std::endl;
-    std::cout << NAME << " prefetch accuracy " << pref.pf_hit << " / " << pref.pf_issued << std::endl;
+    printf("%s overall prefetch accuracy = %ld / %ld = %f\n", NAME.c_str(), pref.pf_hit, pref.pf_issued, 1.0 * pref.pf_hit / (pref.pf_issued + 1.0));
   }
 
   if (!pref.cs_q.empty() && pref.hit_this_round && (pref.filled_blks <= pref.to_be_pf_blks))
     pref.issue(this);
 
+  /*
   if (!pref.hit_this_round)
     pref.hit_this_round = true; 
+    */
 }
 
 void CACHE::prefetcher_final_stats() 

@@ -23,8 +23,8 @@ namespace stlb_pf
   {
     public:
 
-    bool first_round = true;
-    uint64_t DQ_SIZE = 1024;
+    uint64_t DQ_IP_SIZE = 100;
+    uint64_t DQ_SIZE = 1024 - DQ_IP_SIZE;
     bool hit_this_round = false;
 
     uint64_t pf_hit_last_round = 0;
@@ -34,19 +34,17 @@ namespace stlb_pf
     uint64_t pf_hit = 0;
     uint64_t to_be_pf_blks = 0;
     uint64_t filled_blks = 0;
-    std::set<uint64_t> pf_blks;
-    std::set<uint64_t> hit_blks;
 
     // Context switch prefetch queue.
     std::deque<uint64_t> translations; 
+    std::deque<uint64_t> translations_ip;
     std::deque<uint64_t> cs_q;
 
-    void update(uint64_t addr);
+    void update(uint64_t addr, uint64_t ip);
     void pop_pf(uint64_t addr);
     void evict(uint64_t addr);
     void gather_pf();
     void issue(CACHE* cache);
-    void check_hit(uint64_t addr);
     void update_pf_stats();
   };
 }
