@@ -53,8 +53,8 @@ void stlb_pf::prefetcher::gather_pf()
 
   int limit = 0;
 
-  if (accuracy <= 0.5) 
-    limit = translations.size() * (1 - accuracy);
+  if (accuracy <= 0.4) 
+    limit = std::round(translations.size() * (1 - accuracy));
 
   for(int i = translations.size() - 1; i >= limit; i--)
     cs_q.push_back(translations[i] << 12); 
@@ -90,7 +90,9 @@ void stlb_pf::prefetcher::update_pf_stats()
     accuracy = 1.0;
   }
   else 
-    accuracy = (pf_hit - pf_hit_last_round + 1) / (pf_issued - pf_issued_last_round + 1) * 1.0;
+    accuracy = (pf_hit - pf_hit_last_round + 1.0) / (pf_issued - pf_issued_last_round + 1.0) * 1.0;
+
+  printf("STLB PF accuracy = %f\n", accuracy);
 
   pf_hit_last_round = pf_hit;
   pf_issued_last_round = pf_issued;

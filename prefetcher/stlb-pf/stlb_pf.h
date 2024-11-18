@@ -13,6 +13,7 @@
 #include <vector>
 #include <set>
 #include <cassert>
+#include <cmath>
 
 class CACHE;
 
