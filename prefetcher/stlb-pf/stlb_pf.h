@@ -23,7 +23,7 @@ namespace stlb_pf
   {
     public:
 
-    uint64_t DQ_IP_SIZE = 300;
+    uint64_t DQ_IP_SIZE = 700;
     uint64_t DQ_SIZE = 1024;
     bool hit_this_round = false;
 

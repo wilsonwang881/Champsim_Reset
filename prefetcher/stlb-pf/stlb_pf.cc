@@ -25,10 +25,6 @@ void stlb_pf::prefetcher::update(uint64_t addr, uint64_t ip)
   if (translations.size() > DQ_SIZE) 
     translations.pop_front();
 
-  // Avoid duplicates in translations and translations_ip deques.
-  if (addr == ip)
-    return; 
-
   // Update ip.
   // Check for ip number limit.
   page_num = ip >> 12;
@@ -60,6 +56,8 @@ void stlb_pf::prefetcher::update(uint64_t addr, uint64_t ip)
     pop_candidate = translations_ip.front();
     translations_ip.pop_front();
     el = std::find(translations.begin(), translations.end(), pop_candidate);
+
+  if (el != translations.end()) 
     translations.erase(el);
   }
 }
@@ -93,11 +91,25 @@ void stlb_pf::prefetcher::gather_pf()
 {
   cs_q.clear();
 
-  int limit = 0;
+  int limit = 0; // = translations.size(); // = 2 * std::min(translations_ip.size(), translations.size() - translations_ip.size());
+  int ip_size = translations_ip.size();
+  int data_size = translations.size() - ip_size;
 
-  if (accuracy <= 0.5) 
-    limit = std::round(translations.size() * (1 - accuracy));
-    
+  if (ip_size >= data_size)
+  {
+    limit = data_size;
+
+    //if (accuracy <= 0.4) 
+      limit = limit + std::round(ip_size * (1 - accuracy));
+  }
+  else 
+  {
+    //if (accuracy <= 0.4) 
+      limit = std::round(translations.size() * (1 - accuracy));
+  }
+
+  std::cout << "limit = " << limit << std::endl;
+
   for(int i = translations.size() - 1; i >= limit; i--) 
     cs_q.push_back(translations[i] << 12); 
 
