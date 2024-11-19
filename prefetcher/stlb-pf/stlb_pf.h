@@ -23,8 +23,8 @@ namespace stlb_pf
   {
     public:
 
-    uint64_t DQ_IP_SIZE = 100;
-    uint64_t DQ_SIZE = 1024 - DQ_IP_SIZE;
+    uint64_t DQ_IP_SIZE = 300;
+    uint64_t DQ_SIZE = 1024;
     bool hit_this_round = false;
 
     uint64_t pf_hit_last_round = 0;

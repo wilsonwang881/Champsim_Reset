@@ -80,7 +80,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
 {
   uint32_t blk_asid_match = metadata_in >> 2; 
-  uint32_t blk_pfed = (metadata_in >> 1 & 0x1); 
+  //uint32_t blk_pfed = (metadata_in >> 1 & 0x1); 
   uint32_t pkt_pfed = metadata_in & 0x1;
 
   auto &pref = ::SPP[{this, cpu}];

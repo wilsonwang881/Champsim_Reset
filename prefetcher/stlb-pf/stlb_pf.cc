@@ -9,6 +9,7 @@ namespace {
 
 void stlb_pf::prefetcher::update(uint64_t addr, uint64_t ip)
 {
+  // Update addr.
   uint64_t page_num = addr >> 12;
 
   auto el = std::find(translations.begin(), translations.end(), page_num);
@@ -28,6 +29,8 @@ void stlb_pf::prefetcher::update(uint64_t addr, uint64_t ip)
   if (addr == ip)
     return; 
 
+  // Update ip.
+  // Check for ip number limit.
   page_num = ip >> 12;
 
   el = std::find(translations_ip.begin(), translations_ip.end(), page_num);
@@ -40,8 +43,25 @@ void stlb_pf::prefetcher::update(uint64_t addr, uint64_t ip)
     translations_ip.push_back(page_num);
   }
 
+  el = std::find(translations.begin(), translations.end(), page_num);
+
+  if (el == translations.end()) 
+    translations.push_back(page_num);
+  else
+  {
+    translations.erase(el);
+    translations.push_back(page_num);
+  }
+
+  uint64_t pop_candidate;
+
   if (translations_ip.size() > DQ_IP_SIZE) 
+  {
+    pop_candidate = translations_ip.front();
     translations_ip.pop_front();
+    el = std::find(translations.begin(), translations.end(), pop_candidate);
+    translations.erase(el);
+  }
 }
 
 void stlb_pf::prefetcher::pop_pf(uint64_t addr)
@@ -75,27 +95,15 @@ void stlb_pf::prefetcher::gather_pf()
 
   int limit = 0;
 
-  if (accuracy <= 0.4) 
+  if (accuracy <= 0.5) 
     limit = std::round(translations.size() * (1 - accuracy));
-
-  int ip_translation_counter = translations_ip.size() - 1;
-
-  for(int i = translations.size() - 1; i >= limit; i--)
-  {
+    
+  for(int i = translations.size() - 1; i >= limit; i--) 
     cs_q.push_back(translations[i] << 12); 
-
-    if (ip_translation_counter >= 0) 
-    {
-      cs_q.push_back(translations_ip[ip_translation_counter] << 12); 
-      ip_translation_counter--;
-      i--;
-    }
-  }
 
   translations.clear();
   translations_ip.clear();
 }
-
 void stlb_pf::prefetcher::issue(CACHE* cache)
 {
   bool pf_res = cache->prefetch_line(cs_q.front(), true, 0); 
