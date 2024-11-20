@@ -57,8 +57,8 @@ void stlb_pf::prefetcher::update(uint64_t addr, uint64_t ip)
     translations_ip.pop_front();
     el = std::find(translations.begin(), translations.end(), pop_candidate);
 
-  if (el != translations.end()) 
-    translations.erase(el);
+    if (el != translations.end()) 
+      translations.erase(el);
   }
 }
 
@@ -95,6 +95,7 @@ void stlb_pf::prefetcher::gather_pf()
   int ip_size = translations_ip.size();
   int data_size = translations.size() - ip_size;
 
+  /*
   if (ip_size >= data_size)
   {
     limit = data_size;
@@ -107,8 +108,11 @@ void stlb_pf::prefetcher::gather_pf()
     //if (accuracy <= 0.4) 
       limit = std::round(translations.size() * (1 - accuracy));
   }
+  */
 
-  std::cout << "limit = " << limit << " translations.size() = " << (unsigned)translations.size() << std::endl;
+  limit = translations.size() - std::round(translations.size() * accuracy * (translations.size() * 1.0 / DQ_SIZE));
+
+  std::cout << "limit = " << limit << " translations.size() = " << (unsigned)translations.size() << " translations_ip.size() = " << (unsigned)translations_ip.size() << std::endl;
 
   for(int i = translations.size() - 1; i >= limit; i--) 
     cs_q.push_back(translations[i] << 12); 
@@ -116,6 +120,7 @@ void stlb_pf::prefetcher::gather_pf()
   translations.clear();
   translations_ip.clear();
 }
+
 void stlb_pf::prefetcher::issue(CACHE* cache)
 {
   bool pf_res = cache->prefetch_line(cs_q.front(), true, 0); 
@@ -130,10 +135,11 @@ void stlb_pf::prefetcher::issue(CACHE* cache)
 void stlb_pf::prefetcher::update_pf_stats()
 {
   printf("%s hits / accesses = %ld / %ld  = %f\n", "STLB", hits, accesses, 1.0 * hits / accesses);
-  accuracy = (pf_hit - pf_hit_last_round + 1.0) / (pf_issued - pf_issued_last_round + 1.0) * 1.0;
 
-  if (pf_hit == 0 && pf_issued == 0)
+  if ((pf_hit == 0 && pf_issued == 0) || (pf_issued == pf_issued_last_round))
     accuracy = 1.0 * hits / accesses;  
+  else 
+    accuracy = (pf_hit  - pf_hit_last_round * 1.0) / (pf_issued - pf_issued_last_round * 1.0) * 1.0;
 
   printf("STLB PF accuracy = %f\n", accuracy);
 

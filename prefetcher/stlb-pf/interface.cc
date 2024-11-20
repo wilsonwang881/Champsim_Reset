@@ -80,10 +80,8 @@ void CACHE::prefetcher_cycle_operate()
   if (!pref.cs_q.empty() && pref.hit_this_round && (pref.filled_blks <= pref.to_be_pf_blks))
     pref.issue(this);
 
-  /*
   if (!pref.hit_this_round)
     pref.hit_this_round = true; 
-    */
 }
 
 void CACHE::prefetcher_final_stats() 
