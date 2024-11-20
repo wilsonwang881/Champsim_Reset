@@ -23,7 +23,7 @@ namespace stlb_pf
   {
     public:
 
-    uint64_t DQ_IP_SIZE = 700;
+    uint64_t DQ_IP_SIZE = 1024;
     uint64_t DQ_SIZE = 1024;
     bool hit_this_round = false;
 
@@ -34,6 +34,8 @@ namespace stlb_pf
     uint64_t pf_hit = 0;
     uint64_t to_be_pf_blks = 0;
     uint64_t filled_blks = 0;
+    uint64_t hits = 0;
+    uint64_t accesses = 0;
 
     // Context switch prefetch queue.
     std::deque<uint64_t> translations; 

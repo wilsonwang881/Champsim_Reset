@@ -100,7 +100,7 @@ void stlb_pf::prefetcher::gather_pf()
     limit = data_size;
 
     //if (accuracy <= 0.4) 
-      limit = limit + std::round(ip_size * (1 - accuracy));
+      limit = std::round(ip_size * (1 - accuracy));
   }
   else 
   {
@@ -108,7 +108,7 @@ void stlb_pf::prefetcher::gather_pf()
       limit = std::round(translations.size() * (1 - accuracy));
   }
 
-  std::cout << "limit = " << limit << std::endl;
+  std::cout << "limit = " << limit << " translations.size() = " << (unsigned)translations.size() << std::endl;
 
   for(int i = translations.size() - 1; i >= limit; i--) 
     cs_q.push_back(translations[i] << 12); 
@@ -129,7 +129,11 @@ void stlb_pf::prefetcher::issue(CACHE* cache)
 
 void stlb_pf::prefetcher::update_pf_stats()
 {
+  printf("%s hits / accesses = %ld / %ld  = %f\n", "STLB", hits, accesses, 1.0 * hits / accesses);
   accuracy = (pf_hit - pf_hit_last_round + 1.0) / (pf_issued - pf_issued_last_round + 1.0) * 1.0;
+
+  if (pf_hit == 0 && pf_issued == 0)
+    accuracy = 1.0 * hits / accesses;  
 
   printf("STLB PF accuracy = %f\n", accuracy);
 

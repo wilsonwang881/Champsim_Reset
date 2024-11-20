@@ -20,6 +20,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   {
     pref.update(addr, ip);
     pref.hit_this_round = true;
+    pref.hits++;
   }
   else
   {
@@ -31,6 +32,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
 
   if (useful_prefetch)
     pref.pf_hit++;
+
+  pref.accesses++;
 
   return metadata_in;
 }
