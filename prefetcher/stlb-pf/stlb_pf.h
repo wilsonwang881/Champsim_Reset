@@ -36,6 +36,9 @@ namespace stlb_pf
     uint64_t filled_blks = 0;
     uint64_t hits = 0;
     uint64_t accesses = 0;
+    uint64_t wait_interval;
+    uint64_t last_issued_pf_moment;
+    uint64_t pushed_el = 0;
 
     // Context switch prefetch queue.
     std::deque<uint64_t> translations; 
