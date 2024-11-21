@@ -95,7 +95,7 @@ void stlb_pf::prefetcher::gather_pf()
 {
   cs_q.clear();
 
-  int limit = translations.size() - std::round(translations.size() * accuracy); // * (translations.size() * 1.0 / DQ_SIZE));
+  int limit = translations.size() - std::round(translations.size() * accuracy); // * (translations.size() * 1.0 / DQ_SIZE);
 
   std::cout << "limit = " << limit << " translations.size() = " << (unsigned)translations.size() << " translations_ip.size() = " << (unsigned)translations_ip.size() << std::endl;
 
@@ -108,8 +108,8 @@ void stlb_pf::prefetcher::gather_pf()
 
 void stlb_pf::prefetcher::issue(CACHE* cache)
 {
-  if (cache->current_cycle >= (last_issued_pf_moment + wait_interval)) {
-
+  if (cache->current_cycle >= (last_issued_pf_moment + wait_interval)) 
+  {
     bool pf_res = cache->prefetch_line(cs_q.front(), true, 0); 
     
     if (pf_res) 
@@ -134,7 +134,7 @@ void stlb_pf::prefetcher::update_pf_stats()
 
   pf_hit_last_round = pf_hit;
   pf_issued_last_round = pf_issued;
-  wait_interval = std::round(4000000 * 1.0 / pushed_el);
+  wait_interval = std::round(4000000 * 0.5 / pushed_el);
   pushed_el = 0;
   printf("STLB PF issue wait cycle = %ld\n", wait_interval);
 }
