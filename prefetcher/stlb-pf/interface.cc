@@ -21,7 +21,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
     pref.update(addr);
     pref.update(ip);
     pref.hit_this_round = true;
-    pref.last_issued_pf_moment -= pref.wait_interval;
     pref.hits++;
   }
   else
@@ -35,6 +34,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   if (useful_prefetch)
   {
     pref.pf_hit++;
+    pref.last_issued_pf_moment -= pref.wait_interval;
   }
 
   pref.accesses++;
@@ -83,7 +83,7 @@ void CACHE::prefetcher_cycle_operate()
     pref.last_issued_pf_moment = this->current_cycle - pref.wait_interval;
   }
 
-  if (!pref.cs_q.empty() && pref.hit_this_round && (pref.filled_blks <= pref.to_be_pf_blks))
+  if (!pref.cs_q.empty() && (pref.filled_blks <= pref.to_be_pf_blks)) // && pref.hit_this_round 
     pref.issue(this);
 }
 
