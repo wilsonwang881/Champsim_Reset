@@ -7,7 +7,7 @@ namespace {
   std::map<unique_key, stlb_pf::prefetcher> STLB_PF; 
 }
 
-void stlb_pf::prefetcher::update(uint64_t addr, uint64_t ip)
+void stlb_pf::prefetcher::update(uint64_t addr)
 {
   // Update addr.
   uint64_t page_num = addr >> 12;
@@ -29,6 +29,7 @@ void stlb_pf::prefetcher::update(uint64_t addr, uint64_t ip)
   if (translations.size() > DQ_SIZE) 
     translations.pop_front();
 
+  /*
   // Update ip.
   // Check for ip number limit.
   page_num = ip >> 12;
@@ -64,6 +65,7 @@ void stlb_pf::prefetcher::update(uint64_t addr, uint64_t ip)
     if (el != translations.end()) 
       translations.erase(el);
   }
+  */
 }
 
 void stlb_pf::prefetcher::pop_pf(uint64_t addr)
@@ -85,31 +87,27 @@ void stlb_pf::prefetcher::evict(uint64_t addr)
   if (evict_pos != translations.end())
     translations.erase(evict_pos);
 
+  /*
   evict_pos = std::find(translations_ip.begin(), translations_ip.end(), page_num);
 
   if (evict_pos != translations_ip.end())
     translations_ip.erase(evict_pos);
+    */
 }
 
 void stlb_pf::prefetcher::gather_pf()
 {
   cs_q.clear();
 
-  int limit = translations.size() - std::round(translations.size() * accuracy); // * (translations.size() * 1.0 / DQ_SIZE);
+  int limit = translations.size() - std::round(translations.size() * accuracy) * (translations.size() * 1.0 / DQ_SIZE);
   
-  if (accuracy >= 0.9)
-    limit = 0; 
-
-  if ((1.0 * hits / accesses) <= 0.1)
-    limit = translations.size();
-
-  std::cout << "limit = " << limit << " translations.size() = " << (unsigned)translations.size() << " translations_ip.size() = " << (unsigned)translations_ip.size() << std::endl;
+  std::cout << "limit = " << limit << " translations.size() = " << (unsigned)translations.size() << std::endl;
 
   for(int i = translations.size() - 1; i >= limit; i--) 
     cs_q.push_back(translations[i] << 12); 
 
   translations.clear();
-  translations_ip.clear();
+  //translations_ip.clear();
 }
 
 void stlb_pf::prefetcher::issue(CACHE* cache)
@@ -140,8 +138,9 @@ void stlb_pf::prefetcher::update_pf_stats()
 
   pf_hit_last_round = pf_hit;
   pf_issued_last_round = pf_issued;
-  wait_interval = std::round(4000000 * 1.0 / pushed_el);
+  wait_interval = std::round(4000000 * 1.0 / (accesses - accesses_last_round + 1.0));
   pushed_el = 0;
+  accesses_last_round = accesses;
   printf("STLB PF issue wait cycle = %ld\n", wait_interval);
 }
 
