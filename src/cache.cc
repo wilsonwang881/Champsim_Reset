@@ -48,7 +48,7 @@ CACHE::mshr_type::mshr_type(tag_lookup_type req, uint64_t cycle)
   asid[0] = req.asid[0];
 }
 
-CACHE::mshr_type CACHE::mshr_type::merge(mshr_type predecessor, mshr_type successor)
+CACHE::mshr_type CACHE::mshr_type::merge(mshr_type predecessor, mshr_type successor, CACHE* cache)
 {
   std::vector<std::reference_wrapper<ooo_model_instr>> merged_instr{};
   std::vector<std::deque<response_type>*> merged_return{};
@@ -70,9 +70,9 @@ CACHE::mshr_type CACHE::mshr_type::merge(mshr_type predecessor, mshr_type succes
 
   if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
     if (successor.type == access_type::PREFETCH) {
-      fmt::print("[MSHR] {} address {:#x} type: {} into address {:#x} type: {} event: {} with asid: {} predecessor asid: {} predecessor instr_id: {} successor asid: {} successor instr_id: {}\n", __func__, successor.address, access_type_names.at(champsim::to_underlying(successor.type)), predecessor.address, access_type_names.at(champsim::to_underlying(successor.type)), retval.event_cycle, retval.asid[0], predecessor.asid[0], predecessor.instr_id, successor.asid[0], successor.instr_id);
+      fmt::print("[MSHR] {} {} address {:#x} type: {} into address {:#x} type: {} event: {} with asid: {} predecessor asid: {} predecessor instr_id: {} successor asid: {} successor instr_id: {}\n", __func__, cache->NAME, successor.address, access_type_names.at(champsim::to_underlying(successor.type)), predecessor.address, access_type_names.at(champsim::to_underlying(successor.type)), retval.event_cycle, retval.asid[0], predecessor.asid[0], predecessor.instr_id, successor.asid[0], successor.instr_id);
     } else {
-      fmt::print("[MSHR] {} address {:#x} type: {} into address {:#x} type: {} event: {} with asid: {} predecessor asid: {} predecessor instr_id: {} successor asid: {} successor instr_id: {}\n", __func__, predecessor.address, access_type_names.at(champsim::to_underlying(predecessor.type)), successor.address, access_type_names.at(champsim::to_underlying(successor.type)), retval.event_cycle, retval.asid[0], predecessor.asid[0], predecessor.instr_id, successor.asid[0], successor.instr_id);
+      fmt::print("[MSHR] {} {} address {:#x} type: {} into address {:#x} type: {} event: {} with asid: {} predecessor asid: {} predecessor instr_id: {} successor asid: {} successor instr_id: {}\n", __func__, cache->NAME, predecessor.address, access_type_names.at(champsim::to_underlying(predecessor.type)), successor.address, access_type_names.at(champsim::to_underlying(successor.type)), retval.event_cycle, retval.asid[0], predecessor.asid[0], predecessor.instr_id, successor.asid[0], successor.instr_id);
     }
   }
 
@@ -268,7 +268,7 @@ bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
     // WL: add ASID check before MSHR merging
     if (mshr_entry->asid[0] == to_allocate.asid[0]) {
       //std::cout << "MSHR merging in cache " << NAME << std::endl;
-      *mshr_entry = mshr_type::merge(*mshr_entry, to_allocate);
+      *mshr_entry = mshr_type::merge(*mshr_entry, to_allocate, this);
     }
     // WL
   } else {

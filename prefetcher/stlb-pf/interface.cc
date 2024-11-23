@@ -60,6 +60,8 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   if (blk_asid_match) 
     pref.evict(evicted_addr);
 
+  pref.pop_pf(addr);
+
   //if (!prefetch) 
     pref.filled_blks++;
 
