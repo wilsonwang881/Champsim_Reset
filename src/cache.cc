@@ -135,7 +135,12 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       auto evicting_address = (ever_seen_data ? way->address : way->v_address) & ~champsim::bitmask(match_offset_bits ? 0 : OFFSET_BITS);
 
       if (way->prefetch)
+      {
         ++sim_stats.pf_useless;
+        // WL 
+        std::cout << NAME << " useless pf " << way->address << std::endl;
+        // WL
+      }
 
       // WL: if the block is prefetched in during the current context switch cycle,
       // then it is a useless prefetch and should update the prefetcher.

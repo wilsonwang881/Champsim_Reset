@@ -52,7 +52,8 @@ void spp::prefetcher::issue(CACHE* cache)
 
     auto q_occupancy = cache->get_pq_occupancy();
 
-    if (q_occupancy[2] <= 16) {
+    //if (q_occupancy[2] <= 16) 
+    {
 
       auto [addr, priority] = context_switch_issue_queue.front();
       bool prefetched = cache->prefetch_line(addr, priority, 0);
@@ -64,12 +65,19 @@ void spp::prefetcher::issue(CACHE* cache)
         issued_cs_pf.insert(addr);
         total_issued_cs_pf++;
         issued_pf_this_round++;
+
+        //std::cout << "Issued " << addr << " at cycle " << cache->current_cycle << std::endl;
         //filter.update_issue(addr, cache->get_set(addr));
       }
     }
 
     return;
   }
+  
+  //if (!oracle.first_round && ((oracle.ORACLE_ACTIVE && !oracle.RECORD_OR_REPLAY && !oracle.oracle_pf.empty()) || (oracle.ORACLE_ACTIVE && oracle.RECORD_OR_REPLAY)))
+  if (oracle.ORACLE_ACTIVE) // && !oracle.first_round)
+    return; 
+
   // WL 
 
   // Issue eligible outstanding prefetches
@@ -259,15 +267,10 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   return;
   */
   context_switch_issue_queue.clear();
-  tmpp_pf = oracle.file_read();
-
-  for(auto var : tmpp_pf)
-    context_switch_issue_queue.push_back(var);
-    
+  oracle.file_read();
   oracle.file_write();
   oracle.can_write = true;
   oracle.interval_start_cycle = cache->current_cycle;
-
 
   issue_queue.clear();
   filter.clear();

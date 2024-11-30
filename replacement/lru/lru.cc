@@ -30,16 +30,25 @@ void CACHE::update_replacement_state(uint32_t triggering_cpu, uint32_t set, uint
 {
   // Mark the way as being used on the current cycle
   if (!hit || access_type{type} != access_type::WRITE) // Skip this for writeback hits
+  {
     ::last_used_cycles[this].at(set * NUM_WAY + way) = current_cycle;
 
-  // WL 
-  // Update the communication channel to be used by the LLC prefetcher.
-  /*
-  if (!NAME.compare(champsim::operable::LLC_name)) {
-    champsim::operable::lru_states[set * NUM_WAY + way] = current_cycle;
+    // WL
+    if(champsim::operable::lru_states.size() > 0 && L2C_name.compare(this->NAME) == 0)
+    {
+      for(auto var : champsim::operable::lru_states) 
+      {
+        if (var.second < NUM_WAY)
+        {
+          std::cout << "LRU: handling set " << var.first << " way " << var.second << std::endl;
+          ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) = 0; 
+        }
+      }
+
+      champsim::operable::lru_states.clear();
+    }
+    // WL
   }
-  */
-  // WL 
 }
 
 void CACHE::replacement_final_stats() {}

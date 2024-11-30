@@ -228,7 +228,6 @@ void spp::SPP_PAGE_BITMAP::update_bitmap_store()
 
           tb[i].page_no_store = tb[i].page_no;
         }
-
       }
     }
   }

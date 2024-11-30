@@ -85,7 +85,7 @@ void CACHE::prefetcher_cycle_operate()
     pref.last_issued_pf_moment = this->current_cycle - pref.wait_interval;
   }
 
-  if (!pref.cs_q.empty() && (pref.filled_blks <= pref.to_be_pf_blks)) // && pref.hit_this_round 
+  if (!pref.cs_q.empty()) // && (pref.filled_blks <= pref.to_be_pf_blks)) // && pref.hit_this_round 
     pref.issue(this);
 }
 

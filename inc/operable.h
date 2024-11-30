@@ -142,7 +142,7 @@ public:
 
   static uint64_t cpu0_num_retired;
 
-  static std::vector<uint64_t> lru_states;
+  static std::deque<std::pair<uint64_t, uint64_t>> lru_states;
   // WL
 
   double leap_operation = 0;

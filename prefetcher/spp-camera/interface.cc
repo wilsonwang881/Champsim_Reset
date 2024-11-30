@@ -36,7 +36,22 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     pref.initiate_lookahead(base_addr);
   }
 
-  pref.oracle.update(this->current_cycle, base_addr);
+  pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit);
+
+  /*
+  if (!pref.oracle.oracle_pf.empty()) 
+  {
+    int before_acc = pref.oracle.check_pf_status(base_addr);
+    int remaining_acc = pref.oracle.update_pf_avail(base_addr);
+
+    if ((before_acc > remaining_acc) && (remaining_acc <= 0)) {
+      uint64_t set = this->get_set_index(base_addr);
+      uint64_t way = this->get_way(base_addr, set);
+      champsim::operable::lru_states.push_back(std::make_pair(set, way));
+      std::cout << "Cleared address " << base_addr << " at set " << this->get_set_index(base_addr) << std::endl;
+    }
+  }
+  */
 
   if (cache_hit) 
   {
@@ -89,10 +104,18 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
     pref.page_bitmap.update(addr);
 
   if (blk_asid_match)// && !blk_pfed 
-      pref.page_bitmap.evict(evicted_addr);
+  {
+    pref.page_bitmap.evict(evicted_addr);
+  }
 
+  if (blk_asid_match && !pref.oracle.oracle_pf.empty())
+    pref.oracle.update_fill(evicted_addr);
   //pref.oracle.evict(evicted_addr);
-
+  
+  if (prefetch) {
+    std::cout << NAME << " fill " << addr << " set " << set << " way " << way << " cycle " << current_cycle - pref.oracle.interval_start_cycle << std::endl; 
+  }
+  
   return metadata_in;
 }
 
@@ -127,19 +150,28 @@ void CACHE::prefetcher_cycle_operate()
       pref.page_bitmap.update_bitmap_store();
       champsim::operable::emptied_cache.clear();
       pref.issued_cs_pf.clear();
-      //pref.oracle.can_write = true;
+      pref.oracle.can_write = true;
       //pref.clear_states();
       std::cout << "SPP states not cleared." << std::endl;
       reset_misc::can_record_after_access = true;
       std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
       pref.oracle.first_round = false;
       pref.oracle.access.clear();
+      pref.oracle.refresh_cache_state();
     }
   }
   // Normal operation.
   // No prefetch gathering via the signature and pattern tables.
   else
   {
+    if (pref.oracle.oracle_pf.size() > 0) 
+    {
+      uint64_t potential_cs_pf = pref.oracle.poll(current_cycle);
+    
+      if (potential_cs_pf != 0)
+        pref.context_switch_issue_queue.push_back(std::make_pair(potential_cs_pf, 1));
+    }
+
     pref.issue(this);
     pref.step_lookahead();
   }
@@ -154,6 +186,7 @@ void CACHE::prefetcher_final_stats()
 
   // WL 
   std::cout << "Context switch prefetch accuracy: " << ::SPP[{this, cpu}].issued_cs_pf_hit << "/" << ::SPP[{this, cpu}].total_issued_cs_pf << "." << std::endl;
+  ::SPP[{this, cpu}].oracle.finish();
 }
 
 // WL
@@ -172,7 +205,4 @@ void CACHE::record_spp_camera_states()
   auto &pref = ::SPP[{this, cpu}];
   pref.cache_cycle = current_cycle;
   pref.record_spp_states();
-
-  pref.oracle.file_write();
-  pref.oracle.finish();
 }
