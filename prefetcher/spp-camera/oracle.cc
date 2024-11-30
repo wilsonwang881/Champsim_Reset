@@ -137,7 +137,7 @@ void spp::SPP_ORACLE::file_read()
       {
         uint64_t accs = 1;
 
-        for (size_t j = i + 1; j < oracle_pf.size(); j++) 
+        for (uint64_t j = i + 1; j < oracle_pf.size(); j++) 
         {
           if (oracle_pf[j].addr == addr && !oracle_pf[j].miss_or_hit) 
             break;     
@@ -153,8 +153,12 @@ void spp::SPP_ORACLE::file_read()
       }
     }
 
+    std::sort(to_be_erased.begin(), to_be_erased.end());
+
     for (int i = to_be_erased.size() - 1; i >= 0; i--)
-      oracle_pf.erase(oracle_pf.begin() + i);
+    {
+      oracle_pf.erase(oracle_pf.begin() + to_be_erased[i]);
+    }
 
     std::cout << "L2C oracle: pre-processing collects " << oracle_pf.size() << " accesses from file read." << std::endl;
   }
@@ -238,7 +242,7 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t cycle)
   uint64_t set, way;
 
   // Find the address to be prefetched.
-  for(size_t i = 0; i < 200 && i < oracle_pf.size();i++) // oracle_pf.size() 
+  for(size_t i = 0; i < 20 && i < oracle_pf.size();i++) // oracle_pf.size() 
   {
     set = (oracle_pf[i].addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
     way = check_set_pf_avail(set);
@@ -248,8 +252,8 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t cycle)
       target = oracle_pf[i].addr;
       //to_be_erased.push_back(i);
       cache_state[set * WAY_NUM + way].addr = target;
-      cache_state[set * WAY_NUM + way].pending_accesses = oracle_pf[i].miss_or_hit;
-      std::cout << "PF:  addr = " << target << " set = " << set << " way = " << way << " accesses = " << oracle_pf[i].miss_or_hit << " at cycle " << cycle - interval_start_cycle << std::endl;
+      cache_state[set * WAY_NUM + way].pending_accesses = static_cast<int>(oracle_pf[i].miss_or_hit);
+      std::cout << "PF: addr = " << target << " set = " << set << " way = " << way << " accesses = " << oracle_pf[i].miss_or_hit << " at cycle " << cycle - interval_start_cycle << std::endl;
       to_be_erased.push_back(i);
       break;
     }

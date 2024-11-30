@@ -20,7 +20,7 @@ namespace spp
 
   class SPP_ORACLE
   {
-    constexpr static uint64_t ACCESS_LEN = 20000;
+    constexpr static uint64_t ACCESS_LEN = 80000;
     std::string L2C_PHY_ACC_FILE_NAME = "L2C_phy_acc.txt";
 
     std::fstream rec_file;
@@ -28,7 +28,7 @@ namespace spp
     public:
 
     constexpr static bool ORACLE_ACTIVE = true;
-    constexpr static bool RECORD_OR_REPLAY = false;
+    constexpr static bool RECORD_OR_REPLAY = true;
 
     struct acc_timestamp 
     {

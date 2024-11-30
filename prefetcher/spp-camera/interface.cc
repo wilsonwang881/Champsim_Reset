@@ -38,7 +38,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
   pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit);
 
-  /*
   if (!pref.oracle.oracle_pf.empty()) 
   {
     int before_acc = pref.oracle.check_pf_status(base_addr);
@@ -51,7 +50,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       std::cout << "Cleared address " << base_addr << " at set " << this->get_set_index(base_addr) << std::endl;
     }
   }
-  */
 
   if (cache_hit) 
   {
