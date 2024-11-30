@@ -12,6 +12,7 @@
 #include <vector>
 #include <set>
 #include <fstream>
+#include <cassert>
 #include "champsim.h"
 #include "champsim_constants.h"
 
@@ -20,7 +21,7 @@ namespace spp
 
   class SPP_ORACLE
   {
-    constexpr static uint64_t ACCESS_LEN = 80000;
+    constexpr static uint64_t ACCESS_LEN = 160000;
     std::string L2C_PHY_ACC_FILE_NAME = "L2C_phy_acc.txt";
 
     std::fstream rec_file;
@@ -28,7 +29,7 @@ namespace spp
     public:
 
     constexpr static bool ORACLE_ACTIVE = true;
-    constexpr static bool RECORD_OR_REPLAY = true;
+    constexpr static bool RECORD_OR_REPLAY = false;
 
     struct acc_timestamp 
     {
@@ -38,13 +39,14 @@ namespace spp
     };
 
     bool can_write;
-    bool first_round = true;
+    bool first_round;
     std::deque<acc_timestamp> access;
     uint64_t interval_start_cycle;
     uint64_t pf_issued_last_round = 0;
     uint64_t pf_issued = 0;
     const static uint64_t SET_NUM = 1024;
     const static uint64_t WAY_NUM = 8;
+    uint64_t available_pf = 1024 * 8;
 
     struct blk_state 
     {

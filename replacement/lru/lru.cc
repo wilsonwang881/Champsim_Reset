@@ -40,7 +40,7 @@ void CACHE::update_replacement_state(uint32_t triggering_cpu, uint32_t set, uint
       {
         if (var.second < NUM_WAY)
         {
-          std::cout << "LRU: handling set " << var.first << " way " << var.second << std::endl;
+          //std::cout << "LRU: handling set " << var.first << " way " << var.second << std::endl;
           ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) = 0; 
         }
       }

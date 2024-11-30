@@ -22,6 +22,7 @@
 #include <fstream>
 #include <set>
 #include <bitset>
+#include <cassert>
 // WL 
 
 class CACHE;

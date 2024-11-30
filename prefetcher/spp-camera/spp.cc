@@ -73,11 +73,22 @@ void spp::prefetcher::issue(CACHE* cache)
 
     return;
   }
-  
+ 
+  if (oracle.ORACLE_ACTIVE && oracle.RECORD_OR_REPLAY) {
+    return; 
+  }
+
   //if (!oracle.first_round && ((oracle.ORACLE_ACTIVE && !oracle.RECORD_OR_REPLAY && !oracle.oracle_pf.empty()) || (oracle.ORACLE_ACTIVE && oracle.RECORD_OR_REPLAY)))
-  if (oracle.ORACLE_ACTIVE) // && !oracle.first_round)
+  if (oracle.ORACLE_ACTIVE && !oracle.RECORD_OR_REPLAY && !oracle.first_round)
     return; 
 
+  if (oracle.ORACLE_ACTIVE) {
+    return; 
+  }
+
+  if (!oracle.first_round) {
+    assert(false); 
+  }
   // WL 
 
   // Issue eligible outstanding prefetches

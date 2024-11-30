@@ -48,6 +48,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       uint64_t way = this->get_way(base_addr, set);
       champsim::operable::lru_states.push_back(std::make_pair(set, way));
       std::cout << "Cleared address " << base_addr << " at set " << this->get_set_index(base_addr) << std::endl;
+      pref.oracle.available_pf++;
     }
   }
 
@@ -110,9 +111,11 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
     pref.oracle.update_fill(evicted_addr);
   //pref.oracle.evict(evicted_addr);
   
+  /*
   if (prefetch) {
     std::cout << NAME << " fill " << addr << " set " << set << " way " << way << " cycle " << current_cycle - pref.oracle.interval_start_cycle << std::endl; 
   }
+  */
   
   return metadata_in;
 }
@@ -131,6 +134,7 @@ void CACHE::prefetcher_cycle_operate()
     // Gather prefetches via the signature and pattern tables.
     if (!pref.context_switch_prefetch_gathered)
     {
+      std::cout << "remaining cs pf size " << pref.oracle.oracle_pf.size() << std::endl;
       pref.context_switch_gather_prefetches(this);
       pref.context_switch_prefetch_gathered = true;
     }

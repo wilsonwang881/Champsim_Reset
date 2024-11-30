@@ -138,7 +138,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       {
         ++sim_stats.pf_useless;
         // WL 
-        std::cout << NAME << " useless pf " << way->address << std::endl;
+        //std::cout << NAME << " useless pf " << way->address << std::endl;
         // WL
       }
 
