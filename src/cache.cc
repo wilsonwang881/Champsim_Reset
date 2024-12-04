@@ -108,6 +108,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
 
   bool success = true;
   auto metadata_thru = fill_mshr.pf_metadata;
+  bool dirty_blk_evicted = false; // WL
   auto pkt_address = (virtual_prefetch ? fill_mshr.v_address : fill_mshr.address) & ~champsim::bitmask(match_offset_bits ? 0 : OFFSET_BITS);
   if (way != set_end) {
     if (way->valid && way->dirty) {
@@ -129,6 +130,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       }
 
       success = lower_level->add_wq(writeback_packet);
+      dirty_blk_evicted = success;
     }
 
     if (success) {
@@ -138,16 +140,21 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       {
         ++sim_stats.pf_useless;
         // WL 
-        //std::cout << NAME << " useless pf " << way->address << std::endl;
+          std::cout << NAME << " useless pf " << way->address << " evicting_address " << evicting_address << " by address " << fill_mshr.address << " at cycle " << current_cycle << std::endl;
+          for (auto i = set_begin; i < set_end; i++) {
+            std::cout <<"way " << i - set_begin << " dirty " << i->dirty << " addr " << (unsigned)i->address << " prefetch " << i->prefetch << " asid " << i->asid << " | "; 
+          }
+          std::cout << std::endl;
         // WL
       }
 
       // WL: if the block is prefetched in during the current context switch cycle,
       // then it is a useless prefetch and should update the prefetcher.
+      uint32_t dirty_blk_evicted_success = dirty_blk_evicted ? 1 : 0;
       uint32_t blk_asid_match = way->asid == currently_active_thread_ID ? 1 : 0; 
       uint32_t blk_pfed = way->prefetch ? 1 : 0; 
       uint32_t pkt_pfed = fill_mshr.type == access_type::PREFETCH;
-      uint32_t pf_feed = (blk_asid_match << 2) + (blk_pfed << 1) + pkt_pfed;
+      uint32_t pf_feed = (dirty_blk_evicted_success << 3) + (blk_asid_match << 2) + (blk_pfed << 1) + pkt_pfed;
       // WL
 
       if (fill_mshr.type == access_type::PREFETCH)

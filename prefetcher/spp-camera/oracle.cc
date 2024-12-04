@@ -46,6 +46,38 @@ void spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit)
   }
 }
 
+void spp::SPP_ORACLE::create_new_entry(uint64_t addr)
+{
+  if (!ORACLE_ACTIVE)
+    return; 
+
+  if (!RECORD_OR_REPLAY) {
+    addr = (addr >> 6) << 6;
+    uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
+
+    // Find the "way" to update pf/block status.
+    size_t i;
+    for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) 
+    {
+      if (cache_state[i].addr == addr) 
+      {
+        //cache_state[i].pending_accesses = -1;
+        std::cout << "Found in cache_state" << std::endl;
+        break;
+      }
+
+      if (cache_state[i].addr == 0) 
+      {
+        cache_state[i].addr = addr;
+        cache_state[i].pending_accesses = -1;
+        std::cout << "Create new entry " << addr << " set " << set << std::endl;
+        available_pf--;
+        break;  
+      } 
+    }
+  }
+}
+
 void spp::SPP_ORACLE::update_fill(uint64_t addr)
 {
   if (!ORACLE_ACTIVE)
@@ -58,7 +90,7 @@ void spp::SPP_ORACLE::update_fill(uint64_t addr)
 
     // Find the "way" to update pf/block status.
     size_t i;
-    for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i--) 
+    for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) 
     {
       if (cache_state[i].addr == addr) 
       {
@@ -78,8 +110,8 @@ void spp::SPP_ORACLE::refresh_cache_state()
     cache_state[i].addr = 0;
     cache_state[i].pending_accesses = 0; 
   }
-  
-  available_pf = 1024 * 8;
+
+  available_pf = SET_NUM * WAY_NUM;
 }
 
 void spp::SPP_ORACLE::file_write()
@@ -160,25 +192,33 @@ void spp::SPP_ORACLE::file_read()
     std::sort(to_be_erased.begin(), to_be_erased.end());
 
     for (int i = to_be_erased.size() - 1; i >= 0; i--)
-    {
       oracle_pf.erase(oracle_pf.begin() + to_be_erased[i]);
-    }
 
     std::cout << "L2C oracle: pre-processing collects " << oracle_pf.size() << " accesses from file read." << std::endl;
   }
 }
 
-uint64_t spp::SPP_ORACLE::check_set_pf_avail(uint64_t set)
+uint64_t spp::SPP_ORACLE::check_set_pf_avail(uint64_t addr)
 {
   uint64_t res = 0;
+  uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
+  addr = (addr >> 6) << 6;
 
   for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) 
   {
-    //std::cout << "set = " << set << " way = " << i - set * WAY_NUM << " addr = " << cache_state[i].addr << " pending_accesses = " << cache_state[i].pending_accesses << std::endl;
-    if (cache_state[i].addr != 0 && cache_state[i].pending_accesses == 0) {
+    if (cache_state[i].addr != 0 && cache_state[i].pending_accesses == 0) 
+    {
+      std::cout << "set = " << set << " way = " << i - set * WAY_NUM << " addr = " << cache_state[i].addr << " pending_accesses = " << cache_state[i].pending_accesses << std::endl;
       assert(false); 
     }
-    if (cache_state[i].pending_accesses <= 0)
+
+    if (cache_state[i].addr == addr) 
+    {
+      res = (set + 1) * WAY_NUM;
+      break;
+    }
+
+    if (cache_state[i].pending_accesses <= 0 && cache_state[i].addr == 0)
     {
       cache_state[i].addr = 0;
       res = i; 
@@ -195,18 +235,17 @@ int spp::SPP_ORACLE::check_pf_status(uint64_t addr)
 
   // Find the "way" to update pf/block status.
   size_t i;
+  addr = (addr >> 6) << 6;
   for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) 
   {
     if (cache_state[i].addr == addr) 
-    {
       break;  
-    } 
   }
 
   if ((i - set * WAY_NUM) < WAY_NUM)
     return cache_state[i].pending_accesses;
   else {
-    return 0;
+    return -1;
   }
 }
 
@@ -225,9 +264,14 @@ int spp::SPP_ORACLE::update_pf_avail(uint64_t addr)
     if (cache_state[i].addr == addr) 
     {
       cache_state[i].pending_accesses--;
-      //std::cout << "Accessed addr = " << addr << " at set " << set << " way " << i - set * WAY_NUM << " remaining accesses " << cache_state[i].pending_accesses << std::endl;
+      std::cout << "Accessed addr = " << addr << " at set " << set << " way " << i - set * WAY_NUM << " remaining accesses " << cache_state[i].pending_accesses << std::endl;
 
-      if (cache_state[i].pending_accesses <= 0)
+      /*
+      if (cache_state[i].pending_accesses < -1) 
+        cache_state[i].pending_accesses = -1;  
+      */
+
+      if (cache_state[i].pending_accesses == 0)
         cache_state[i].addr = 0; 
 
       break;  
@@ -237,7 +281,7 @@ int spp::SPP_ORACLE::update_pf_avail(uint64_t addr)
   if ((i - set * WAY_NUM) < WAY_NUM)
     return cache_state[i].pending_accesses;
   else
-    return 0;
+    return -1;
 }
 
 uint64_t spp::SPP_ORACLE::poll(uint64_t cycle)
@@ -254,15 +298,19 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t cycle)
   for(size_t i = 0; i < oracle_pf.size();i++) // oracle_pf.size() 
   {
     set = (oracle_pf[i].addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
-    way = check_set_pf_avail(set);
+    way = check_set_pf_avail(oracle_pf[i].addr);
 
-    if (way < WAY_NUM) 
+    if (way < WAY_NUM) // && set_blk_availability[set] > 0) 
     {
       target = oracle_pf[i].addr;
-      //to_be_erased.push_back(i);
       cache_state[set * WAY_NUM + way].addr = target;
       cache_state[set * WAY_NUM + way].pending_accesses = static_cast<int>(oracle_pf[i].miss_or_hit);
-      std::cout << "PF: addr = " << target << " et = " << set << " way = " << way << " accesses = " << oracle_pf[i].miss_or_hit << " at cycle " << cycle - interval_start_cycle << std::endl;
+
+      /*
+      if (cache_state[set * WAY_NUM + way].pending_accesses == 0) 
+        cache_state[set * WAY_NUM + way].addr = 0; 
+        */
+      std::cout << "PF: addr = " << target << " set = " << set << " way = " << way << " accesses = " << oracle_pf[i].miss_or_hit << " at cycle " << cycle - interval_start_cycle << std::endl;
       to_be_erased.push_back(i);
       available_pf--;
       break;

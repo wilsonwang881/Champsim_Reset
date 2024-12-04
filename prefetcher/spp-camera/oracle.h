@@ -21,7 +21,7 @@ namespace spp
 
   class SPP_ORACLE
   {
-    constexpr static uint64_t ACCESS_LEN = 160000;
+    constexpr static uint64_t ACCESS_LEN = 40000;
     std::string L2C_PHY_ACC_FILE_NAME = "L2C_phy_acc.txt";
 
     std::fstream rec_file;
@@ -52,19 +52,20 @@ namespace spp
     {
       uint64_t addr;
       int pending_accesses;
+      bool dirty;
     };
 
     blk_state cache_state[SET_NUM * WAY_NUM];
-
     std::deque<acc_timestamp> oracle_pf;
 
     void init();
     void update_demand(uint64_t cycle, uint64_t addr, bool hit);
+    void create_new_entry(uint64_t addr);
     void update_fill(uint64_t addr);
     void refresh_cache_state();
     void file_write();
     void file_read();
-    uint64_t check_set_pf_avail(uint64_t set);
+    uint64_t check_set_pf_avail(uint64_t addr);
     int check_pf_status(uint64_t addr);
     int update_pf_avail(uint64_t addr);
     uint64_t poll(uint64_t cycle);

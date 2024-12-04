@@ -22,6 +22,11 @@
 
 #include "champsim_constants.h"
 
+// WL
+#include <iostream>
+#include <fstream>
+// WL
+
 class MEMORY_CONTROLLER;
 
 // reserve 1MB or one page of space
@@ -42,6 +47,17 @@ private:
 
   uint64_t ppage_front() const;
   void ppage_pop();
+
+  // WL
+  bool RECORD_IN_USE = true;
+  bool RECORD_OR_READ = false;
+  std::string va_to_pa_file_name = "va_to_pa.txt";
+  std::string page_table_file_name = "page_table.txt";
+  std::fstream va_to_pa_file;
+  std::fstream page_table_file;
+  std::map<std::pair<uint32_t, uint64_t>, uint64_t> fr_vpage_to_ppage_map; 
+  std::map<std::tuple<uint32_t, uint64_t, uint32_t>, uint64_t> fr_page_table; 
+  // WL
 
 public:
   const uint64_t minor_fault_penalty;
