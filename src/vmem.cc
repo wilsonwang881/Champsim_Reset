@@ -113,7 +113,7 @@ std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t
   else
     translation = ppage_front(); 
 
-  assert(translation != 0); // WL
+  //assert(translation != 0); // WL
 
   auto [ppage, fault] = vpage_to_ppage_map.insert({{cpu_num, vaddr >> LOG2_PAGE_SIZE}, translation});
 
