@@ -146,7 +146,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
             std::cout <<"way " << i - set_begin << " dirty " << i->dirty << " addr " << (unsigned)i->address << " prefetch " << i->prefetch << " asid " << i->asid << " | "; 
           }
           std::cout << std::endl;
-          */
+        */
         // WL
       }
 

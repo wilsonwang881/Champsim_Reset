@@ -82,7 +82,7 @@ void spp::prefetcher::issue(CACHE* cache)
     return; 
   }
 
-  return;
+  //return;
 
   // WL 
 

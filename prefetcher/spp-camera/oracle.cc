@@ -263,7 +263,7 @@ uint64_t spp::SPP_ORACLE::check_set_pf_avail(uint64_t addr)
       break;
     }
 
-    if (cache_state[i].pending_accesses <= 0 && cache_state[i].addr == 0)
+    if (cache_state[i].pending_accesses == 0 && cache_state[i].addr == 0)
     {
       cache_state[i].addr = 0;
       res = i; 
@@ -357,10 +357,6 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t cycle)
       cache_state[set * WAY_NUM + way].pending_accesses = static_cast<int>(oracle_pf[i].miss_or_hit);
       cache_state[set * WAY_NUM + way].timestamp = cycle;
 
-      /*
-      if (cache_state[set * WAY_NUM + way].pending_accesses == 0) 
-        cache_state[set * WAY_NUM + way].addr = 0; 
-        */
       //std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " at cycle " << cycle - interval_start_cycle << std::endl;
       to_be_erased.push_back(i);
       available_pf--;

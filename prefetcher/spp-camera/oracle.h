@@ -29,7 +29,7 @@ namespace spp
     public:
 
     constexpr static bool ORACLE_ACTIVE = true;
-    constexpr static bool RECORD_OR_REPLAY = true;
+    constexpr static bool RECORD_OR_REPLAY = false;
 
     struct acc_timestamp 
     {
