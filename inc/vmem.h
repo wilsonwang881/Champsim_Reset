@@ -49,8 +49,8 @@ private:
   void ppage_pop();
 
   // WL
-  bool RECORD_IN_USE = true;
-  bool RECORD_OR_READ = false;
+  bool RECORD_IN_USE = false;
+  bool RECORD_OR_READ = true;
   std::string va_to_pa_file_name = "va_to_pa.txt";
   std::string page_table_file_name = "page_table.txt";
   std::fstream va_to_pa_file;

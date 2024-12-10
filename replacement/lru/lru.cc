@@ -33,6 +33,7 @@ void CACHE::update_replacement_state(uint32_t triggering_cpu, uint32_t set, uint
   {
     ::last_used_cycles[this].at(set * NUM_WAY + way) = current_cycle;
 
+    /*
     // WL
     if(champsim::operable::lru_states.size() > 0 && L2C_name.compare(this->NAME) == 0)
     {
@@ -48,7 +49,42 @@ void CACHE::update_replacement_state(uint32_t triggering_cpu, uint32_t set, uint
       champsim::operable::lru_states.clear();
     }
     // WL
+    */
   }
+ // WL
+    if(champsim::operable::lru_states.size() > 0 && L2C_name.compare(this->NAME) == 0)
+    {
+      for(auto var : champsim::operable::lru_states) 
+      {
+        //std::cout << "LRU: handling set " << var.first << " way " << var.second << std::endl;
+
+        if (var.second < NUM_WAY)
+        {
+          ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) = 0; 
+          //std::cout << "LRU: result " << ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) << std::endl;
+        }
+      }
+
+      champsim::operable::lru_states.clear();
+    }
+    // WL
+
 }
 
-void CACHE::replacement_final_stats() {}
+void CACHE::replacement_final_stats() 
+{
+  /*
+  if (L2C_name.compare(this->NAME) == 0)
+  {
+    for (size_t i = 0; i < NUM_SET; i++) 
+    {
+      std::cout << "LRU set " << i << " ";
+      for (size_t j = 0; j < NUM_WAY; j++) {
+        std::cout << ::last_used_cycles[this].at(i * NUM_WAY + j) << " ";
+      }
+      std::cout << std::endl;
+    }
+  }
+  */
+
+}

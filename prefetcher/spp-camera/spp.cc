@@ -62,7 +62,7 @@ void spp::prefetcher::issue(CACHE* cache)
 
       if (prefetched) {
         context_switch_issue_queue.pop_front();
-        issued_cs_pf.insert(addr);
+        issued_cs_pf.insert((addr >> 6) << 6);
         total_issued_cs_pf++;
         issued_pf_this_round++;
 
@@ -82,7 +82,7 @@ void spp::prefetcher::issue(CACHE* cache)
     return; 
   }
 
-  //return;
+  return;
 
   // WL 
 

@@ -140,13 +140,20 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       {
         ++sim_stats.pf_useless;
         // WL 
-        /*
-          std::cout << NAME << " useless pf " << way->address << " evicting_address " << evicting_address << " by address " << fill_mshr.address << " at cycle " << current_cycle << std::endl;
+          std::cout << NAME << " useless pf " << way->address << " evicting_address " << evicting_address << " by address " << ((fill_mshr.address >> 6) << 6) << " at cycle " << current_cycle << std::endl;
           for (auto i = set_begin; i < set_end; i++) {
             std::cout <<"way " << i - set_begin << " dirty " << i->dirty << " addr " << (unsigned)i->address << " prefetch " << i->prefetch << " asid " << i->asid << " | "; 
           }
           std::cout << std::endl;
-        */
+          //impl_replacement_final_stats();
+
+          /*
+          std::cout << "LRU bits" << std::endl;
+          for (size_t i = get_set_index(fill_mshr.address) * NUM_WAY; i < (get_set_index(fill_mshr.address) + 1) * NUM_WAY; i++) {
+            std::cout << ::last_used_cycles[this].at(i) << " ";
+          }
+          std::cout << std::endl;
+          */
         // WL
       }
 
@@ -162,10 +169,18 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       if (fill_mshr.type == access_type::PREFETCH)
         ++sim_stats.pf_fill;
 
+      /* WL: original code
       *way = BLOCK{fill_mshr};
 
       metadata_thru = impl_prefetcher_cache_fill(pkt_address, get_set_index(fill_mshr.address), way_idx, fill_mshr.type == access_type::PREFETCH,
                                                  evicting_address, pf_feed); // WL: replaced last metadata_thru with pf_feed.
+      */
+
+      metadata_thru = impl_prefetcher_cache_fill(pkt_address, get_set_index(fill_mshr.address), way_idx, fill_mshr.type == access_type::PREFETCH,
+                                                 evicting_address, pf_feed); // WL: replaced last metadata_thru with pf_feed.
+
+      *way = BLOCK{fill_mshr};
+
       impl_update_replacement_state(fill_mshr.cpu, get_set_index(fill_mshr.address), way_idx, fill_mshr.address, fill_mshr.ip, evicting_address,
                                     champsim::to_underlying(fill_mshr.type), false);
 
@@ -531,7 +546,7 @@ uint64_t CACHE::get_way(uint64_t address, uint64_t) const
 {
   auto [begin, end] = get_set_span(address);
   return std::distance(
-      begin, std::find_if(begin, end, [match = address >> OFFSET_BITS, shamt = OFFSET_BITS](const auto& entry) { return (entry.address >> shamt) == match; }));
+      begin, std::find_if(begin, end, [match = address >> OFFSET_BITS, shamt = OFFSET_BITS, asid=champsim::operable::currently_active_thread_ID](const auto& entry) { return (entry.address >> shamt) == match && entry.asid == asid; }));
 }
 // LCOV_EXCL_STOP
 
