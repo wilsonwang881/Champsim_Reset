@@ -92,19 +92,19 @@ void spp::SPP_ORACLE::create_new_entry(uint64_t addr, uint64_t cycle, bool& succ
       std::cout << "Create new entry failed" << std::endl; 
 
       // Find the victim.
-      uint64_t timestamp_comparison = 0;
+      uint64_t timestamp_comparison = uint64_t(-1);
       size_t max_timestamp_index = 0;
       for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) 
       {
         std::cout << "set " << set << " way " << (i - set * WAY_NUM) << " max timestamp index " << max_timestamp_index << " comparison " << timestamp_comparison << std::endl;
-        if (cache_state[i].timestamp > timestamp_comparison && cache_state[i].pending_accesses > 0) 
+        if (cache_state[i].timestamp < timestamp_comparison && cache_state[i].pending_accesses > 0) 
         {
           max_timestamp_index = i;
           timestamp_comparison = cache_state[i].timestamp;
         }
       }
 
-      if (timestamp_comparison != 0) 
+      if (timestamp_comparison != uint64_t(-1)) 
       {
         evict_addr = cache_state[max_timestamp_index].addr;
 

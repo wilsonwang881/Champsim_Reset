@@ -72,6 +72,8 @@ VirtualMemory::VirtualMemory(uint64_t page_table_page_size, std::size_t page_tab
 
     va_to_pa_file.close();
 
+    next_ppage = next_ppage + PAGE_SIZE * (fr_vpage_to_ppage_map.size() + fr_page_table.size());
+
   }
   // WL
 }
@@ -98,7 +100,7 @@ std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t
   cpu_num = 0; // WL: harded coded cpu_num to be 0
 
   // WL
-  uint64_t translation = 0;
+  uint64_t translation = uint64_t(-1);
 
   if(RECORD_IN_USE)
   {
@@ -113,7 +115,15 @@ std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t
   else
     translation = ppage_front(); 
 
-  //assert(translation != 0); // WL
+  // WL 
+  bool not_recorded_page = false;
+
+  if (translation == (uint64_t(-1))) {
+    not_recorded_page = true;
+    translation = ppage_front(); 
+    std::cout << "New va_to_pa vaddr " << vaddr << " translation " << translation << std::endl;
+  }
+  // WL
 
   auto [ppage, fault] = vpage_to_ppage_map.insert({{cpu_num, vaddr >> LOG2_PAGE_SIZE}, translation});
 
@@ -127,9 +137,10 @@ std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t
       va_to_pa_file << cpu_num << " " << (vaddr >> LOG2_PAGE_SIZE) << " " << ppage_front() << std::endl;
       va_to_pa_file.close();
     }
-    // WL
 
-    ppage_pop();
+    if (not_recorded_page || RECORD_OR_READ)
+      ppage_pop(); 
+    // WL
   }
 
   auto paddr = champsim::splice_bits(ppage->second, vaddr, LOG2_PAGE_SIZE);
@@ -137,6 +148,7 @@ std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t
     fmt::print("[VMEM] {} paddr: {:x} vaddr: {:x} fault: {}\n", __func__, paddr, vaddr, fault);
   }
 
+  assert(translation != uint64_t(-1)); // WL
   return {paddr, fault ? minor_fault_penalty : 0};
 }
 
@@ -149,13 +161,13 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
   }
 
   // WL
-  uint64_t translation;
+  uint64_t translation = uint64_t(-1);
 
   // WL
   if(RECORD_IN_USE)
   {
     for(auto var : fr_page_table) {
-      if (std::get<0>(var.first) == cpu_num && std::get<1>(var.first) == (vaddr >> shamt(level)) && std::get<2>(var.first) == level) {
+      if (std::get<0>(var.first) == cpu_num && (std::get<1>(var.first) == (vaddr >> shamt(level))) && std::get<2>(var.first) == level) {
         translation = var.second;
         break;
       } 
@@ -164,6 +176,17 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
   // WL
   else
     translation = ppage_front(); 
+
+  // WL
+  //assert(translation != uint64_t(-1));
+  bool not_recorded_page = false;
+
+  if (translation == (uint64_t(-1))) {
+    not_recorded_page = true;
+    translation = ppage_front(); 
+    std::cout << "New get_pte_pa vaddr " << vaddr << " vaddr_shifted " << (vaddr >> shamt(level)) << " level " << level << std::endl;
+  }
+  // WL
 
   std::tuple key{cpu_num, vaddr >> shamt(level), level};
   auto [ppage, fault] = page_table.insert({key, translation});
@@ -181,10 +204,12 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
     //std::cout << "VMEM vaddr = " << (vaddr >> shamt(level)) << " paddr = " << next_pte_page << " level " << level << std::endl;
     // WL
 
-    next_pte_page += pte_page_size;
-    if (!(next_pte_page % PAGE_SIZE)) {
-      next_pte_page = ppage_front();
-      ppage_pop();
+    if (not_recorded_page || RECORD_OR_READ) { // WL
+      next_pte_page += pte_page_size;
+      if (!(next_pte_page % PAGE_SIZE)) {
+        next_pte_page = ppage_front();
+        ppage_pop();
+      }
     }
   }
 
@@ -193,6 +218,8 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
   if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { // WL
     fmt::print("[VMEM] {} paddr: {:x} vaddr: {:x} pt_page_offset: {} translation_level: {} fault: {} asid: {}\n", __func__, paddr, vaddr, offset, level, fault, cpu_num);
   }
+
+  assert(translation != uint64_t(-1)); // WL
 
   return {paddr, fault ? minor_fault_penalty : 0};
 }
