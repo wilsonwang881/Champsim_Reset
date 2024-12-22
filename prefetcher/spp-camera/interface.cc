@@ -41,7 +41,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   if (!pref.oracle.first_round && !pref.oracle.oracle_pf.empty()) 
   {
     uint64_t set = this->get_set_index(base_addr);
-    std::cout << "addr " << ((base_addr >> 6) << 6) << " hit " << (unsigned)cache_hit << " useful_prefetch " << useful_prefetch << " type " << (unsigned)type << " set " << set  << std::endl; 
+    //std::cout << "addr " << ((base_addr >> 6) << 6) << " hit " << (unsigned)cache_hit << " useful_prefetch " << useful_prefetch << " type " << (unsigned)type << " set " << set  << std::endl; 
   }
 
   if (!pref.oracle.oracle_pf.empty()) 
@@ -64,12 +64,12 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
         }
         */
 
-        std::cout << "Trying to evict before_acc " << before_acc << " remaining_acc " << remaining_acc << " set " << set << " way " << way << std::endl;
+        //std::cout << "Trying to evict before_acc " << before_acc << " remaining_acc " << remaining_acc << " set " << set << " way " << way << std::endl;
 
         if (way < NUM_WAY) // && require_evict)
         {
           champsim::operable::lru_states.push_back(std::make_pair(set, way));
-          std::cout << "Cleared address " << base_addr << " at set " << this->get_set_index(base_addr) << " way " << way << std::endl;
+          //std::cout << "Cleared address " << base_addr << " at set " << this->get_set_index(base_addr) << " way " << way << std::endl;
         }
         
         /*
@@ -165,7 +165,7 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
   if (!pref.oracle.first_round && !pref.oracle.oracle_pf.empty())
   {
-    std::cout << "Filled block addr " << addr << " set " << set << " way " << way << " evicting " << evicted_addr << " prefetch? " << (unsigned)prefetch << std::endl;
+    //std::cout << "Filled block addr " << addr << " set " << set << " way " << way << " evicting " << evicted_addr << " prefetch? " << (unsigned)prefetch << std::endl;
     
     /*
     size_t i;

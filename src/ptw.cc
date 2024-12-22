@@ -67,6 +67,30 @@ auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* 
   walk_init =
       std::accumulate(std::begin(pscl_hits), std::end(pscl_hits), std::optional<pscl_entry>(walk_init), [](auto x, auto& y) { return y.value_or(*x); }).value();
 
+  // WL
+  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+
+    std::cout << "PTW pscl_hits " << std::endl;
+
+    for(auto var : pscl_hits) {
+      if (var.has_value()){
+        std::cout << std::hex << "vaddr 0x" << var.value().vaddr << " ptw_addr 0x" << var.value().ptw_addr << " level " << var.value().level << " asid " << (unsigned)var.value().asid << std::dec << std::endl; 
+      }
+    }
+
+    /*
+    std::cout << "PTW pscl" << std::endl;
+    for(auto var : pscl) {
+          if (var.has_value()){
+            std::cout << std::hex << "vaddr 0x" << var.value().vaddr << " ptw_addr 0x" << var.value().ptw_addr << " level " << var.value().level << " asid " << (unsigned)var.value().asid << std::dec << std::endl; 
+          }
+        }
+        */
+
+    std::cout << std::hex << "walk_init vaddr = 0x" << walk_init.vaddr << " ptw_addr 0x" << walk_init.ptw_addr << " level " << walk_init.level << " asid " << walk_init.asid << std::dec << std::endl;
+  }
+  // WL
+
   auto walk_offset = vmem->get_offset(handle_pkt.address, walk_init.level) * PTE_BYTES;
 
   mshr_type fwd_mshr{handle_pkt, walk_init.level};
@@ -79,8 +103,8 @@ auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* 
     fwd_mshr.to_return = {&ul->returned};
 
   if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
-    fmt::print("[{}] {} address: {:#x} v_address: {:#x} pt_page_offset: {} translation_level: {} packet asid: {} handle_pkt_asid: {} instr_id: {} CR3_addr: {:#x}\n", NAME, __func__, fwd_mshr.address, fwd_mshr.v_address,
-               walk_offset / PTE_BYTES, walk_init.level, fwd_mshr.asid[0], handle_pkt.asid[0], handle_pkt.instr_id, CR3_addr);
+    fmt::print("[{}] {} address: {:#x} v_address: {:#x} pt_page_offset: {} translation_level: {} packet asid: {} handle_pkt_asid: {} instr_id: {} CR3_addr: {:#x} pscl size: {}\n", NAME, __func__, fwd_mshr.address, fwd_mshr.v_address,
+               walk_offset / PTE_BYTES, walk_init.level, fwd_mshr.asid[0], handle_pkt.asid[0], handle_pkt.instr_id, CR3_addr, std::size(pscl_hits));
   }
 
   return step_translation(fwd_mshr);
@@ -97,6 +121,13 @@ auto PageTableWalker::handle_fill(const mshr_type& fill_mshr) -> std::optional<m
   const auto pscl_idx = std::size(pscl) - fill_mshr.translation_level;
   pscl.at(pscl_idx).fill_with_asid({fill_mshr.v_address, fill_mshr.data, fill_mshr.translation_level - 1, fill_mshr.asid[0]}); // WL: changed fill to fill_with_asid
 
+  // WL 
+  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+    std::cout << "pscl updated at index " << pscl_idx << std::endl;
+    //std::cout << "pscl val: " << pscl.at(pscl_idx).vaddr << " " << pscl.at(pscl_idx).ptw_addr << " " << pscl.at(pscl_idx).level << " " << pscl.at(pscl_idx).asid << std::endl;
+  }
+  // WL
+  
   mshr_type fwd_mshr = fill_mshr;
   fwd_mshr.address = fill_mshr.data;
   fwd_mshr.translation_level = fill_mshr.translation_level - 1;

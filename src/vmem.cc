@@ -49,7 +49,10 @@ VirtualMemory::VirtualMemory(uint64_t page_table_page_size, std::size_t page_tab
     page_table_file.open(page_table_file_name, std::ifstream::in);
     fr_page_table.clear();
 
-    uint64_t cpu_num, vaddr_shifted, level, nxt_pg;
+    uint32_t cpu_num; 
+    uint64_t vaddr_shifted; 
+    uint32_t level;
+    uint64_t nxt_pg;
 
     while(!page_table_file.eof())
     {
@@ -72,7 +75,7 @@ VirtualMemory::VirtualMemory(uint64_t page_table_page_size, std::size_t page_tab
 
     va_to_pa_file.close();
 
-    next_ppage = next_ppage + PAGE_SIZE * (fr_vpage_to_ppage_map.size() + fr_page_table.size());
+    //next_ppage = next_ppage + PAGE_SIZE * (fr_vpage_to_ppage_map.size() + fr_page_table.size());
 
   }
   // WL
@@ -100,30 +103,24 @@ std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t
   cpu_num = 0; // WL: harded coded cpu_num to be 0
 
   // WL
-  uint64_t translation = uint64_t(-1);
+  uint64_t translation;
 
   if(RECORD_IN_USE)
   {
+    bool found = false;
     for(auto var : fr_vpage_to_ppage_map) {
       if (var.first.first == cpu_num && var.first.second == (vaddr >> LOG2_PAGE_SIZE)) {
         translation = var.second;
+        found = true;
         break;
       } 
     }
+
+    assert(found != false);
   }
   // WL
   else
     translation = ppage_front(); 
-
-  // WL 
-  bool not_recorded_page = false;
-
-  if (translation == (uint64_t(-1))) {
-    not_recorded_page = true;
-    translation = ppage_front(); 
-    std::cout << "New va_to_pa vaddr " << vaddr << " translation " << translation << std::endl;
-  }
-  // WL
 
   auto [ppage, fault] = vpage_to_ppage_map.insert({{cpu_num, vaddr >> LOG2_PAGE_SIZE}, translation});
 
@@ -134,11 +131,11 @@ std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t
     if (RECORD_OR_READ) 
     {
       va_to_pa_file.open(va_to_pa_file_name, std::ofstream::app);
-      va_to_pa_file << cpu_num << " " << (vaddr >> LOG2_PAGE_SIZE) << " " << ppage_front() << std::endl;
+      va_to_pa_file << cpu_num << " " << (vaddr >> LOG2_PAGE_SIZE) << " " << translation << std::endl;
       va_to_pa_file.close();
     }
 
-    if (not_recorded_page || RECORD_OR_READ)
+    if (RECORD_OR_READ)
       ppage_pop(); 
     // WL
   }
@@ -148,7 +145,6 @@ std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t
     fmt::print("[VMEM] {} paddr: {:x} vaddr: {:x} fault: {}\n", __func__, paddr, vaddr, fault);
   }
 
-  assert(translation != uint64_t(-1)); // WL
   return {paddr, fault ? minor_fault_penalty : 0};
 }
 
@@ -160,36 +156,34 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
     ppage_pop();
   }
 
-  // WL
-  uint64_t translation = uint64_t(-1);
+  if (vaddr == 24909557776) {
+    std::cout << "vaddr match with level " << level << std::endl; 
+  }
 
   // WL
   if(RECORD_IN_USE)
   {
+    bool found = false;
+
     for(auto var : fr_page_table) {
       if (std::get<0>(var.first) == cpu_num && (std::get<1>(var.first) == (vaddr >> shamt(level))) && std::get<2>(var.first) == level) {
-        translation = var.second;
+        found = true;
+        next_pte_page = var.second;
         break;
       } 
     }
-  }
-  // WL
-  else
-    translation = ppage_front(); 
 
-  // WL
-  //assert(translation != uint64_t(-1));
-  bool not_recorded_page = false;
-
-  if (translation == (uint64_t(-1))) {
-    not_recorded_page = true;
-    translation = ppage_front(); 
-    std::cout << "New get_pte_pa vaddr " << vaddr << " vaddr_shifted " << (vaddr >> shamt(level)) << " level " << level << std::endl;
+    if (!found) 
+    {
+      std::cout << "cpu_num = " << cpu_num << " vaddr = " << vaddr << " level = " << level << " vaddr_shifted = " << (vaddr >> (shamt(level))) << std::endl;  
+      auto [ppage, fault] = va_to_pa(cpu_num, vaddr);
+    }
+    //assert(found != false);
   }
   // WL
 
   std::tuple key{cpu_num, vaddr >> shamt(level), level};
-  auto [ppage, fault] = page_table.insert({key, translation});
+  auto [ppage, fault] = page_table.insert({key, next_pte_page});
 
   // this PTE doesn't yet have a mapping
   if (fault) {
@@ -201,10 +195,9 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
       page_table_file << cpu_num << " " << (vaddr >> shamt(level)) << " " << level << " " << next_pte_page << std::endl;
       page_table_file.close();
     }
-    //std::cout << "VMEM vaddr = " << (vaddr >> shamt(level)) << " paddr = " << next_pte_page << " level " << level << std::endl;
     // WL
 
-    if (not_recorded_page || RECORD_OR_READ) { // WL
+    if (RECORD_OR_READ) { // WL
       next_pte_page += pte_page_size;
       if (!(next_pte_page % PAGE_SIZE)) {
         next_pte_page = ppage_front();
@@ -218,8 +211,6 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
   if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { // WL
     fmt::print("[VMEM] {} paddr: {:x} vaddr: {:x} pt_page_offset: {} translation_level: {} fault: {} asid: {}\n", __func__, paddr, vaddr, offset, level, fault, cpu_num);
   }
-
-  assert(translation != uint64_t(-1)); // WL
 
   return {paddr, fault ? minor_fault_penalty : 0};
 }

@@ -140,13 +140,15 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       {
         ++sim_stats.pf_useless;
         // WL 
-          std::cout << NAME << " useless pf " << way->address << " evicting_address " << evicting_address << " by address " << ((fill_mshr.address >> 6) << 6) << " at cycle " << current_cycle << std::endl;
+        /*
+          std::cout << NAME << " useless pf " << way->address << " evicting_address " << evicting_address << " by address " << ((fill_mshr.address >> 6) << 6) << " at cycle " << current_cycle << " set " << get_set_index(fill_mshr.address) << " way " << way_idx << std::endl;
           for (auto i = set_begin; i < set_end; i++) {
             std::cout <<"way " << i - set_begin << " dirty " << i->dirty << " addr " << (unsigned)i->address << " prefetch " << i->prefetch << " asid " << i->asid << " | "; 
           }
           std::cout << std::endl;
           //impl_replacement_final_stats();
 
+          */
           /*
           std::cout << "LRU bits" << std::endl;
           for (size_t i = get_set_index(fill_mshr.address) * NUM_WAY; i < (get_set_index(fill_mshr.address) + 1) * NUM_WAY; i++) {
@@ -644,13 +646,20 @@ void CACHE::finish_translation(const response_type& packet)
 
     // WL: capture the translated address, the physical address, here 
     if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
-      fmt::print("[{}_TRANSLATE] finish_translation paddr: {:#x} vaddr: {:#x} cycle: {} instr_id: {}\n", this->NAME, entry.address, entry.v_address, this->current_cycle, entry.instr_id);
+      fmt::print("[{}_TRANSLATE] finish_translation mark_translated paddr: {:#x} vaddr: {:#x} cycle: {} instr_id: {}\n", this->NAME, entry.address, entry.v_address, this->current_cycle, entry.instr_id);
     }
   };
 
   // Restart stashed translations
   auto finish_begin = std::find_if_not(std::begin(translation_stash), std::end(translation_stash), [](const auto& x) { return x.is_translated; });
   auto finish_end = std::stable_partition(finish_begin, std::end(translation_stash), matches_vpage);
+
+  // WL
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+    std::cout << NAME << " finish_translation distance between finish_begin and finish_end " << finish_end - finish_begin << std::endl;
+  }
+  // WL 
+
   std::for_each(finish_begin, finish_end, mark_translated);
 
   // Find all packets that match the page of the returned packet

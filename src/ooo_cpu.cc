@@ -194,6 +194,29 @@ void O3_CPU::initialize_instruction()
     instrs_to_read_this_cycle--;
 
     auto stop_fetch = do_init_instruction(input_queue.front());
+
+    // WL 
+    if (input_queue.front().ip == 24909557776) {
+      std::cout << "ip = " << input_queue.front().ip << std::endl; 
+      std::cout << "Found!" << std::endl;
+    }
+
+    for(auto var : input_queue.front().destination_memory) {
+      if (var == 24909557776) {
+        std::cout << "Found in destination_memory!" << std::endl; 
+        std::cout << "Number of fed instructions = " << num_retired << std::endl;
+      }
+    }
+
+    for(auto var : input_queue.front().source_memory) {
+      if (var == 24909557776) {
+        std::cout << "Found in source_memory!" << std::endl; 
+        std::cout << "Number of fed instructions = " << num_retired << std::endl;
+      }
+    }
+
+    // WL
+    
     if (stop_fetch)
       instrs_to_read_this_cycle = 0;
 

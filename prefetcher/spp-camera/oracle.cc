@@ -70,7 +70,7 @@ void spp::SPP_ORACLE::create_new_entry(uint64_t addr, uint64_t cycle, bool& succ
       {
         cache_state[i].timestamp = cycle;
         success = true;
-        std::cout << "Found in cache_state addr " << addr << " set " << set << " way " << (i - set * WAY_NUM) << std::endl;
+        //std::cout << "Found in cache_state addr " << addr << " set " << set << " way " << (i - set * WAY_NUM) << std::endl;
         break;
       }
 
@@ -79,7 +79,7 @@ void spp::SPP_ORACLE::create_new_entry(uint64_t addr, uint64_t cycle, bool& succ
         cache_state[i].addr = addr;
         cache_state[i].pending_accesses = -1;
         cache_state[i].timestamp = cycle; 
-        std::cout << "Create new entry addr " << addr << " set " << set << " way " << (i - set * WAY_NUM) << std::endl;
+        //std::cout << "Create new entry addr " << addr << " set " << set << " way " << (i - set * WAY_NUM) << std::endl;
         available_pf--;
         success = true;
         break;  
@@ -144,7 +144,7 @@ void spp::SPP_ORACLE::update_fill(uint64_t addr)
     {
       if (cache_state[i].addr == addr) 
       {
-        std::cout << "Updating cache state in set " << set << " way " << (i - set * WAY_NUM) << " after updating addr " << cache_state[i].addr << std::endl;
+        //std::cout << "Updating cache state in set " << set << " way " << (i - set * WAY_NUM) << " after updating addr " << cache_state[i].addr << std::endl;
         cache_state[i].addr = 0;
         cache_state[i].pending_accesses = 0;
         cache_state[i].timestamp = 0;
@@ -364,7 +364,7 @@ int spp::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle, bool& evict)
     if (cache_state[i].addr == addr) 
     {
       cache_state[i].pending_accesses--;
-      std::cout << "Accessed addr = " << addr << " at set " << set << " way " << i - set * WAY_NUM << " remaining accesses " << cache_state[i].pending_accesses << std::endl;
+      //std::cout << "Accessed addr = " << addr << " at set " << set << " way " << i - set * WAY_NUM << " remaining accesses " << cache_state[i].pending_accesses << std::endl;
 
       cache_state[i].timestamp = cycle; 
 
@@ -410,7 +410,7 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t cycle)
       cache_state[set * WAY_NUM + way].timestamp = cycle;
       cache_state[set * WAY_NUM + way].require_eviction = oracle_pf[i].require_eviction;
 
-      std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " at cycle " << cycle - interval_start_cycle << std::endl;
+      //std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " at cycle " << cycle - interval_start_cycle << std::endl;
       to_be_erased.push_back(i);
       available_pf--;
       break;
