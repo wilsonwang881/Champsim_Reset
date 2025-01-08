@@ -23,6 +23,9 @@ void CACHE::prefetcher_initialize()
   pref.prefetcher_state_file.open("prefetcher_states.txt", std::ios::out);
   pref.page_bitmap.init();
   pref.oracle.init();
+
+  // Testing the no context switch case.
+  pref.context_switch_gather_prefetches(this);
   // WL 
 }
 

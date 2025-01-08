@@ -40,12 +40,14 @@ VirtualMemory::VirtualMemory(uint64_t page_table_page_size, std::size_t page_tab
   // WL
   if (RECORD_OR_READ) 
   {
+    std::cout << "Recording vmem mapping." << std::endl;
     page_table_file.open(page_table_file_name, std::ofstream::out | std::ofstream::trunc);
     page_table_file.close();
     va_to_pa_file.open(va_to_pa_file_name, std::ofstream::out | std::ofstream::trunc);
     va_to_pa_file.close();
   }
   else {
+    std::cout << "Reading vmem mapping." << std::endl;
     page_table_file.open(page_table_file_name, std::ifstream::in);
     fr_page_table.clear();
 

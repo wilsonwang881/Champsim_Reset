@@ -5,7 +5,7 @@ void spp::SPP_ORACLE::init()
   if (!ORACLE_ACTIVE) 
     return;
 
-  can_write = false;
+  can_write = true; // Change to false for context switch simulation.
   first_round = true;
   oracle_pf.clear();
 
@@ -35,7 +35,7 @@ void spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit)
   if (!ORACLE_ACTIVE) 
     return;
 
-  if (can_write) //RECORD_OR_REPLAY &&  
+  if (RECORD_OR_REPLAY && can_write)  
   {
     acc_timestamp tmpp;
     tmpp.cycle_demanded = cycle - interval_start_cycle;
