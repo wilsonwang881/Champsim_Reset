@@ -36,8 +36,12 @@ PageTableWalker::PageTableWalker(Builder b)
   std::remove_copy_if(std::begin(b.m_pscl), std::end(b.m_pscl), std::back_inserter(local_pscl_dims), [](auto x) { return std::get<0>(x) == 0; });
   std::sort(std::begin(local_pscl_dims), std::end(local_pscl_dims), std::greater{});
 
+  std::cout << "pt_levels = " << b.m_vmem->pt_levels << std::endl;
   for (auto [level, sets, ways] : local_pscl_dims)
-    pscl.emplace_back(sets, ways, pscl_indexer{b.m_vmem->shamt(level)}, pscl_indexer{b.m_vmem->shamt(level)});
+  {
+    std::cout << "set " << sets << " way " << ways << " level " << level << " shamt " << b.m_vmem->shamt(level) << std::endl;
+    pscl.emplace_back(sets, ways, pscl_indexer{b.m_vmem->shamt(level - 1)}, pscl_indexer{b.m_vmem->shamt(level - 1)});
+  }
 }
 
 PageTableWalker::mshr_type::mshr_type(request_type req, std::size_t level)
@@ -63,7 +67,17 @@ auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* 
                                                                              
   pscl_entry walk_init = {handle_pkt.v_address, CR3_addr, std::size(pscl), handle_pkt.asid[0]}; // WL: added ASID
   std::vector<std::optional<pscl_entry>> pscl_hits;
-  std::transform(std::begin(pscl), std::end(pscl), std::back_inserter(pscl_hits), [walk_init](auto& x) { return x.check_hit_with_asid(walk_init); }); // WL: changed check_hit to check_hit_with_asid
+  std::transform(std::begin(pscl), std::end(pscl), std::back_inserter(pscl_hits), [walk_init](auto& x) { return x.check_hit(walk_init); }); // WL: changed check_hit to check_hit_with_asid
+  if (handle_pkt.v_address == 139745110507888) {
+    std::cout << "Found!!!" << std::endl; 
+  
+ for(auto var : pscl_hits) {
+      if (var.has_value()) {
+std::cout << std::dec<< "vaddr " << var.value().vaddr << " ptw_addr " << var.value().ptw_addr << " level " << var.value().level << " asid " << (unsigned)var.value().asid << std::dec << std::endl; 
+
+      } 
+}
+}
   walk_init =
       std::accumulate(std::begin(pscl_hits), std::end(pscl_hits), std::optional<pscl_entry>(walk_init), [](auto x, auto& y) { return y.value_or(*x); }).value();
 
@@ -94,6 +108,23 @@ auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* 
   auto walk_offset = vmem->get_offset(handle_pkt.address, walk_init.level) * PTE_BYTES;
 
   mshr_type fwd_mshr{handle_pkt, walk_init.level};
+  if (handle_pkt.address == 139745110507888) {
+    std::cout << "Found 139745110507888 level = " << walk_init.level << std::endl; 
+    for(size_t i = 0; i < pscl.size(); i++) {
+      std::cout << "pscl_idx = " << i << " translation_level = " << (pscl.size() - i)<< std::endl;
+      for(auto subvar : pscl[i].block) {
+        std::cout << subvar.data.vaddr << " shifted " << (subvar.data.vaddr >> (12 + (pscl.size() - i - 1) * 9))  << " or " << (subvar.data.vaddr >> (12 + (pscl.size() - i) * 9))<< ", asid = " << subvar.data.asid << " paddr = " << subvar.data.ptw_addr << " level = " << subvar.data.level << " asid = " << subvar.data.asid << std::endl;
+      }
+    }
+
+    std::cout << "Reading pscl_hits" << std::endl;
+    for(auto var : pscl_hits) {
+      if (var.has_value()) {
+std::cout << std::dec<< "vaddr " << var.value().vaddr << " ptw_addr " << var.value().ptw_addr << " level " << var.value().level << " asid " << (unsigned)var.value().asid << std::dec << std::endl; 
+
+      } 
+    }
+  }
   fwd_mshr.address = champsim::splice_bits(walk_init.ptw_addr, walk_offset, LOG2_PAGE_SIZE);
   fwd_mshr.v_address = handle_pkt.address;
   fwd_mshr.asid[0] = handle_pkt.asid[0]; // WL: added ASID
@@ -119,7 +150,12 @@ auto PageTableWalker::handle_fill(const mshr_type& fill_mshr) -> std::optional<m
   }
 
   const auto pscl_idx = std::size(pscl) - fill_mshr.translation_level;
-  pscl.at(pscl_idx).fill_with_asid({fill_mshr.v_address, fill_mshr.data, fill_mshr.translation_level - 1, fill_mshr.asid[0]}); // WL: changed fill to fill_with_asid
+
+  if (fill_mshr.v_address == 139745110507888 ) {
+    std::cout << "pscl_idx = " << pscl_idx << " for 139745110507888 translation_level = " << fill_mshr.translation_level << std::endl; 
+  }
+  std::cout << "pscl_idx = " << pscl_idx << " for " << fill_mshr.v_address << " translation_level = " << fill_mshr.translation_level << std::endl; 
+  pscl.at(pscl_idx).fill({fill_mshr.v_address, fill_mshr.data, fill_mshr.translation_level - 0, fill_mshr.asid[0]}); // WL: changed fill to fill_with_asid
 
   // WL 
   if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
@@ -188,10 +224,18 @@ long PageTableWalker::operate()
   auto [mshr_begin, mshr_end] =
       champsim::get_span_p(std::cbegin(finished), std::cend(finished), fill_bw, [cycle = current_cycle](const auto& pkt) { return pkt.event_cycle <= cycle; });
   std::tie(mshr_begin, mshr_end) = champsim::get_span_p(mshr_begin, mshr_end, [&next_steps, this](const auto& pkt) {
-    auto result = this->handle_fill(pkt);
+    // WL 
+    if (pkt.translation_level >= 1) {
+     auto result = this->handle_fill(pkt);
     if (result.has_value())
       next_steps.push_back(*result);
     return result.has_value();
+     
+    }
+    else {
+      assert(false);
+    }
+    // WL
   });
   progress += std::distance(mshr_begin, mshr_end);
   finished.erase(mshr_begin, mshr_end);
@@ -226,6 +270,14 @@ void PageTableWalker::finish_packet(const response_type& packet)
   auto finish_step = [this](auto& mshr_entry) {
     uint64_t penalty;
     std::tie(mshr_entry.data, penalty) = this->vmem->get_pte_pa(mshr_entry.cpu, mshr_entry.v_address, mshr_entry.translation_level);
+    // WL 
+    /*
+    if (mshr_entry.v_address > 0x1000000000000000) {
+      std::cout << "mshr_entry.v_address too large " << (unsigned long)mshr_entry.v_address << " > " << (unsigned long)0xf000000000000 << " log = " << champsim::lg2(mshr_entry.v_address) << std::endl; 
+      assert(false);
+    }
+    */
+    // WL
     //std::tie(mshr_entry.data, penalty) = this->vmem->get_pte_pa(mshr_entry.asid[0], mshr_entry.v_address, mshr_entry.translation_level);
 
     mshr_entry.event_cycle = this->current_cycle + (this->warmup ? 0 : penalty + HIT_LATENCY);

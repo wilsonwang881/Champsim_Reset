@@ -49,6 +49,21 @@ void spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit)
       can_write = false;
     }
   }
+
+  if (!RECORD_OR_REPLAY && can_write) 
+  {
+    acc_timestamp tmpp;
+    tmpp.cycle_demanded = cycle - interval_start_cycle;
+    tmpp.addr = (addr >> 6) << 6;
+    tmpp.miss_or_hit = hit;
+    access.push_back(tmpp); 
+
+    if (access.size() >= ACCESS_LEN) 
+    {
+      file_write();
+      can_write = false;
+    }
+  }
 }
 
 void spp::SPP_ORACLE::create_new_entry(uint64_t addr, uint64_t cycle, bool& success, uint64_t& evict_addr)
@@ -195,7 +210,7 @@ void spp::SPP_ORACLE::file_write()
 
     rec_file_write << "0 0 0" << std::endl;
     rec_file_write.close();
-    std::cout << "L2C oracle: writing " << access.size() << " accesses to file." << std::endl;
+    std::cout << "L2C oracle: writing " << access.size() << " accesses to write file." << std::endl;
     access.clear();
   }
 }
@@ -234,6 +249,9 @@ void spp::SPP_ORACLE::file_read()
     // Pre-processing accesses.
     for (size_t i = 0; i < oracle_pf.size(); i++) 
     {
+      if (((oracle_pf[i].addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM))) == 625) 
+        std::cout << "Reading " << oracle_pf[i].addr << " hit? " << oracle_pf[i].miss_or_hit << std::endl;
+
       uint64_t addr = oracle_pf[i].addr;
       
       if (oracle_pf[i].miss_or_hit == 0) 
@@ -245,7 +263,7 @@ void spp::SPP_ORACLE::file_read()
           if (oracle_pf[j].addr == addr && !oracle_pf[j].miss_or_hit) 
             break;     
 
-          if (oracle_pf[j].addr == addr && oracle_pf[j].miss_or_hit) 
+          if (oracle_pf[j].addr == addr && (oracle_pf[j].miss_or_hit == 1)) 
           {
             accs++;     
             to_be_erased.push_back(j);
@@ -279,6 +297,27 @@ void spp::SPP_ORACLE::file_read()
         if (last_n_ways == WAY_NUM) 
           break;
       }
+    }
+
+    std::cout << "=======================" << std::endl;
+    std::fstream parsed_file;
+    parsed_file.open("parsed_memory_access.txt", std::ofstream::out | std::ofstream::trunc);
+    parsed_file.close();
+    parsed_file.open("parsed_memory_access.txt", std::ofstream::app);
+
+    for(auto var : oracle_pf) 
+    {
+      parsed_file << var.addr << " " << var.miss_or_hit << std::endl;
+    }
+
+    parsed_file.close();
+
+    std::cout << "======================" << std::endl;
+
+    for(auto var : oracle_pf) 
+    {
+      if (((var.addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM))) == 625) 
+        std::cout << "Processing :" << var.addr << " hit " << var.miss_or_hit << " times " << std::endl;
     }
 
     std::cout << "L2C oracle: pre-processing collects " << oracle_pf.size() << " accesses from file read." << std::endl;
@@ -320,7 +359,6 @@ uint64_t spp::SPP_ORACLE::check_set_pf_avail(uint64_t addr)
 
     if (cache_state[i].pending_accesses == 0 && cache_state[i].addr == 0)
     {
-      cache_state[i].addr = 0;
       res = i; 
       break;
     }
@@ -364,7 +402,7 @@ int spp::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle, bool& evict)
     if (cache_state[i].addr == addr) 
     {
       cache_state[i].pending_accesses--;
-      //std::cout << "Accessed addr = " << addr << " at set " << set << " way " << i - set * WAY_NUM << " remaining accesses " << cache_state[i].pending_accesses << std::endl;
+      std::cout << "Accessed addr = " << addr << " at set " << set << " way " << i - set * WAY_NUM << " remaining accesses " << cache_state[i].pending_accesses << std::endl;
 
       cache_state[i].timestamp = cycle; 
 
@@ -395,6 +433,8 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t cycle)
   std::deque<uint64_t> to_be_erased;
   uint64_t set, way;
 
+  std::unordered_set<uint64_t> checked_set;
+
   // Find the address to be prefetched.
   for(size_t i = 0; i < oracle_pf.size();i++) // oracle_pf.size() 
   {
@@ -402,7 +442,10 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t cycle)
     set = (oracle_pf[i].addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
     way = check_set_pf_avail(oracle_pf[i].addr);
 
-    if (way < WAY_NUM) // && set_blk_availability[set] > 0) 
+    uint64_t prev_checked_set_size = checked_set.size();
+    checked_set.insert(way);
+
+    if ((way < WAY_NUM) && (checked_set.size() > prev_checked_set_size))// && set_blk_availability[set] > 0) 
     {
       target = oracle_pf[i].addr;
       cache_state[set * WAY_NUM + way].addr = target;
@@ -415,10 +458,16 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t cycle)
       available_pf--;
       break;
     }
+
+    if (checked_set.size() == (WAY_NUM * SET_NUM)) 
+      break; 
   }
 
   for (int j = to_be_erased.size() - 1; j >= 0; j--) 
     oracle_pf.erase(oracle_pf.begin() + to_be_erased[j]); 
+
+  if ((oracle_pf.size() % 5000) == 0) 
+    std::cout << "Remaing oracle access = " << oracle_pf.size() << std::endl;
 
   return target;
 }

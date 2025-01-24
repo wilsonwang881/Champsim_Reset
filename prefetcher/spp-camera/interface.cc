@@ -39,7 +39,16 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     pref.initiate_lookahead(base_addr);
   }
 
-  pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit);
+  if (pref.oracle.ORACLE_ACTIVE && pref.oracle.RECORD_OR_REPLAY) {
+    pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit);
+  }
+
+  if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && type !=2) {
+    if (useful_prefetch) 
+     pref.oracle.update_demand(this->current_cycle, base_addr, 0);
+    else 
+     pref.oracle.update_demand(this->current_cycle, base_addr, useful_prefetch);
+  }
 
   if (!pref.oracle.first_round && !pref.oracle.oracle_pf.empty()) 
   {
@@ -85,13 +94,13 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     }
     // The block is not prefetched before.
     // Need to allocate a block in the oracle table.
+    /*
     else if (before_acc == remaining_acc && before_acc <= -1) {
       //std::cout << "Try to create new entry type " << (unsigned)type << std::endl;
       bool success = true;
       uint64_t evict_addr;
       pref.oracle.create_new_entry(base_addr, current_cycle - pref.oracle.interval_start_cycle, success, evict_addr);
 
-      /*
       if (!success) {
         uint64_t set = this->get_set_index(evict_addr);
         uint64_t way = this->get_way(evict_addr, set);
@@ -103,8 +112,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
         }
         pref.oracle.lru_clearing_addr.push_back(evict_addr >> 6);
       }
-      */
     }
+  */
   }
 
   if (cache_hit) 
@@ -166,9 +175,9 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   if (blk_asid_match && !pref.oracle.oracle_pf.empty() && !pref.oracle.first_round)
     pref.oracle.update_fill(block[set * NUM_WAY + way].address);
 
-  if (!pref.oracle.first_round && !pref.oracle.oracle_pf.empty())
+  if (!pref.oracle.oracle_pf.empty()) //!pref.oracle.first_round && 
   {
-    //std::cout << "Filled block addr " << addr << " set " << set << " way " << way << " evicting " << evicted_addr << " prefetch? " << (unsigned)prefetch << std::endl;
+    std::cout << "Filled block addr " << addr << " set " << set << " way " << way << " evicting " << evicted_addr << " prefetch? " << (unsigned)prefetch << std::endl;
     
     /*
     size_t i;

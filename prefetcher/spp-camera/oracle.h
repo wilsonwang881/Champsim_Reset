@@ -13,6 +13,7 @@
 #include <set>
 #include <fstream>
 #include <cassert>
+#include <unordered_set>
 #include "champsim.h"
 #include "champsim_constants.h"
 
@@ -21,7 +22,7 @@ namespace spp
 
   class SPP_ORACLE
   {
-    constexpr static uint64_t ACCESS_LEN = 50000;
+    constexpr static uint64_t ACCESS_LEN = 200000;
     std::string L2C_PHY_ACC_FILE_NAME = "L2C_phy_acc.txt";
     std::string L2C_PHY_ACC_WRITE_FILE_NAME = "L2C_phy_acc_write.txt";
 

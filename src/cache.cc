@@ -662,7 +662,7 @@ void CACHE::finish_translation(const response_type& packet)
 
   // Find all packets that match the page of the returned packet
   for (auto& entry : inflight_tag_check) {
-    if ((entry.v_address >> LOG2_PAGE_SIZE) == (packet.v_address >> LOG2_PAGE_SIZE) && entry.asid[0] == packet.asid) { // WL: added ASID
+    if ((entry.v_address >> LOG2_PAGE_SIZE) == (packet.v_address >> LOG2_PAGE_SIZE) && entry.asid[0] == packet.asid && !entry.is_translated) { // WL: added ASID
       mark_translated(entry);
     }
   }

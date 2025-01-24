@@ -135,15 +135,13 @@ std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t
       va_to_pa_file.open(va_to_pa_file_name, std::ofstream::app);
       va_to_pa_file << cpu_num << " " << (vaddr >> LOG2_PAGE_SIZE) << " " << translation << std::endl;
       va_to_pa_file.close();
-    }
-
-    if (RECORD_OR_READ)
       ppage_pop(); 
+    }
     // WL
   }
 
   auto paddr = champsim::splice_bits(ppage->second, vaddr, LOG2_PAGE_SIZE);
-  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { // WL
+  if (champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { // WL(champsim::debug_print) && 
     fmt::print("[VMEM] {} paddr: {:x} vaddr: {:x} fault: {}\n", __func__, paddr, vaddr, fault);
   }
 
@@ -158,8 +156,9 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
     ppage_pop();
   }
 
-  if (vaddr == 24909557776) {
-    std::cout << "vaddr match with level " << level << std::endl; 
+  if (vaddr == 24909557776) 
+  {
+    std::cout << "Found 24909557776 in get_pte_pa in vmem.cc." << std::endl;  
   }
 
   // WL
@@ -179,8 +178,8 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
     {
       std::cout << "cpu_num = " << cpu_num << " vaddr = " << vaddr << " level = " << level << " vaddr_shifted = " << (vaddr >> (shamt(level))) << std::endl;  
       auto [ppage, fault] = va_to_pa(cpu_num, vaddr);
+      assert(found != false);
     }
-    //assert(found != false);
   }
   // WL
 
@@ -196,21 +195,21 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
       page_table_file.open(page_table_file_name, std::ofstream::app);
       page_table_file << cpu_num << " " << (vaddr >> shamt(level)) << " " << level << " " << next_pte_page << std::endl;
       page_table_file.close();
-    }
-    // WL
 
-    if (RECORD_OR_READ) { // WL
       next_pte_page += pte_page_size;
-      if (!(next_pte_page % PAGE_SIZE)) {
+
+      if (!(next_pte_page % PAGE_SIZE)) 
+      {
         next_pte_page = ppage_front();
         ppage_pop();
       }
     }
+    // WL
   }
 
   auto offset = get_offset(vaddr, level);
   auto paddr = champsim::splice_bits(ppage->second, offset * PTE_BYTES, champsim::lg2(pte_page_size));
-  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { // WL
+  if (champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { // WL(champsim::debug_print) && 
     fmt::print("[VMEM] {} paddr: {:x} vaddr: {:x} pt_page_offset: {} translation_level: {} fault: {} asid: {}\n", __func__, paddr, vaddr, offset, level, fault, cpu_num);
   }
 
