@@ -28,6 +28,8 @@ void spp::SPP_ORACLE::init()
     cache_state[i].pending_accesses = 0;
     cache_state[i].timestamp = 0;
   }
+  
+  available_pf = SET_NUM * WAY_NUM;
 }
 
 void spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit)
@@ -63,83 +65,6 @@ void spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit)
       file_write();
       can_write = false;
     }
-  }
-}
-
-void spp::SPP_ORACLE::create_new_entry(uint64_t addr, uint64_t cycle, bool& success, uint64_t& evict_addr)
-{
-  if (!ORACLE_ACTIVE)
-    return; 
-
-  if (!RECORD_OR_REPLAY) 
-  {
-    success = false;
-    addr = (addr >> 6) << 6;
-    uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
-
-    // Find the "way" to update pf/block status.
-    size_t i;
-    for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) 
-    {
-      if (cache_state[i].addr == addr) 
-      {
-        cache_state[i].timestamp = cycle;
-        success = true;
-        //std::cout << "Found in cache_state addr " << addr << " set " << set << " way " << (i - set * WAY_NUM) << std::endl;
-        break;
-      }
-
-      if (cache_state[i].addr == 0 && cache_state[i].pending_accesses == 0) 
-      {
-        cache_state[i].addr = addr;
-        cache_state[i].pending_accesses = -1;
-        cache_state[i].timestamp = cycle; 
-        //std::cout << "Create new entry addr " << addr << " set " << set << " way " << (i - set * WAY_NUM) << std::endl;
-        available_pf--;
-        success = true;
-        break;  
-      } 
-    }
-    
-    /*
-    if (!success) 
-    {
-      std::cout << "Create new entry failed" << std::endl; 
-
-      // Find the victim.
-      uint64_t timestamp_comparison = uint64_t(-1);
-      size_t max_timestamp_index = 0;
-      for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) 
-      {
-        std::cout << "set " << set << " way " << (i - set * WAY_NUM) << " max timestamp index " << max_timestamp_index << " comparison " << timestamp_comparison << std::endl;
-        if (cache_state[i].timestamp < timestamp_comparison && cache_state[i].pending_accesses > 0) 
-        {
-          max_timestamp_index = i;
-          timestamp_comparison = cache_state[i].timestamp;
-        }
-      }
-
-      if (timestamp_comparison != uint64_t(-1)) 
-      {
-        evict_addr = cache_state[max_timestamp_index].addr;
-
-        // Put the pending prefetch back to the queue.
-        acc_timestamp tmpp;
-        tmpp.cycle_demanded = 0;
-        tmpp.addr = cache_state[max_timestamp_index].addr;
-        tmpp.miss_or_hit = cache_state[max_timestamp_index].pending_accesses;
-
-        oracle_pf.push_front(tmpp);
-        std::cout << "Pushed addr " << oracle_pf.front().addr << " with access " << oracle_pf.front().miss_or_hit << std::endl;
-
-        // Update the cache state.
-        cache_state[max_timestamp_index].addr = addr;
-        cache_state[max_timestamp_index].pending_accesses = -1;
-        cache_state[max_timestamp_index].timestamp = cycle;
-        //std::cout << "Updated cache_state at" << std::endl;
-      }
-    }
-    */
   }
 }
 
@@ -249,9 +174,6 @@ void spp::SPP_ORACLE::file_read()
     // Pre-processing accesses.
     for (size_t i = 0; i < oracle_pf.size(); i++) 
     {
-      if (((oracle_pf[i].addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM))) == 625) 
-        std::cout << "Reading " << oracle_pf[i].addr << " hit? " << oracle_pf[i].miss_or_hit << std::endl;
-
       uint64_t addr = oracle_pf[i].addr;
       
       if (oracle_pf[i].miss_or_hit == 0) 
@@ -299,7 +221,6 @@ void spp::SPP_ORACLE::file_read()
       }
     }
 
-    std::cout << "=======================" << std::endl;
     std::fstream parsed_file;
     parsed_file.open("parsed_memory_access.txt", std::ofstream::out | std::ofstream::trunc);
     parsed_file.close();
@@ -311,14 +232,6 @@ void spp::SPP_ORACLE::file_read()
     }
 
     parsed_file.close();
-
-    std::cout << "======================" << std::endl;
-
-    for(auto var : oracle_pf) 
-    {
-      if (((var.addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM))) == 625) 
-        std::cout << "Processing :" << var.addr << " hit " << var.miss_or_hit << " times " << std::endl;
-    }
 
     std::cout << "L2C oracle: pre-processing collects " << oracle_pf.size() << " accesses from file read." << std::endl;
   }
@@ -467,7 +380,7 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t cycle)
     oracle_pf.erase(oracle_pf.begin() + to_be_erased[j]); 
 
   if ((oracle_pf.size() % 5000) == 0) 
-    std::cout << "Remaing oracle access = " << oracle_pf.size() << std::endl;
+    std::cout << "Remaining oracle access = " << oracle_pf.size() << std::endl;
 
   return target;
 }
@@ -478,7 +391,12 @@ void spp::SPP_ORACLE::finish()
     return;
 
   if (!RECORD_OR_REPLAY)
+  {
     rec_file.close();
+    can_write = true;
+    std::cout << "Last round write in replaying mode" << std::endl;
+    file_write();
+  }
   else
   {
     can_write = true;

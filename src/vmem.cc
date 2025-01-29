@@ -59,13 +59,11 @@ VirtualMemory::VirtualMemory(uint64_t page_table_page_size, std::size_t page_tab
     while(!page_table_file.eof())
     {
       page_table_file>> cpu_num >> vaddr_shifted >> level >> nxt_pg;
-
       std::tuple key{cpu_num, vaddr_shifted, level};
       fr_page_table.insert({key, nxt_pg});
     }
 
     page_table_file.close();
-
     va_to_pa_file.open(va_to_pa_file_name, std::ifstream::in);
     fr_vpage_to_ppage_map.clear();
 
@@ -76,9 +74,6 @@ VirtualMemory::VirtualMemory(uint64_t page_table_page_size, std::size_t page_tab
     }
 
     va_to_pa_file.close();
-
-    //next_ppage = next_ppage + PAGE_SIZE * (fr_vpage_to_ppage_map.size() + fr_page_table.size());
-
   }
   // WL
 }
@@ -141,7 +136,7 @@ std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t
   }
 
   auto paddr = champsim::splice_bits(ppage->second, vaddr, LOG2_PAGE_SIZE);
-  if (champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { // WL(champsim::debug_print) && 
+  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { 
     fmt::print("[VMEM] {} paddr: {:x} vaddr: {:x} fault: {}\n", __func__, paddr, vaddr, fault);
   }
 
@@ -154,11 +149,6 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
   if (next_pte_page == 0) {
     next_pte_page = ppage_front();
     ppage_pop();
-  }
-
-  if (vaddr == 24909557776) 
-  {
-    std::cout << "Found 24909557776 in get_pte_pa in vmem.cc." << std::endl;  
   }
 
   // WL
@@ -209,7 +199,7 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
 
   auto offset = get_offset(vaddr, level);
   auto paddr = champsim::splice_bits(ppage->second, offset * PTE_BYTES, champsim::lg2(pte_page_size));
-  if (champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { // WL(champsim::debug_print) && 
+  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { 
     fmt::print("[VMEM] {} paddr: {:x} vaddr: {:x} pt_page_offset: {} translation_level: {} fault: {} asid: {}\n", __func__, paddr, vaddr, offset, level, fault, cpu_num);
   }
 

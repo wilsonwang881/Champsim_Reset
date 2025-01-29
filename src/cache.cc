@@ -134,9 +134,9 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
     }
 
     if (success) {
-      auto evicting_address = (ever_seen_data ? way->address : way->v_address) & ~champsim::bitmask(match_offset_bits ? 0 : OFFSET_BITS);
+      auto evicting_address = !way->valid ? 0 : (virtual_prefetch ? way->v_address : way->address) & ~champsim::bitmask(match_offset_bits ? 0 : OFFSET_BITS);
 
-      if (way->prefetch)
+      if (way->prefetch && way->valid)
       {
         ++sim_stats.pf_useless;
         // WL 

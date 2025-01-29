@@ -68,16 +68,7 @@ auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* 
   pscl_entry walk_init = {handle_pkt.v_address, CR3_addr, std::size(pscl), handle_pkt.asid[0]}; // WL: added ASID
   std::vector<std::optional<pscl_entry>> pscl_hits;
   std::transform(std::begin(pscl), std::end(pscl), std::back_inserter(pscl_hits), [walk_init](auto& x) { return x.check_hit(walk_init); }); // WL: changed check_hit to check_hit_with_asid
-  if (handle_pkt.v_address == 139745110507888) {
-    std::cout << "Found!!!" << std::endl; 
-  
- for(auto var : pscl_hits) {
-      if (var.has_value()) {
-std::cout << std::dec<< "vaddr " << var.value().vaddr << " ptw_addr " << var.value().ptw_addr << " level " << var.value().level << " asid " << (unsigned)var.value().asid << std::dec << std::endl; 
 
-      } 
-}
-}
   walk_init =
       std::accumulate(std::begin(pscl_hits), std::end(pscl_hits), std::optional<pscl_entry>(walk_init), [](auto x, auto& y) { return y.value_or(*x); }).value();
 
@@ -92,15 +83,6 @@ std::cout << std::dec<< "vaddr " << var.value().vaddr << " ptw_addr " << var.val
       }
     }
 
-    /*
-    std::cout << "PTW pscl" << std::endl;
-    for(auto var : pscl) {
-          if (var.has_value()){
-            std::cout << std::hex << "vaddr 0x" << var.value().vaddr << " ptw_addr 0x" << var.value().ptw_addr << " level " << var.value().level << " asid " << (unsigned)var.value().asid << std::dec << std::endl; 
-          }
-        }
-        */
-
     std::cout << std::hex << "walk_init vaddr = 0x" << walk_init.vaddr << " ptw_addr 0x" << walk_init.ptw_addr << " level " << walk_init.level << " asid " << walk_init.asid << std::dec << std::endl;
   }
   // WL
@@ -108,23 +90,6 @@ std::cout << std::dec<< "vaddr " << var.value().vaddr << " ptw_addr " << var.val
   auto walk_offset = vmem->get_offset(handle_pkt.address, walk_init.level) * PTE_BYTES;
 
   mshr_type fwd_mshr{handle_pkt, walk_init.level};
-  if (handle_pkt.address == 139745110507888) {
-    std::cout << "Found 139745110507888 level = " << walk_init.level << std::endl; 
-    for(size_t i = 0; i < pscl.size(); i++) {
-      std::cout << "pscl_idx = " << i << " translation_level = " << (pscl.size() - i)<< std::endl;
-      for(auto subvar : pscl[i].block) {
-        std::cout << subvar.data.vaddr << " shifted " << (subvar.data.vaddr >> (12 + (pscl.size() - i - 1) * 9))  << " or " << (subvar.data.vaddr >> (12 + (pscl.size() - i) * 9))<< ", asid = " << subvar.data.asid << " paddr = " << subvar.data.ptw_addr << " level = " << subvar.data.level << " asid = " << subvar.data.asid << std::endl;
-      }
-    }
-
-    std::cout << "Reading pscl_hits" << std::endl;
-    for(auto var : pscl_hits) {
-      if (var.has_value()) {
-std::cout << std::dec<< "vaddr " << var.value().vaddr << " ptw_addr " << var.value().ptw_addr << " level " << var.value().level << " asid " << (unsigned)var.value().asid << std::dec << std::endl; 
-
-      } 
-    }
-  }
   fwd_mshr.address = champsim::splice_bits(walk_init.ptw_addr, walk_offset, LOG2_PAGE_SIZE);
   fwd_mshr.v_address = handle_pkt.address;
   fwd_mshr.asid[0] = handle_pkt.asid[0]; // WL: added ASID
@@ -151,10 +116,6 @@ auto PageTableWalker::handle_fill(const mshr_type& fill_mshr) -> std::optional<m
 
   const auto pscl_idx = std::size(pscl) - fill_mshr.translation_level;
 
-  if (fill_mshr.v_address == 139745110507888 ) {
-    std::cout << "pscl_idx = " << pscl_idx << " for 139745110507888 translation_level = " << fill_mshr.translation_level << std::endl; 
-  }
-  std::cout << "pscl_idx = " << pscl_idx << " for " << fill_mshr.v_address << " translation_level = " << fill_mshr.translation_level << std::endl; 
   pscl.at(pscl_idx).fill({fill_mshr.v_address, fill_mshr.data, fill_mshr.translation_level - 0, fill_mshr.asid[0]}); // WL: changed fill to fill_with_asid
 
   // WL 

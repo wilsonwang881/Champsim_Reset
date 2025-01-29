@@ -43,11 +43,11 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit);
   }
 
-  if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && type !=2) {
+  if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY) {
     if (useful_prefetch) 
      pref.oracle.update_demand(this->current_cycle, base_addr, 0);
     else 
-     pref.oracle.update_demand(this->current_cycle, base_addr, useful_prefetch);
+     pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit);
   }
 
   if (!pref.oracle.first_round && !pref.oracle.oracle_pf.empty()) 
@@ -263,7 +263,7 @@ void CACHE::prefetcher_cycle_operate()
   // No prefetch gathering via the signature and pattern tables.
   else
   {
-    if (pref.oracle.oracle_pf.size() > 0) 
+    if (pref.oracle.oracle_pf.size() > 0 && pref.oracle.available_pf > 0) 
     {
       uint64_t potential_cs_pf = pref.oracle.poll(current_cycle);
     
