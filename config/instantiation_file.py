@@ -129,6 +129,12 @@ def get_instantiation_lines(cores, caches, ptws, pmem, vmem):
         yield '.cpu({cpu})'.format(**ptw)
         yield '.virtual_memory(&vmem)'
 
+        # WL
+        if "pscl7_set" in ptw or "pscl7_way" in ptw:
+            yield '.add_pscl(7, {pscl7_set}, {pscl7_way})'.format(**ptw)
+        if "pscl6_set" in ptw or "pscl6_way" in ptw:
+            yield '.add_pscl(6, {pscl6_set}, {pscl6_way})'.format(**ptw)
+        # WL
         if "pscl5_set" in ptw or "pscl5_way" in ptw:
             yield '.add_pscl(5, {pscl5_set}, {pscl5_way})'.format(**ptw)
         if "pscl4_set" in ptw or "pscl4_way" in ptw:

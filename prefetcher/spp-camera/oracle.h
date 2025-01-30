@@ -66,7 +66,6 @@ namespace spp
 
     void init();
     void update_demand(uint64_t cycle, uint64_t addr, bool hit);
-    void create_new_entry(uint64_t addr, uint64_t cycle, bool& success, uint64_t& evict_addr);
     void update_fill(uint64_t addr);
     void refresh_cache_state();
     void file_write();

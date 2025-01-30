@@ -66,7 +66,7 @@ void spp::prefetcher::issue(CACHE* cache)
         total_issued_cs_pf++;
         issued_pf_this_round++;
 
-        std::cout << "Issued " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << std::endl;
+        //std::cout << "Issued " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << std::endl;
         //filter.update_issue(addr, cache->get_set(addr));
       }
     }

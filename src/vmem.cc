@@ -29,6 +29,9 @@ VirtualMemory::VirtualMemory(uint64_t page_table_page_size, std::size_t page_tab
 {
   assert(page_table_page_size > 1024);
   assert(page_table_page_size == (1ull << champsim::lg2(page_table_page_size)));
+  if (page_table_levels > 5) {
+    last_ppage = 1ull << 63; 
+  }
   assert(last_ppage > VMEM_RESERVE_CAPACITY);
 
   auto required_bits = champsim::lg2(last_ppage);

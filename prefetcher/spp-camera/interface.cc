@@ -50,11 +50,13 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
      pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit);
   }
 
+  /*
   if (!pref.oracle.first_round && !pref.oracle.oracle_pf.empty()) 
   {
     uint64_t set = this->get_set_index(base_addr);
     //std::cout << "addr " << ((base_addr >> 6) << 6) << " hit " << (unsigned)cache_hit << " useful_prefetch " << useful_prefetch << " type " << (unsigned)type << " set " << set  << std::endl; 
   }
+  */
 
   if (!pref.oracle.oracle_pf.empty()) 
   {
@@ -70,51 +72,23 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
         uint64_t set = this->get_set_index(base_addr);
         uint64_t way = this->get_way((base_addr >> 6) << 6, set);
 
-        /*
-        for (size_t i = set * NUM_WAY; i < (set +1) * NUM_WAY; i++) {
-          std::cout << "Checking set " << set << " way " << (i - set * NUM_WAY)<< " addr " << block[i].address << std::endl; 
-        }
-        */
-
-        //std::cout << "Trying to evict before_acc " << before_acc << " remaining_acc " << remaining_acc << " set " << set << " way " << way << std::endl;
-
         if (way < NUM_WAY) // && require_evict)
         {
           champsim::operable::lru_states.push_back(std::make_pair(set, way));
-          //std::cout << "Cleared address " << base_addr << " at set " << this->get_set_index(base_addr) << " way " << way << std::endl;
         }
-        
-        /*
-        if(!require_evict)
-          std::cout << "Does not require eviction at set " << set << " way " << way << " addr " << base_addr << std::endl;
-          */
       }
 
       pref.oracle.available_pf++;
     }
-    // The block is not prefetched before.
-    // Need to allocate a block in the oracle table.
-    /*
-    else if (before_acc == remaining_acc && before_acc <= -1) {
-      //std::cout << "Try to create new entry type " << (unsigned)type << std::endl;
-      bool success = true;
-      uint64_t evict_addr;
-      pref.oracle.create_new_entry(base_addr, current_cycle - pref.oracle.interval_start_cycle, success, evict_addr);
-
-      if (!success) {
-        uint64_t set = this->get_set_index(evict_addr);
-        uint64_t way = this->get_way(evict_addr, set);
-
-        if (way < NUM_WAY)
-        {
-          champsim::operable::lru_states.push_back(std::make_pair(set, way));
-          std::cout << "Replacing entries in set " << set << " way " << way << " for addr " << base_addr << " evicting " << evict_addr << " true address " << block[set * NUM_WAY + way].address << std::endl;
-        }
-        pref.oracle.lru_clearing_addr.push_back(evict_addr >> 6);
-      }
-    }
-  */
   }
+
+  /*
+  if (!useful_prefetch && !cache_hit)
+  {
+    pref.oracle.available_pf++;  
+    std::cout << "available_pf = " << pref.oracle.available_pf << std::endl;
+  }
+  */
 
   if (cache_hit) 
   {
@@ -177,25 +151,15 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
   if (!pref.oracle.oracle_pf.empty()) //!pref.oracle.first_round && 
   {
-    std::cout << "Filled block addr " << addr << " set " << set << " way " << way << " evicting " << evicted_addr << " prefetch? " << (unsigned)prefetch << std::endl;
-    
-    /*
-    size_t i;
-
-    for (i = 0; i < pref.oracle.lru_clearing_addr.size(); i++) {
-      if (pref.oracle.lru_clearing_addr[i] == (addr >> 6)) {
-
-        champsim::operable::lru_states.push_back(std::make_pair(set, way));
-        //std::cout << "Replacing entries in set " << set << " way " << way << " for addr " << addr << " evicting " << evicted_addr << std::endl;
-        break;
-      } 
-    }
-
-    if (i < pref.oracle.lru_clearing_addr.size()) {
-      pref.oracle.lru_clearing_addr.erase(pref.oracle.lru_clearing_addr.begin() + i); 
-    }
-    */
+    //std::cout << "Filled block addr " << addr << " set " << set << " way " << way << " evicting " << evicted_addr << " prefetch? " << (unsigned)prefetch << std::endl;
   }
+
+  /*
+  if (!prefetch)
+  {
+    pref.oracle.available_pf++;  
+  }
+  */
  
   return metadata_in;
 }
@@ -219,17 +183,6 @@ void CACHE::prefetcher_cycle_operate()
       for(auto var : pref.oracle.oracle_pf) {
         std::cout << "Addr " << var.addr << " pending accesses " << var.miss_or_hit << std::endl; 
       }
-
-      /*
-      std::cout << "Cache state" << std::endl;
-
-      for (size_t i = 0; i < NUM_SET; i++) {
-        
-        for (size_t j = 0; j < NUM_WAY; j++) {
-          std::cout << "SET " << i << " WAY " << j << " addr " << pref.oracle.cache_state[i * NUM_WAY + j].addr << " pending accesses " << pref.oracle.cache_state[i * NUM_WAY + j].pending_accesses << std::endl;
-        }
-      } 
-      */
 
       pref.context_switch_gather_prefetches(this);
       pref.context_switch_prefetch_gathered = true;
