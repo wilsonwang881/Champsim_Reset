@@ -14,6 +14,7 @@
 #include <fstream>
 #include <cassert>
 #include <unordered_set>
+#include <algorithm>
 #include "champsim.h"
 #include "champsim_constants.h"
 
@@ -50,7 +51,7 @@ namespace spp
     uint64_t pf_issued = 0;
     const static uint64_t SET_NUM = 1024;
     const static uint64_t WAY_NUM = 8;
-    int available_pf = SET_NUM * WAY_NUM;
+    uint64_t available_pf = SET_NUM * WAY_NUM;
 
     struct blk_state 
     {

@@ -1,6 +1,7 @@
 #include "cache.h"
 #include "spp.h"
 
+#include <algorithm>
 #include <map>
 
 using unique_key = std::pair<CACHE*, uint32_t>;
@@ -79,16 +80,16 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       }
 
       pref.oracle.available_pf++;
+      pref.oracle.available_pf = std::min(pref.oracle.available_pf, (uint64_t)(1024 * 8 - 16));
     }
   }
 
-  /*
   if (!pref.oracle.RECORD_OR_REPLAY && !cache_hit)
   {
     pref.oracle.available_pf++;  
-    std::cout << "available_pf = " << pref.oracle.available_pf << std::endl;
+    pref.oracle.available_pf = std::min(pref.oracle.available_pf, (uint64_t)(1024 * 8 - 16));
+    pref.oracle.update_fill(base_addr);
   }
-  */
 
   if (cache_hit) 
   {
@@ -154,13 +155,6 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
     //std::cout << "Filled block addr " << addr << " set " << set << " way " << way << " evicting " << evicted_addr << " prefetch? " << (unsigned)prefetch << std::endl;
   }
 
-  /*
-  if (!prefetch)
-  {
-    pref.oracle.available_pf++;  
-  }
-  */
- 
   return metadata_in;
 }
 
