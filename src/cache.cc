@@ -96,7 +96,6 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
 {
   cpu = fill_mshr.cpu;
 
-  /*
   if (fill_mshr.type != access_type::PREFETCH && !L2C_name.compare(NAME)) {
         // COLLECT STATS
     sim_stats.total_miss_latency += current_cycle - (fill_mshr.cycle_enqueued + 1);
@@ -108,7 +107,6 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
     
     return true;
   }
-  */
 
   // find victim
   auto [set_begin, set_end] = get_set_span(fill_mshr.address);

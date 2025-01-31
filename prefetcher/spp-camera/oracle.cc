@@ -172,12 +172,19 @@ void spp::SPP_ORACLE::file_read()
     std::deque<uint64_t> to_be_erased;
 
     // Pre-processing accesses.
+    /*
+     O(n^2), not good.
     for (size_t i = 0; i < oracle_pf.size(); i++) 
     {
       uint64_t addr = oracle_pf[i].addr;
       
       if (oracle_pf[i].miss_or_hit == 0) 
       {
+
+        if (i % 1000 == 0) {
+          std::cout << "Processed " << i << " memory accesses." << std::endl; 
+        }
+
         uint64_t accs = 1;
 
         for (uint64_t j = i + 1; j < oracle_pf.size(); j++) 
@@ -201,6 +208,71 @@ void spp::SPP_ORACLE::file_read()
 
     for (int i = to_be_erased.size() - 1; i >= 0; i--)
       oracle_pf.erase(oracle_pf.begin() + to_be_erased[i]);
+    */
+
+    // Use the hashmap to gather accesses.
+    std::map<uint64_t, std::deque<uint64_t>> parsing;
+
+    for (size_t i = 0; i < oracle_pf.size(); i++) 
+    {
+      uint64_t addr = oracle_pf[i].addr;
+
+      if (i % 100000 == 0)
+        std::cout << "Processed " << i << " memory accesses." << std::endl; 
+
+      if (oracle_pf[i].miss_or_hit == 0) 
+      {
+        // Found in the hashmap already.
+        if (auto search = parsing.find(addr); search != parsing.end()) 
+          search->second.push_back(1); 
+        else 
+        {
+          parsing[addr];
+          parsing[addr].push_back(1);
+        }
+      }
+      else 
+      {
+        if (auto search = parsing.find(addr); search != parsing.end()) 
+          *(search->second.end()) = *(search->second.end()) + 1;
+        else 
+          assert(false);
+      }
+    }
+
+    // Use the hashmap to walk the memory accesses.
+    std::deque<acc_timestamp> oracle_pf_tmpp;
+
+    for (size_t i = 0; i < oracle_pf.size(); i++) 
+    {
+      uint64_t addr = oracle_pf[i].addr;
+
+      if (i % 1000000 == 0)
+        std::cout << "Re-processed " << i << " memory accesses." << std::endl;
+
+      if (oracle_pf[i].miss_or_hit == 0) 
+      {
+        auto search = parsing.find(addr);
+        assert(search != parsing.end());
+        assert(search->second.size() != 0);
+
+        uint64_t accesses = search->second.front();
+        acc_timestamp acc_timestamp_tmpp;
+        acc_timestamp_tmpp.addr = addr;
+        acc_timestamp_tmpp.miss_or_hit = accesses;
+        oracle_pf_tmpp.push_back(acc_timestamp_tmpp);
+        search->second.pop_front();
+
+        if (search->second.size() == 0) {
+          parsing.erase(search); 
+        }
+      }  
+    }
+
+    oracle_pf.clear();
+
+    for(auto var : oracle_pf_tmpp)
+      oracle_pf.push_back(var); 
 
     for (uint64_t i = 0; i < SET_NUM; i++) 
     {

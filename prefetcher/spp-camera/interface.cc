@@ -83,7 +83,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   }
 
   /*
-  if (!useful_prefetch && !cache_hit)
+  if (!pref.oracle.RECORD_OR_REPLAY && !cache_hit)
   {
     pref.oracle.available_pf++;  
     std::cout << "available_pf = " << pref.oracle.available_pf << std::endl;
@@ -147,7 +147,7 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   }
 
   if (blk_asid_match && !pref.oracle.oracle_pf.empty() && !pref.oracle.first_round)
-    pref.oracle.update_fill(block[set * NUM_WAY + way].address);
+    pref.oracle.update_fill(evicted_addr); //(block[set * NUM_WAY + way].address);
 
   if (!pref.oracle.oracle_pf.empty()) //!pref.oracle.first_round && 
   {
