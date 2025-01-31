@@ -61,35 +61,26 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
   if (!pref.oracle.oracle_pf.empty()) 
   {
-    bool require_evict = true;
     int before_acc = pref.oracle.check_pf_status(base_addr);
-    int remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle, require_evict);
+    int remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 
     // Last access to the prefetched block used.
     if ((before_acc > remaining_acc) && (remaining_acc == 0)) {
 
-      //if (require_evict) 
-      {
         uint64_t set = this->get_set_index(base_addr);
         uint64_t way = this->get_way((base_addr >> 6) << 6, set);
 
-        if (way < NUM_WAY) // && require_evict)
-        {
+        if (way < NUM_WAY)
           champsim::operable::lru_states.push_back(std::make_pair(set, way));
-        }
-      }
-
-      pref.oracle.available_pf++;
-      pref.oracle.available_pf = std::min(pref.oracle.available_pf, (uint64_t)(1024 * 8 - 16));
     }
   }
 
+  /*
   if (!pref.oracle.RECORD_OR_REPLAY && !cache_hit)
   {
-    pref.oracle.available_pf++;  
-    pref.oracle.available_pf = std::min(pref.oracle.available_pf, (uint64_t)(1024 * 8 - 16));
     pref.oracle.update_fill(base_addr);
   }
+  */
 
   if (cache_hit) 
   {
@@ -147,8 +138,10 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
     pref.page_bitmap.evict(evicted_addr);
   }
 
+  /*
   if (blk_asid_match && !pref.oracle.oracle_pf.empty() && !pref.oracle.first_round)
     pref.oracle.update_fill(evicted_addr); //(block[set * NUM_WAY + way].address);
+  */
 
   if (!pref.oracle.oracle_pf.empty()) //!pref.oracle.first_round && 
   {

@@ -32,6 +32,8 @@ namespace spp
 
     public:
 
+    std::map<uint64_t, uint64_t> set_availability;
+
     constexpr static bool ORACLE_ACTIVE = true;
     constexpr static bool RECORD_OR_REPLAY = false;
 
@@ -40,7 +42,6 @@ namespace spp
       uint64_t cycle_demanded;
       uint64_t addr;
       uint64_t miss_or_hit;
-      bool require_eviction;
     };
 
     bool can_write;
@@ -58,7 +59,6 @@ namespace spp
       uint64_t addr;
       int pending_accesses;
       uint64_t timestamp;
-      bool require_eviction;
     };
 
     blk_state cache_state[SET_NUM * WAY_NUM];
@@ -73,7 +73,7 @@ namespace spp
     void file_read();
     uint64_t check_set_pf_avail(uint64_t addr);
     int check_pf_status(uint64_t addr);
-    int update_pf_avail(uint64_t addr, uint64_t cycle, bool& evict);
+    int update_pf_avail(uint64_t addr, uint64_t cycle);
     uint64_t poll(uint64_t cycle);
     void finish();
   };

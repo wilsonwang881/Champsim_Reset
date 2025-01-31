@@ -25,6 +25,11 @@ void spp::SPP_ORACLE::init() {
   }
   
   available_pf = SET_NUM * WAY_NUM - 16;
+
+  for(uint64_t i = 0; i < SET_NUM; i++) {
+    set_availability[i];
+    set_availability[i] = WAY_NUM;
+  }
 }
 
 void spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit) {
@@ -73,13 +78,12 @@ void spp::SPP_ORACLE::update_fill(uint64_t addr) {
         //std::cout << "Updating cache state in set " << set << " way " << (i - set * WAY_NUM) << " after updating addr " << cache_state[i].addr << std::endl;
         cache_state[i].addr = 0;
 
-        if (cache_state[i].pending_accesses != 0 && available_pf > 0)
-          available_pf--;
-        else if (cache_state[i].pending_accesses != 0 && available_pf == 0) 
+        if (available_pf == 0) 
           available_pf = 0; 
         else {
           available_pf++;
           available_pf = std::min(available_pf, WAY_NUM * SET_NUM - 16);
+          set_availability.find(set)->second++;
         }
 
         cache_state[i].pending_accesses = 0;
@@ -90,18 +94,25 @@ void spp::SPP_ORACLE::update_fill(uint64_t addr) {
 }
 
 void spp::SPP_ORACLE::refresh_cache_state() {
+
   for (size_t i = 0; i < SET_NUM * WAY_NUM; i++) {
     cache_state[i].addr = 0;
     cache_state[i].pending_accesses = 0; 
     cache_state[i].timestamp = 0;
-    cache_state[i].require_eviction = true;
   }
 
-  available_pf = SET_NUM * WAY_NUM;
+  available_pf = SET_NUM * WAY_NUM - 16;
+
+  for(uint64_t i = 0; i < SET_NUM; i++) {
+    set_availability[i];
+    set_availability[i] = WAY_NUM;
+  }
+
   lru_clearing_addr.clear();
 }
 
 void spp::SPP_ORACLE::file_write() {
+
   if (!ORACLE_ACTIVE) 
     return;
 
@@ -220,7 +231,6 @@ void spp::SPP_ORACLE::file_read()
         uint64_t set = (oracle_pf[j].addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
 
         if (set == i && last_n_ways < WAY_NUM) {
-          oracle_pf[j].require_eviction = false; 
           last_n_ways++;
         }
 
@@ -277,7 +287,7 @@ int spp::SPP_ORACLE::check_pf_status(uint64_t addr) {
   }
 }
 
-int spp::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle, bool& evict) {
+int spp::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
   if (RECORD_OR_REPLAY)
     return 1; 
 
@@ -296,7 +306,9 @@ int spp::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle, bool& evict)
       if (cache_state[i].pending_accesses == 0) {
         cache_state[i].addr = 0; 
         cache_state[i].timestamp = 0;
-        evict = cache_state[i].require_eviction;
+        available_pf++;
+        available_pf = std::min(available_pf, (uint64_t)(1024 * 8 - 16));
+        set_availability.find(set)->second++;
       }
 
       break;  
@@ -316,27 +328,29 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t cycle) {
     return target; 
 
   std::deque<uint64_t> to_be_erased;
-  uint64_t set, way;
+  uint64_t set, way, set_vacancy;
 
   std::unordered_set<uint64_t> checked_set;
 
   // Find the address to be prefetched.
   for(size_t i = 0; i < oracle_pf.size();i++) {
     set = (oracle_pf[i].addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
-    way = check_set_pf_avail(oracle_pf[i].addr);
+    set_vacancy = set_availability[set];
 
     uint64_t prev_checked_set_size = checked_set.size();
     checked_set.insert(way);
 
-    if ((way < WAY_NUM) && (checked_set.size() > prev_checked_set_size)) {
+    if ((set_vacancy > 0) && (checked_set.size() > prev_checked_set_size)) {
+
+      way = check_set_pf_avail(oracle_pf[i].addr);
       target = oracle_pf[i].addr;
       cache_state[set * WAY_NUM + way].addr = target;
       cache_state[set * WAY_NUM + way].pending_accesses = static_cast<int>(oracle_pf[i].miss_or_hit);
       cache_state[set * WAY_NUM + way].timestamp = cycle;
-      cache_state[set * WAY_NUM + way].require_eviction = oracle_pf[i].require_eviction;
 
       //std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " at cycle " << cycle - interval_start_cycle << std::endl;
       to_be_erased.push_back(i);
+      set_availability[set]--;
       available_pf--;
       break;
     }
