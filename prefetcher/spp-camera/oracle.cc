@@ -243,14 +243,17 @@ void spp::SPP_ORACLE::file_read()
     // Use the hashmap to walk the memory accesses.
     std::deque<acc_timestamp> oracle_pf_tmpp;
 
-    for (size_t i = 0; i < oracle_pf.size(); i++) 
+    //for (size_t i = 0; i < oracle_pf.size(); i++) 
+    while(oracle_pf.size() > 0)
     {
-      uint64_t addr = oracle_pf[i].addr;
+      uint64_t addr = oracle_pf.front().addr;
 
+      /*
       if (i % 1000000 == 0)
         std::cout << "Re-processed " << i << " memory accesses." << std::endl;
+        */
 
-      if (oracle_pf[i].miss_or_hit == 0) 
+      if (oracle_pf.front().miss_or_hit == 0) 
       {
         auto search = parsing.find(addr);
         assert(search != parsing.end());
@@ -267,6 +270,8 @@ void spp::SPP_ORACLE::file_read()
           parsing.erase(search); 
         }
       }  
+
+      oracle_pf.pop_front();
     }
 
     oracle_pf.clear();
