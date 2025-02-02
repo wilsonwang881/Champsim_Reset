@@ -105,18 +105,11 @@ std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t
   // WL
   uint64_t translation;
 
-  if(RECORD_IN_USE)
-  {
-    bool found = false;
-    for(auto var : fr_vpage_to_ppage_map) {
-      if (var.first.first == cpu_num && var.first.second == (vaddr >> LOG2_PAGE_SIZE)) {
-        translation = var.second;
-        found = true;
-        break;
-      } 
-    }
-
-    assert(found != false);
+  if(RECORD_IN_USE) {
+    if (auto search = fr_vpage_to_ppage_map.find({cpu_num, vaddr >> LOG2_PAGE_SIZE}); search != fr_vpage_to_ppage_map.end())
+      translation = search->second;
+    else 
+      assert(false);
   }
   // WL
   else
@@ -125,8 +118,7 @@ std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t
   auto [ppage, fault] = vpage_to_ppage_map.insert({{cpu_num, vaddr >> LOG2_PAGE_SIZE}, translation});
 
   // this vpage doesn't yet have a ppage mapping
-  if (fault)
-  {
+  if (fault) {
     // WL
     if (RECORD_OR_READ) 
     {
@@ -155,28 +147,19 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
   }
 
   // WL
+  std::tuple key{cpu_num, vaddr >> shamt(level), level};
+
   if(RECORD_IN_USE)
   {
-    bool found = false;
-
-    for(auto var : fr_page_table) {
-      if (std::get<0>(var.first) == cpu_num && (std::get<1>(var.first) == (vaddr >> shamt(level))) && std::get<2>(var.first) == level) {
-        found = true;
-        next_pte_page = var.second;
-        break;
-      } 
-    }
-
-    if (!found) 
-    {
+    if (auto search = fr_page_table.find(key); search != fr_page_table.end()) 
+      next_pte_page = search->second;
+    else {
       std::cout << "cpu_num = " << cpu_num << " vaddr = " << vaddr << " level = " << level << " vaddr_shifted = " << (vaddr >> (shamt(level))) << std::endl;  
-      auto [ppage, fault] = va_to_pa(cpu_num, vaddr);
-      assert(found != false);
+      assert(false);
     }
   }
   // WL
 
-  std::tuple key{cpu_num, vaddr >> shamt(level), level};
   auto [ppage, fault] = page_table.insert({key, next_pte_page});
 
   // this PTE doesn't yet have a mapping

@@ -23,7 +23,7 @@ namespace spp
 
   class SPP_ORACLE
   {
-    constexpr static uint64_t ACCESS_LEN = 1000000;
+    constexpr static uint64_t ACCESS_LEN = 100000000;
     std::string L2C_PHY_ACC_FILE_NAME = "L2C_phy_acc.txt";
     std::string L2C_PHY_ACC_WRITE_FILE_NAME = "L2C_phy_acc_write.txt";
 
@@ -35,7 +35,7 @@ namespace spp
     std::map<uint64_t, uint64_t> set_availability;
 
     constexpr static bool ORACLE_ACTIVE = true;
-    constexpr static bool RECORD_OR_REPLAY = false;
+    constexpr static bool RECORD_OR_REPLAY = true;
 
     uint64_t lru_counter;
 
@@ -48,7 +48,7 @@ namespace spp
 
     bool can_write;
     bool first_round;
-    std::deque<acc_timestamp> access;
+    std::vector<acc_timestamp> access;
     uint64_t interval_start_cycle;
     uint64_t pf_issued_last_round = 0;
     uint64_t pf_issued = 0;
@@ -65,7 +65,6 @@ namespace spp
 
     blk_state cache_state[SET_NUM * WAY_NUM];
     std::deque<acc_timestamp> oracle_pf;
-    std::deque<uint64_t> lru_clearing_addr;
 
     void init();
     void update_demand(uint64_t cycle, uint64_t addr, bool hit);

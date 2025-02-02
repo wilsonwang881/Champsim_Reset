@@ -133,10 +133,6 @@
     },
 
 	"PTW": {
-    "pscl7_set": 1,
-    "pscl7_way": 2,
-    "pscl6_set": 1,
-    "pscl6_way": 2,
 		"pscl5_set": 1,
 		"pscl5_way": 2,
 		"pscl4_set": 1,
@@ -188,7 +184,7 @@
 
     "virtual_memory": {
         "pte_page_size": 4096,
-        "num_levels": 7,
+        "num_levels": 5,
         "minor_fault_penalty": 200
     }
 }

@@ -131,6 +131,8 @@ uint64_t spp::SPP_ORACLE::evict_one_way(uint64_t addr) {
 
     return evict_addr; 
   }
+
+  return 0;
 }
 
 void spp::SPP_ORACLE::refresh_cache_state() {
@@ -147,8 +149,6 @@ void spp::SPP_ORACLE::refresh_cache_state() {
     set_availability[i];
     set_availability[i] = WAY_NUM;
   }
-
-  lru_clearing_addr.clear();
 }
 
 void spp::SPP_ORACLE::file_write() {
@@ -380,7 +380,7 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t cycle) {
       cache_state[set * WAY_NUM + way].pending_accesses = static_cast<int>(oracle_pf[i].miss_or_hit);
       cache_state[set * WAY_NUM + way].timestamp = cycle;
 
-      std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " at cycle " << cycle - interval_start_cycle << std::endl;
+      //std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " at cycle " << cycle - interval_start_cycle << std::endl;
       to_be_erased.push_back(i);
       set_availability[set]--;
       available_pf--;
