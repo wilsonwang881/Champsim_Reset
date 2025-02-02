@@ -23,6 +23,7 @@ void spp::SPP_ORACLE::init() {
     cache_state[i].pending_accesses = 0;
     cache_state[i].timestamp = 0;
   }
+   lru_counter = 0;
   
   available_pf = SET_NUM * WAY_NUM - 16;
 
@@ -90,6 +91,45 @@ void spp::SPP_ORACLE::update_fill(uint64_t addr) {
         cache_state[i].timestamp = 0;
       } 
     }
+  }
+}
+
+uint64_t spp::SPP_ORACLE::evict_one_way(uint64_t addr) {
+  if (!ORACLE_ACTIVE)
+    return 0; 
+
+  if (!RECORD_OR_REPLAY) {
+    addr = (addr >> 6) << 6;
+    uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
+
+    // Find if there is a free way.
+    for (size_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
+      if (cache_state[i].pending_accesses == 0)
+        return 0; 
+    }
+
+    // Find the "way" to update pf/block status.
+    uint64_t lru = std::numeric_limits<uint64_t>::max();
+    size_t j = 0;
+    uint64_t evict_addr = 0;
+
+    for (size_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
+      if (cache_state[i].timestamp <= lru && cache_state[i].timestamp != 0) {
+        j = i;
+        lru = cache_state[i].timestamp;
+      } 
+    }
+
+    cache_state[j].pending_accesses = 0;
+    evict_addr = cache_state[j].addr;
+    cache_state[j].addr = 0;
+    cache_state[j].timestamp = 0;
+
+    available_pf++;
+    available_pf = std::min(available_pf, (uint64_t)(1024 * 8 - 16));
+    set_availability[set]++;
+
+    return evict_addr; 
   }
 }
 
@@ -222,21 +262,9 @@ void spp::SPP_ORACLE::file_read()
     parsing.clear();
 
     for(auto var : oracle_pf_tmpp)
+    {
       oracle_pf.push_back(var); 
-
-    for (uint64_t i = 0; i < SET_NUM; i++) {
-      uint64_t last_n_ways = 0;
-
-      for (int j = oracle_pf.size() - 1; j >= 0; j--) {
-        uint64_t set = (oracle_pf[j].addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
-
-        if (set == i && last_n_ways < WAY_NUM) {
-          last_n_ways++;
-        }
-
-        if (last_n_ways == WAY_NUM) 
-          break;
-      }
+      oracle_pf.back().cycle_demanded = (oracle_pf.back().addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
     }
 
     std::cout << "L2C oracle: pre-processing collects " << oracle_pf.size() << " accesses from file read." << std::endl;
@@ -276,8 +304,11 @@ int spp::SPP_ORACLE::check_pf_status(uint64_t addr) {
   addr = (addr >> 6) << 6;
 
   for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
-    if (cache_state[i].addr == addr) 
+    if (cache_state[i].addr == addr) {
+      cache_state[i].timestamp = lru_counter;
+      lru_counter++;
       break;  
+    } 
   }
 
   if ((i - set * WAY_NUM) < WAY_NUM)
@@ -309,6 +340,7 @@ int spp::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
         available_pf++;
         available_pf = std::min(available_pf, (uint64_t)(1024 * 8 - 16));
         set_availability.find(set)->second++;
+        cache_state[i].timestamp = 0;
       }
 
       break;  
@@ -334,7 +366,7 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t cycle) {
 
   // Find the address to be prefetched.
   for(size_t i = 0; i < oracle_pf.size();i++) {
-    set = (oracle_pf[i].addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
+    set = oracle_pf[i].cycle_demanded; 
     set_vacancy = set_availability[set];
 
     uint64_t prev_checked_set_size = checked_set.size();
@@ -348,14 +380,14 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t cycle) {
       cache_state[set * WAY_NUM + way].pending_accesses = static_cast<int>(oracle_pf[i].miss_or_hit);
       cache_state[set * WAY_NUM + way].timestamp = cycle;
 
-      //std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " at cycle " << cycle - interval_start_cycle << std::endl;
+      std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " at cycle " << cycle - interval_start_cycle << std::endl;
       to_be_erased.push_back(i);
       set_availability[set]--;
       available_pf--;
       break;
     }
 
-    if (checked_set.size() == (WAY_NUM * SET_NUM)) 
+    if (checked_set.size() == (WAY_NUM * SET_NUM - 16)) 
       break; 
   }
 

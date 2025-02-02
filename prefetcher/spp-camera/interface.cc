@@ -59,7 +59,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   }
   */
 
-  if (!pref.oracle.oracle_pf.empty()) 
+  if (!pref.oracle.oracle_pf.empty() && cache_hit) 
   {
     int before_acc = pref.oracle.check_pf_status(base_addr);
     int remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
@@ -75,12 +75,17 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     }
   }
 
-  /*
-  if (!pref.oracle.RECORD_OR_REPLAY && !cache_hit)
-  {
-    pref.oracle.update_fill(base_addr);
+  if (!pref.oracle.RECORD_OR_REPLAY && !cache_hit) {
+    uint64_t res = pref.oracle.evict_one_way(base_addr);
+
+    if (res != 0) {
+      uint64_t set = this->get_set_index(res);
+      uint64_t way = this->get_way((res >> 6) << 6, set);
+
+      if (way < NUM_WAY)
+        champsim::operable::lru_states.push_back(std::make_pair(set, way));
+    }
   }
-  */
 
   if (cache_hit) 
   {
@@ -138,10 +143,8 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
     pref.page_bitmap.evict(evicted_addr);
   }
 
-  /*
   if (blk_asid_match && !pref.oracle.oracle_pf.empty() && !pref.oracle.first_round)
     pref.oracle.update_fill(evicted_addr); //(block[set * NUM_WAY + way].address);
-  */
 
   if (!pref.oracle.oracle_pf.empty()) //!pref.oracle.first_round && 
   {

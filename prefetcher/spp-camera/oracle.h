@@ -37,6 +37,8 @@ namespace spp
     constexpr static bool ORACLE_ACTIVE = true;
     constexpr static bool RECORD_OR_REPLAY = false;
 
+    uint64_t lru_counter;
+
     struct acc_timestamp 
     {
       uint64_t cycle_demanded;
@@ -68,6 +70,7 @@ namespace spp
     void init();
     void update_demand(uint64_t cycle, uint64_t addr, bool hit);
     void update_fill(uint64_t addr);
+    uint64_t evict_one_way(uint64_t addr);
     void refresh_cache_state();
     void file_write();
     void file_read();
