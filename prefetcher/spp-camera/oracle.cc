@@ -44,6 +44,18 @@ void spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit) {
     tmpp.miss_or_hit = hit;
     access.push_back(tmpp); 
 
+    if (access.size() >= (ACCESS_LEN / 10000)) {
+      rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::app);
+
+      for(auto var : access)
+          rec_file << var.cycle_demanded << " " << var.addr << " " << var.miss_or_hit << std::endl;
+
+      rec_file.close();
+      std::cout << "L2C oracle: writing " << access.size() << " accesses to file." << std::endl;
+      access.clear();
+      access.shrink_to_fit();
+    }
+
     if (access.size() >= ACCESS_LEN) {
       file_write();
       can_write = false;
