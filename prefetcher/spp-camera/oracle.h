@@ -35,7 +35,9 @@ namespace spp
     std::map<uint64_t, uint64_t> set_availability;
 
     constexpr static bool ORACLE_ACTIVE = true;
-    constexpr static bool RECORD_OR_REPLAY = true;
+    constexpr static bool RECORD_OR_REPLAY = false;
+
+    uint64_t pf_size;
 
     uint64_t lru_counter;
 
