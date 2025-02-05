@@ -72,23 +72,31 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
         if (way < NUM_WAY) {
           champsim::operable::lru_states.push_back(std::make_pair(set, way));
+          pref.oracle.hit_address = base_addr;
         }
     }
   }
-
-  if (!pref.oracle.RECORD_OR_REPLAY && !cache_hit) {
-    uint64_t res = pref.oracle.evict_one_way(base_addr);
-
-    if (res != 0) {
-      uint64_t set = this->get_set_index(res);
-      uint64_t way = this->get_way((res >> 6) << 6, set);
-
-      if (way < NUM_WAY) {
-        champsim::operable::lru_states.push_back(std::make_pair(set, way));
-        //std::cout << "Evicted set " << set << " way " << way << " res" << std::endl;
-      }
-    }
+  else if (!cache_hit)
+  {
+    pref.oracle.hit_address = 0;
+    //std::cout << "Misses " << base_addr << std::endl;
   }
+
+  //std::cout << "Miss/hit " << (unsigned)cache_hit << " address " << base_addr << std::endl;
+  
+  // if (!pref.oracle.RECORD_OR_REPLAY && !cache_hit) {
+  //   uint64_t res = pref.oracle.evict_one_way(base_addr);
+
+  //   if (res != 0) {
+  //     uint64_t set = this->get_set_index(res);
+  //     uint64_t way = this->get_way((res >> 6) << 6, set);
+
+  //     if (way < NUM_WAY) {
+  //       champsim::operable::lru_states.push_back(std::make_pair(set, way));
+  //       //std::cout << "Evicted set " << set << " way " << way << " res" << std::endl;
+  //     }
+  //   }
+  // }
 
   if (cache_hit) 
   {
@@ -209,9 +217,9 @@ void CACHE::prefetcher_cycle_operate()
   // No prefetch gathering via the signature and pattern tables.
   else
   {
-    if (pref.oracle.oracle_pf.size() > 0 && pref.oracle.available_pf > 0) 
+    if ((pref.oracle.oracle_pf.size() > 0 && pref.oracle.available_pf > 0 && pref.oracle.hit_address != 0) || pref.oracle.initial_fill != 0)
     {
-      uint64_t potential_cs_pf = pref.oracle.poll(current_cycle);
+      uint64_t potential_cs_pf = pref.oracle.poll(pref.oracle.hit_address);
     
       if (potential_cs_pf != 0)
         pref.context_switch_issue_queue.push_back(std::make_pair(potential_cs_pf, 1));

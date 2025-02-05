@@ -210,6 +210,7 @@ void spp::SPP_ORACLE::file_read()
     return;
 
   acc_timestamp tmpp;
+  std::vector<acc_timestamp> readin;
 
   if (!RECORD_OR_REPLAY) {
     uint64_t readin_cycle_demanded, readin_addr, readin_miss_or_hit;
@@ -224,20 +225,20 @@ void spp::SPP_ORACLE::file_read()
       if (readin_addr == 0)
         break; 
 
-      oracle_pf.push_back(tmpp);
+      readin.push_back(tmpp);
     }
 
-    std::cout << "L2C oracle: read " << oracle_pf.size() << " accesses from file." << std::endl;
+    std::cout << "L2C oracle: read " << readin.size() << " accesses from file." << std::endl;
 
     std::deque<uint64_t> to_be_erased;
 
     // Use the hashmap to gather accesses.
     std::map<uint64_t, std::deque<uint64_t>> parsing;
 
-    for (size_t i = 0; i < oracle_pf.size(); i++) {
-      uint64_t addr = oracle_pf[i].addr;
+    for (size_t i = 0; i < readin.size(); i++) {
+      uint64_t addr = readin.at(i).addr;
 
-      if (oracle_pf[i].miss_or_hit == 0) {
+      if (readin.at(i).miss_or_hit == 0) {
         // Found in the hashmap already.
         if (auto search = parsing.find(addr); search != parsing.end()) 
           search->second.push_back(1); 
@@ -256,11 +257,10 @@ void spp::SPP_ORACLE::file_read()
     // Use the hashmap to walk the memory accesses.
     std::deque<acc_timestamp> oracle_pf_tmpp;
 
-    for(uint64_t i = 0; i < oracle_pf.size(); i++) {
-      uint64_t addr = oracle_pf.at(i).addr;
+    for(uint64_t i = 0; i < readin.size(); i++) {
+      uint64_t addr = readin.at(i).addr;
 
-
-      if (oracle_pf.at(i).miss_or_hit == 0) {
+      if (readin.at(i).miss_or_hit == 0) {
         auto search = parsing.find(addr);
         assert(search != parsing.end());
         assert(search->second.size() != 0);
@@ -278,16 +278,11 @@ void spp::SPP_ORACLE::file_read()
       }  
     }
 
-    oracle_pf.clear();
-    oracle_pf.shrink_to_fit();
-
-    for(auto var : oracle_pf_tmpp)
-    {
+    for(auto var : oracle_pf_tmpp) {
       oracle_pf.push_back(var); 
       oracle_pf.back().cycle_demanded = (oracle_pf.back().addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
     }
 
-    pf_size = oracle_pf.size();
     std::cout << "L2C oracle: pre-processing collects " << oracle_pf.size() << " accesses from file read." << std::endl;
   }
 }
@@ -334,9 +329,8 @@ int spp::SPP_ORACLE::check_pf_status(uint64_t addr) {
 
   if ((i - set * WAY_NUM) < WAY_NUM)
     return cache_state[i].pending_accesses;
-  else {
+  else 
     return -1;
-  }
 }
 
 int spp::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
@@ -374,73 +368,76 @@ int spp::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
     return -1;
 }
 
-uint64_t spp::SPP_ORACLE::poll(uint64_t cycle) {
+uint64_t spp::SPP_ORACLE::poll(uint64_t address) {
   uint64_t target = 0;
 
   if (oracle_pf.empty()) 
     return target; 
 
-  uint64_t set, way, set_vacancy;
+  if (address == 0 && initial_fill == 0) {
+    return target; 
+  }
+
+  uint64_t address_set = (address >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
+  uint64_t way, set_vacancy;
 
   std::unordered_set<uint64_t> checked_set;
 
-  if (oracle_pf.size() > pf_size) {
-    std::cout << "size = " << oracle_pf.size() << " actual size = " << pf_size << std::endl;
-    assert(false); 
-  }
-  pf_size = oracle_pf.size();
-
   // Find the address to be prefetched.
   auto ite = oracle_pf.begin();
-  for(ite = oracle_pf.begin(); ite != oracle_pf.end();) {
-    uint64_t pf_size_total = oracle_pf.size();
-    uint64_t pf_offset = ite - oracle_pf.begin();
-    set = ite->cycle_demanded; 
+
+  while(ite != oracle_pf.end()) {
+    uint64_t set = ite->cycle_demanded; 
+
+    if (set == address_set || initial_fill != 0) {
+    
     set_vacancy = set_availability[set];
 
     uint64_t prev_checked_set_size = checked_set.size();
     checked_set.insert(set);
 
-    if ((set_vacancy > 0) && (checked_set.size() > prev_checked_set_size)) {
+    if ((set_vacancy > 0) && (checked_set.size() > prev_checked_set_size) && ite->addr != 0) {
 
       way = check_set_pf_avail(ite->addr);
-      target = ite->addr;
-      cache_state[set * WAY_NUM + way].addr = target;
-      cache_state[set * WAY_NUM + way].pending_accesses = static_cast<int>(ite->miss_or_hit);
-      cache_state[set * WAY_NUM + way].timestamp = cycle;
+      
+      if (way < WAY_NUM)
+      {
+        target = ite->addr;
+        cache_state[set * WAY_NUM + way].addr = target;
+        cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
+        //std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << std::endl;
+        set_availability[set]--;
+        available_pf--;
+        hit_address = 0;
 
-      //std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " at cycle " << cycle - interval_start_cycle << std::endl;
-      set_availability[set]--;
-      available_pf--;
-
-      if (oracle_pf.size() < 1250000) {
-        std::cout << "pf_size_total = " << pf_size_total << std::endl; 
-        std::cout << "pf_offset = " << pf_offset << std::endl;
-      }
+        if (initial_fill > 0)
+          initial_fill--;
+        
       break;
+      }    
     }
     else if (checked_set.size() == (WAY_NUM * SET_NUM - 16)) 
       break; 
-    else 
-      ++ite;
+    }
+ 
+    ++ite;
+}
+
+  if (target != 0 && ite != oracle_pf.end()) { 
+    
+    ite = oracle_pf.erase(ite); 
   }
 
-  if (target != 0 && ite < oracle_pf.end()) {
-    ite = oracle_pf.erase(ite);
-  }
   else if (ite >= oracle_pf.end()) {
     target = 0; 
   }
-if (oracle_pf.size() > pf_size) {
-  std::cout << "distance = " << ite - oracle_pf.begin() << " size = " << oracle_pf.size() << " actual size = " << pf_size << std::endl;
-    assert(false); 
-  }
-  pf_size = oracle_pf.size();
 
   if ((oracle_pf.size() % 5000) == 0) {
-      std::cout << "Remaining oracle access = " << oracle_pf.size() << std::endl;
+      std::cout << "Remaining oracle access = " << oracle_pf.size() - pf_issued << std::endl;
       oracle_pf.shrink_to_fit();
   } 
+
+  //std::cout << "poll returned " << target << " initial_fill = " << initial_fill << std::endl;
 
   return target;
 }

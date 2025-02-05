@@ -37,8 +37,6 @@ namespace spp
     constexpr static bool ORACLE_ACTIVE = true;
     constexpr static bool RECORD_OR_REPLAY = false;
 
-    uint64_t pf_size;
-
     uint64_t lru_counter;
 
     struct acc_timestamp 
@@ -57,6 +55,8 @@ namespace spp
     const static uint64_t SET_NUM = 1024;
     const static uint64_t WAY_NUM = 8;
     uint64_t available_pf = SET_NUM * WAY_NUM;
+    uint64_t hit_address = 0;
+    uint64_t initial_fill = SET_NUM * WAY_NUM;
 
     struct blk_state 
     {
@@ -78,7 +78,7 @@ namespace spp
     uint64_t check_set_pf_avail(uint64_t addr);
     int check_pf_status(uint64_t addr);
     int update_pf_avail(uint64_t addr, uint64_t cycle);
-    uint64_t poll(uint64_t cycle);
+    uint64_t poll(uint64_t addr);
     void finish();
   };
 }
