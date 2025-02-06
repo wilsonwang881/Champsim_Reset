@@ -47,7 +47,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY) {
     if (useful_prefetch) 
      pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0);
-    else 
+    else if (type != 2) 
      pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1);
   }
 
