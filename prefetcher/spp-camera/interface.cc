@@ -41,14 +41,14 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   }
 
   if (pref.oracle.ORACLE_ACTIVE && pref.oracle.RECORD_OR_REPLAY) {
-    pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit);
+    pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 0);
   }
 
   if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY) {
     if (useful_prefetch) 
-     pref.oracle.update_demand(this->current_cycle, base_addr, 0);
+     pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0);
     else 
-     pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit);
+     pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1);
   }
 
   /*
@@ -75,6 +75,9 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
           pref.oracle.hit_address = base_addr;
         }
     }
+    else {
+      pref.oracle.hit_address = 0;
+    }
   }
   else if (!cache_hit)
   {
@@ -84,19 +87,21 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
   //std::cout << "Miss/hit " << (unsigned)cache_hit << " address " << base_addr << std::endl;
   
-  // if (!pref.oracle.RECORD_OR_REPLAY && !cache_hit) {
-  //   uint64_t res = pref.oracle.evict_one_way(base_addr);
+  /*
+   if (!pref.oracle.RECORD_OR_REPLAY && !cache_hit) {
+     uint64_t res = pref.oracle.evict_one_way(base_addr);
 
-  //   if (res != 0) {
-  //     uint64_t set = this->get_set_index(res);
-  //     uint64_t way = this->get_way((res >> 6) << 6, set);
+     if (res != 0) {
+       uint64_t set = this->get_set_index(res);
+       uint64_t way = this->get_way((res >> 6) << 6, set);
 
-  //     if (way < NUM_WAY) {
-  //       champsim::operable::lru_states.push_back(std::make_pair(set, way));
-  //       //std::cout << "Evicted set " << set << " way " << way << " res" << std::endl;
-  //     }
-  //   }
-  // }
+       if (way < NUM_WAY) {
+         champsim::operable::lru_states.push_back(std::make_pair(set, way));
+         //std::cout << "Evicted set " << set << " way " << way << " res" << std::endl;
+       }
+     }
+   }
+   */
 
   if (cache_hit) 
   {

@@ -35,7 +35,7 @@ namespace spp
     std::map<uint64_t, uint64_t> set_availability;
 
     constexpr static bool ORACLE_ACTIVE = true;
-    constexpr static bool RECORD_OR_REPLAY = false;
+    constexpr static bool RECORD_OR_REPLAY = true;
 
     uint64_t lru_counter;
 
@@ -69,7 +69,7 @@ namespace spp
     std::deque<acc_timestamp> oracle_pf;
 
     void init();
-    void update_demand(uint64_t cycle, uint64_t addr, bool hit);
+    void update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch);
     void update_fill(uint64_t addr);
     uint64_t evict_one_way(uint64_t addr);
     void refresh_cache_state();
