@@ -34,6 +34,11 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 {
   auto &pref = ::SPP[{this, cpu}];
 
+  if (base_addr == pref.oracle.previous_miss_addr && !cache_hit) {
+    pref.oracle.previous_miss_addr = base_addr;
+    return metadata_in; 
+  }
+
   //if (pref.context_switch_queue_empty())
   {
     pref.update_demand(base_addr,this->get_set_index(base_addr));
@@ -41,14 +46,35 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   }
 
   if (pref.oracle.ORACLE_ACTIVE && pref.oracle.RECORD_OR_REPLAY) {
-    pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 0);
+    uint64_t evict_candidate = pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 0);
+
+    if (evict_candidate != 0)
+    {
+      this->do_not_fill_address.push_back(evict_candidate);
+    }    
   }
 
-  if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY) {
-    if (useful_prefetch) 
-     pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0);
-    else if (type != 2) 
-     pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1);
+  if (!cache_hit && type != 2)
+  {
+    pref.oracle.hit_address = 0;
+    //pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
+
+  }
+
+  /*
+  if (type != 2) {
+    std::cout << "Hit/miss " << (unsigned)cache_hit << " " << base_addr << " " << this->current_cycle << std::endl;
+  }
+  */
+
+  if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && !(type == 2 && cache_hit)) {
+    if (useful_prefetch) {
+      pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0);
+    }
+    else {
+      //std::cout << "type " << (unsigned)type << " addr " << base_addr << " hit miss " << (unsigned)cache_hit << " cycle " << current_cycle << std::endl;
+      pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1);
+    }      
   }
 
   /*
@@ -79,12 +105,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       pref.oracle.hit_address = 0;
     }
   }
-  else if (!cache_hit)
-  {
-    pref.oracle.hit_address = 0;
-    //std::cout << "Misses " << base_addr << std::endl;
-  }
 
+  
   //std::cout << "Miss/hit " << (unsigned)cache_hit << " address " << base_addr << std::endl;
   
   /*
@@ -159,9 +181,10 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
     pref.page_bitmap.evict(evicted_addr);
   }
 
+/*
   if (!pref.oracle.oracle_pf.empty()) // blk_asid_match && !pref.oracle.first_round
     pref.oracle.update_fill(block[set * NUM_WAY + way].address);
-
+*/
   if (!pref.oracle.oracle_pf.empty()) //!pref.oracle.first_round && 
   {
     //std::cout << "Filled block addr " << addr << " set " << set << " way " << way << " evicting " << evicted_addr << " prefetch? " << (unsigned)prefetch << std::endl;

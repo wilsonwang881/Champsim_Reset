@@ -61,6 +61,12 @@ CACHE::mshr_type CACHE::mshr_type::merge(mshr_type predecessor, mshr_type succes
   retval.instr_depend_on_me = merged_instr;
   retval.to_return = merged_return;
   retval.data = predecessor.data;
+
+  // Disable when recording.
+  if(!cache->L2C_name.compare(cache->NAME))
+    retval.type = (predecessor.type == access_type::PREFETCH) ? predecessor.type : successor.type;
+  // Disable when recording.
+
   retval.asid[0] = predecessor.asid[0]; // WL: added ASID
 
   if (predecessor.event_cycle < std::numeric_limits<uint64_t>::max()) {
@@ -95,9 +101,11 @@ CACHE::BLOCK::BLOCK(mshr_type mshr)
 bool CACHE::handle_fill(const mshr_type& fill_mshr)
 {
   cpu = fill_mshr.cpu;
-
-  if (fill_mshr.type != access_type::PREFETCH && !L2C_name.compare(NAME)) {
+  auto search = std::find(do_not_fill_address.begin(), do_not_fill_address.end(), fill_mshr.address);
+  if ((fill_mshr.type != access_type::PREFETCH && !L2C_name.compare(NAME)) || search != do_not_fill_address.end()) {
         // COLLECT STATS
+    if(search != do_not_fill_address.end())
+      do_not_fill_address.erase(search);
     sim_stats.total_miss_latency += current_cycle - (fill_mshr.cycle_enqueued + 1);
 
     response_type response{fill_mshr.address, fill_mshr.v_address, fill_mshr.data,
@@ -256,7 +264,7 @@ bool CACHE::try_hit(const tag_lookup_type& handle_pkt)
 
   // update prefetcher on load instructions and prefetches from upper levels
   auto metadata_thru = handle_pkt.pf_metadata;
-  if (should_activate_prefetcher(handle_pkt)) {
+  if (should_activate_prefetcher(handle_pkt) && !handle_pkt.has_been_checked) {
     uint64_t pf_base_addr = (virtual_prefetch ? handle_pkt.v_address : handle_pkt.address) & ~champsim::bitmask(match_offset_bits ? 0 : OFFSET_BITS);
 
     metadata_thru = impl_prefetcher_cache_operate(pf_base_addr, handle_pkt.ip, hit, useful_prefetch, champsim::to_underlying(handle_pkt.type), metadata_thru);
@@ -463,8 +471,13 @@ long CACHE::operate()
   auto stash_bandwidth_consumed = champsim::transform_while_n(
       translation_stash, std::back_inserter(inflight_tag_check), tag_bw, [](const auto& entry) { return entry.is_translated; }, initiate_tag_check<false>());
   tag_bw -= stash_bandwidth_consumed;
-
   progress += stash_bandwidth_consumed;
+
+  auto pq_bandwidth_consumed =
+      champsim::transform_while_n(internal_PQ, std::back_inserter(inflight_tag_check), tag_bw, can_translate, initiate_tag_check<false>());
+  tag_bw -= pq_bandwidth_consumed;
+  progress += pq_bandwidth_consumed;
+
   std::vector<long long> channels_bandwidth_consumed{};
   for (auto* ul : upper_levels) {
     for (auto q : {std::ref(ul->WQ), std::ref(ul->RQ), std::ref(ul->PQ)}) {
@@ -475,10 +488,7 @@ long CACHE::operate()
       progress += bandwidth_consumed;
     }
   }
-  auto pq_bandwidth_consumed =
-      champsim::transform_while_n(internal_PQ, std::back_inserter(inflight_tag_check), tag_bw, can_translate, initiate_tag_check<false>());
-  tag_bw -= pq_bandwidth_consumed;
-  progress += pq_bandwidth_consumed;
+
 
   // Issue translations
   issue_translation();
@@ -491,11 +501,15 @@ long CACHE::operate()
   inflight_tag_check.erase(last_not_missed, std::end(inflight_tag_check));
 
   // Perform tag checks
-  auto do_tag_check = [this](const auto& pkt) {
-    if (this->try_hit(pkt))
+  auto do_tag_check = [this](auto& pkt) {
+    if (this->try_hit(pkt)) {
+      pkt.has_been_checked = true;
       return true;
-    if (pkt.type == access_type::WRITE && !this->match_offset_bits)
+    }
+    pkt.has_been_checked = true;
+    if (pkt.type == access_type::WRITE && !this->match_offset_bits) {
       return this->handle_write(pkt); // Treat writes (that is, writebacks) like fills
+    }
     else
       return this->handle_miss(pkt); // Treat writes (that is, stores) like reads
   };

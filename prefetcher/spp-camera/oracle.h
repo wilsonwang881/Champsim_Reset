@@ -57,6 +57,7 @@ namespace spp
     uint64_t available_pf = SET_NUM * WAY_NUM;
     uint64_t hit_address = 0;
     uint64_t initial_fill = SET_NUM * WAY_NUM;
+    uint64_t previous_miss_addr;
 
     struct blk_state 
     {
@@ -67,9 +68,11 @@ namespace spp
 
     blk_state cache_state[SET_NUM * WAY_NUM];
     std::deque<acc_timestamp> oracle_pf;
+    std::deque<acc_timestamp> readin;
+    uint64_t readin_index = 0;
 
     void init();
-    void update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch);
+    uint64_t update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch);
     void update_fill(uint64_t addr);
     uint64_t evict_one_way(uint64_t addr);
     void refresh_cache_state();
@@ -79,6 +82,7 @@ namespace spp
     int check_pf_status(uint64_t addr);
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     uint64_t poll(uint64_t addr);
+    void kill_simulation(uint64_t cycle, uint64_t addr, bool hit);
     void finish();
   };
 }

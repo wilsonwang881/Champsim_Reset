@@ -94,6 +94,7 @@ class CACHE : public champsim::operable
     bool skip_fill;
     bool is_translated;
     bool translate_issued = false;
+    bool has_been_checked = false;
 
     uint16_t asid[2] = {std::numeric_limits<uint16_t>::max(), std::numeric_limits<uint16_t>::max()};
 
@@ -192,6 +193,7 @@ public:
   bool ever_seen_data = false;
   const unsigned pref_activate_mask = (1 << champsim::to_underlying(access_type::LOAD)) | (1 << champsim::to_underlying(access_type::PREFETCH));
 
+  std::deque<uint64_t> do_not_fill_address;
   using stats_type = cache_stats;
 
   stats_type sim_stats, roi_stats;
