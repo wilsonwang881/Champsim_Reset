@@ -34,11 +34,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 {
   auto &pref = ::SPP[{this, cpu}];
 
-  if (base_addr == pref.oracle.previous_miss_addr && !cache_hit) {
-    pref.oracle.previous_miss_addr = base_addr;
-    return metadata_in; 
-  }
-
   //if (pref.context_switch_queue_empty())
   {
     pref.update_demand(base_addr,this->get_set_index(base_addr));
@@ -57,17 +52,26 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   if (!cache_hit && type != 2)
   {
     pref.oracle.hit_address = 0;
+    std::cout << "MSHR occupancy " << this->get_mshr_occupancy() << " MSHR size " << this->get_mshr_size() << std::endl;
     //pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 
   }
 
-  /*
-  if (type != 2) {
-    std::cout << "Hit/miss " << (unsigned)cache_hit << " " << base_addr << " " << this->current_cycle << std::endl;
-  }
-  */
+  //std::cout << "Hit/miss " << (unsigned)cache_hit << " set " << this->get_set_index(base_addr) << " addr " << base_addr << " at " << this->current_cycle << " type " << (unsigned)type << std::endl;
 
   if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && !(type == 2 && cache_hit)) {
+
+
+    auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
+                                 [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
+                                   return (entry.address >> shamt) == match; // WL: added ASID matching.
+                                 });
+
+    if (search_mshr != this->MSHR.end()) {
+      useful_prefetch = true; 
+      cache_hit = true;
+    }
+
     if (useful_prefetch) {
       pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0);
     }
@@ -109,22 +113,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   
   //std::cout << "Miss/hit " << (unsigned)cache_hit << " address " << base_addr << std::endl;
   
-  /*
-   if (!pref.oracle.RECORD_OR_REPLAY && !cache_hit) {
-     uint64_t res = pref.oracle.evict_one_way(base_addr);
-
-     if (res != 0) {
-       uint64_t set = this->get_set_index(res);
-       uint64_t way = this->get_way((res >> 6) << 6, set);
-
-       if (way < NUM_WAY) {
-         champsim::operable::lru_states.push_back(std::make_pair(set, way));
-         //std::cout << "Evicted set " << set << " way " << way << " res" << std::endl;
-       }
-     }
-   }
-   */
-
   if (cache_hit) 
   {
     pref.page_bitmap.update(base_addr);
@@ -179,15 +167,6 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   if (blk_asid_match)// && !blk_pfed 
   {
     pref.page_bitmap.evict(evicted_addr);
-  }
-
-/*
-  if (!pref.oracle.oracle_pf.empty()) // blk_asid_match && !pref.oracle.first_round
-    pref.oracle.update_fill(block[set * NUM_WAY + way].address);
-*/
-  if (!pref.oracle.oracle_pf.empty()) //!pref.oracle.first_round && 
-  {
-    //std::cout << "Filled block addr " << addr << " set " << set << " way " << way << " evicting " << evicted_addr << " prefetch? " << (unsigned)prefetch << std::endl;
   }
 
   return metadata_in;

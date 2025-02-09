@@ -73,8 +73,6 @@ namespace spp
 
     void init();
     uint64_t update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch);
-    void update_fill(uint64_t addr);
-    uint64_t evict_one_way(uint64_t addr);
     void refresh_cache_state();
     void file_write();
     void file_read();

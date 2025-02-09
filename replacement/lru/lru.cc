@@ -18,6 +18,21 @@ uint32_t CACHE::find_victim(uint32_t triggering_cpu, uint64_t instr_id, uint32_t
   auto begin = std::next(std::begin(::last_used_cycles[this]), set * NUM_WAY);
   auto end = std::next(begin, NUM_WAY);
 
+  // WL
+  if(champsim::operable::lru_states.size() > 0 && L2C_name.compare(this->NAME) == 0)
+  {
+    for(auto var : champsim::operable::lru_states) 
+    {
+      if (var.second < NUM_WAY)
+        ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) = 0; 
+    }
+
+    champsim::operable::lru_states.clear();
+  }
+
+  // WL
+
+
   // Find the way whose last use cycle is most distant
   auto victim = std::min_element(begin, end);
   assert(begin <= victim);
@@ -32,59 +47,25 @@ void CACHE::update_replacement_state(uint32_t triggering_cpu, uint32_t set, uint
   if (!hit || access_type{type} != access_type::WRITE) // Skip this for writeback hits
   {
     ::last_used_cycles[this].at(set * NUM_WAY + way) = current_cycle;
-
-    /*
-    // WL
-    if(champsim::operable::lru_states.size() > 0 && L2C_name.compare(this->NAME) == 0)
-    {
-      for(auto var : champsim::operable::lru_states) 
-      {
-        if (var.second < NUM_WAY)
-        {
-          //std::cout << "LRU: handling set " << var.first << " way " << var.second << std::endl;
-          ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) = 0; 
-        }
-      }
-
-      champsim::operable::lru_states.clear();
-    }
-    // WL
-    */
   }
- // WL
-    if(champsim::operable::lru_states.size() > 0 && L2C_name.compare(this->NAME) == 0)
-    {
-      for(auto var : champsim::operable::lru_states) 
-      {
-        //std::cout << "LRU: handling set " << var.first << " way " << var.second << std::endl;
-
-        if (var.second < NUM_WAY)
-        {
-          ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) = 0; 
-          //std::cout << "LRU: result " << ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) << std::endl;
-        }
-      }
-
-      champsim::operable::lru_states.clear();
-    }
-    // WL
-
-}
-
-void CACHE::replacement_final_stats() 
-{
-  /*
-  if (L2C_name.compare(this->NAME) == 0)
+  // WL
+  if(champsim::operable::lru_states.size() > 0 && L2C_name.compare(this->NAME) == 0)
   {
-    for (size_t i = 0; i < NUM_SET; i++) 
+    for(auto var : champsim::operable::lru_states) 
     {
-      std::cout << "LRU set " << i << " ";
-      for (size_t j = 0; j < NUM_WAY; j++) {
-        std::cout << ::last_used_cycles[this].at(i * NUM_WAY + j) << " ";
+      //std::cout << "LRU: handling set " << var.first << " way " << var.second << std::endl;
+
+      if (var.second < NUM_WAY)
+      {
+        ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) = 0; 
+        //std::cout << "LRU: result " << ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) << std::endl;
       }
-      std::cout << std::endl;
     }
+
+    champsim::operable::lru_states.clear();
   }
-  */
+  // WL
 
 }
+
+void CACHE::replacement_final_stats() {}
