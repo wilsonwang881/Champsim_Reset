@@ -49,13 +49,17 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     }    
   }
 
+  /*
   if (!cache_hit && type != 2)
   {
     pref.oracle.hit_address = 0;
     std::cout << "MSHR occupancy " << this->get_mshr_occupancy() << " MSHR size " << this->get_mshr_size() << std::endl;
+    std::cout << "Hit/miss " << (unsigned)cache_hit << " set " << this->get_set_index(base_addr) << " addr " << base_addr << " at " << this->current_cycle << " type " << (unsigned)type << std::endl;
+
     //pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 
   }
+  */
 
   //std::cout << "Hit/miss " << (unsigned)cache_hit << " set " << this->get_set_index(base_addr) << " addr " << base_addr << " at " << this->current_cycle << " type " << (unsigned)type << std::endl;
 
@@ -92,10 +96,11 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   if (!pref.oracle.oracle_pf.empty() && cache_hit && !pref.oracle.RECORD_OR_REPLAY) 
   {
     int before_acc = pref.oracle.check_pf_status(base_addr);
+    bool evict = pref.oracle.check_require_eviction(base_addr);
     int remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 
     // Last access to the prefetched block used.
-    if ((before_acc > remaining_acc) && (remaining_acc == 0)) {
+    if ((before_acc > remaining_acc) && (remaining_acc == 0) && evict) {
 
         uint64_t set = this->get_set_index(base_addr);
         uint64_t way = this->get_way((base_addr >> 6) << 6, set);

@@ -36,10 +36,8 @@ PageTableWalker::PageTableWalker(Builder b)
   std::remove_copy_if(std::begin(b.m_pscl), std::end(b.m_pscl), std::back_inserter(local_pscl_dims), [](auto x) { return std::get<0>(x) == 0; });
   std::sort(std::begin(local_pscl_dims), std::end(local_pscl_dims), std::greater{});
 
-  std::cout << "pt_levels = " << b.m_vmem->pt_levels << std::endl;
   for (auto [level, sets, ways] : local_pscl_dims)
   {
-    std::cout << "set " << sets << " way " << ways << " level " << level << " shamt " << b.m_vmem->shamt(level) << std::endl;
     pscl.emplace_back(sets, ways, pscl_indexer{b.m_vmem->shamt(level - 1)}, pscl_indexer{b.m_vmem->shamt(level - 1)});
   }
 }
