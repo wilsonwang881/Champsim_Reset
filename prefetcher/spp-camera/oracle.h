@@ -79,6 +79,7 @@ namespace spp {
     int check_pf_status(uint64_t addr);
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     bool check_require_eviction(uint64_t addr);
+    void update_fill(uint64_t addr, uint64_t evicting_addr);
     uint64_t poll(uint64_t addr);
     void kill_simulation(uint64_t cycle, uint64_t addr, bool hit);
     void finish();

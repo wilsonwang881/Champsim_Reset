@@ -61,7 +61,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   }
   */
 
-  //std::cout << "Hit/miss " << (unsigned)cache_hit << " set " << this->get_set_index(base_addr) << " addr " << base_addr << " at " << this->current_cycle << " type " << (unsigned)type << std::endl;
+  //std::cout << "Hit/miss " << (unsigned)cache_hit << " set " << this->get_set_index(base_addr) << " addr " << base_addr << " at cycle " << this->current_cycle << " type " << (unsigned)type << std::endl;
 
   if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && !(type == 2 && cache_hit)) {
 
@@ -77,11 +77,20 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     }
 
     if (useful_prefetch) {
-      pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0);
+
+      uint64_t res = pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0);
+      if (res != 0)
+      {
+        this->do_not_fill_address.push_back(res);
+      }
     }
     else {
       //std::cout << "type " << (unsigned)type << " addr " << base_addr << " hit miss " << (unsigned)cache_hit << " cycle " << current_cycle << std::endl;
-      pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1);
+      uint64_t res = pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1);
+      if (res != 0)
+      {
+        this->do_not_fill_address.push_back(res);
+      }
     }      
   }
 
@@ -93,14 +102,14 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   }
   */
 
-  if (!pref.oracle.oracle_pf.empty() && cache_hit && !pref.oracle.RECORD_OR_REPLAY) 
+  if (cache_hit && !pref.oracle.RECORD_OR_REPLAY) //!pref.oracle.oracle_pf.empty() && 
   {
     int before_acc = pref.oracle.check_pf_status(base_addr);
     bool evict = pref.oracle.check_require_eviction(base_addr);
     int remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 
     // Last access to the prefetched block used.
-    if ((before_acc > remaining_acc) && (remaining_acc == 0) && evict) {
+    if ((before_acc > remaining_acc) && (remaining_acc == 0)) { // && evict
 
         uint64_t set = this->get_set_index(base_addr);
         uint64_t way = this->get_way((base_addr >> 6) << 6, set);
@@ -115,9 +124,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     }
   }
 
-  
-  //std::cout << "Miss/hit " << (unsigned)cache_hit << " address " << base_addr << std::endl;
-  
   if (cache_hit) 
   {
     pref.page_bitmap.update(base_addr);
@@ -173,6 +179,9 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   {
     pref.page_bitmap.evict(evicted_addr);
   }
+
+  //pref.oracle.update_fill(addr, evicted_addr);
+  //std::cout << "Filled addr " << addr << " set " << set << " way " << way << " prefetch " << (unsigned)prefetch << " evicted_addr " << evicted_addr << std::endl;
 
   return metadata_in;
 }

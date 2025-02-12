@@ -82,6 +82,7 @@ uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit,
         set_kill_counter[set_check]++;
 
         if (set_kill_counter[set_check] > 1) {
+          std::cout << "Simulation killed at a with set " << set_check << " way " << way_check << std::endl;
           kill_simulation(cycle, addr, hit);
         }
       }
@@ -91,7 +92,8 @@ uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit,
         if (cache_state[set_check * WAY_NUM + way_check].pending_accesses < 0) {
           set_kill_counter[set_check]++;
 
-          if (set_kill_counter[set_check] > 1) {
+          if (set_kill_counter[set_check] > 7) {
+            std::cout << "Simulation killed at b with set " << set_check << " way " << way_check << std::endl;
             kill_simulation(cycle, addr, hit);
           }
         }
@@ -103,7 +105,7 @@ uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit,
           available_pf++;
           available_pf = std::min(available_pf, (uint64_t)(1024 * 8 - 16));
           set_availability.find(set_check)->second++;
-          possible_do_not_fill_addr = addr;          
+          //possible_do_not_fill_addr = addr;          
         }
 
         tmpp.miss_or_hit = hit;
@@ -282,9 +284,10 @@ void spp::SPP_ORACLE::file_read()
 
       if (auto search = eviction_check.find(set); search != eviction_check.end()) {
 
-        if (eviction_check[set].size() < WAY_NUM) {
+        if (eviction_check[set].size() < (WAY_NUM)) {
            
-          if (auto it = std::find(eviction_check[set].begin(), eviction_check[set].end(), addr); it == eviction_check[set].end()) {
+          //if (auto it = std::find(eviction_check[set].begin(), eviction_check[set].end(), addr); it == eviction_check[set].end()) 
+          {
             eviction_check[set].push_back(addr); 
             oracle_pf[i].require_eviction = false;
           } 
@@ -296,6 +299,14 @@ void spp::SPP_ORACLE::file_read()
         oracle_pf[i].require_eviction = false;
       }
     }
+    
+    /*
+    for(auto var : oracle_pf) {
+      if (var.cycle_demanded == 907) {
+        std::cout << "addr " << var.addr << " in set " << var.cycle_demanded << " require_eviction " << var.require_eviction << std::endl; 
+      } 
+    }
+    */
 
     std::cout << "L2C oracle: pre-processing collects " << oracle_pf.size() << " accesses from file read." << std::endl;
   }
@@ -310,17 +321,17 @@ uint64_t spp::SPP_ORACLE::check_set_pf_avail(uint64_t addr)
  
   for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
 
-    if ((cache_state[i].addr != 0 && cache_state[i].pending_accesses == 0))
+    if (cache_state[i].addr != 0 && cache_state[i].pending_accesses == 0 && cache_state[i].require_eviction)
       assert(false); 
 
-    if ((cache_state[i].addr == 0 && cache_state[i].pending_accesses != 0)) {
+    if (cache_state[i].addr == 0 && cache_state[i].pending_accesses != 0 && cache_state[i].require_eviction) {
       std::cout << "pending_access = " << cache_state[i].pending_accesses << std::endl;
       assert(false); 
     }
       
 
     if (cache_state[i].addr == addr) {
-      res = (set + 1) * WAY_NUM; // i;
+      res = (set + 1) * WAY_NUM;
       break;
     }
 
@@ -373,7 +384,7 @@ int spp::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
       if (cache_state[i].pending_accesses == 0) {
         cache_state[i].addr = 0; 
         cache_state[i].timestamp = 0;
-        cache_state[i].require_eviction = false;
+        cache_state[i].require_eviction = true;
         available_pf++;
         available_pf = std::min(available_pf, (uint64_t)(1024 * 8 - 16));
         set_availability.find(set)->second++;
@@ -405,6 +416,22 @@ bool spp::SPP_ORACLE::check_require_eviction(uint64_t addr) {
   }
 
   return need_eviction;
+}
+
+void spp::SPP_ORACLE::update_fill(uint64_t addr, uint64_t evicting_addr) {
+
+  addr = (addr >> 6) << 6;
+  uint64_t addr_set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
+
+  evicting_addr = (evicting_addr >> 6) << 6;
+
+  for (size_t i = addr_set * WAY_NUM; i < (addr_set + 1) * WAY_NUM; i++) {
+    if (cache_state[i].addr == evicting_addr && set_kill_counter[i] >= 1) {
+      cache_state[i].addr = addr;
+      cache_state[i].pending_accesses = 99999999;
+      cache_state[i].require_eviction = false;
+    } 
+  }
 }
 
 uint64_t spp::SPP_ORACLE::poll(uint64_t address) {
