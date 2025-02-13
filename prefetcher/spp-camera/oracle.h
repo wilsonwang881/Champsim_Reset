@@ -23,10 +23,7 @@ namespace spp {
   class SPP_ORACLE {
     constexpr static uint64_t ACCESS_LEN = 100000000;
     std::string L2C_PHY_ACC_FILE_NAME = "L2C_phy_acc.txt";
-    std::string L2C_PHY_ACC_WRITE_FILE_NAME = "L2C_phy_acc_write.txt";
-
     std::fstream rec_file;
-    //std::fstream rec_file_write;
 
     public:
 
@@ -34,8 +31,6 @@ namespace spp {
 
     constexpr static bool ORACLE_ACTIVE = true;
     constexpr static bool RECORD_OR_REPLAY = false;
-
-    uint64_t lru_counter;
 
     struct acc_timestamp {
       uint64_t cycle_demanded;
@@ -79,7 +74,6 @@ namespace spp {
     int check_pf_status(uint64_t addr);
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     bool check_require_eviction(uint64_t addr);
-    void update_fill(uint64_t addr, uint64_t evicting_addr);
     uint64_t poll(uint64_t addr);
     void kill_simulation(uint64_t cycle, uint64_t addr, bool hit);
     void finish();

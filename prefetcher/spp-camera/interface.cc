@@ -109,15 +109,23 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     int remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 
     // Last access to the prefetched block used.
-    if ((before_acc > remaining_acc) && (remaining_acc == 0)) { // && evict
+    if ((before_acc > remaining_acc) && (remaining_acc == 0) && evict) { // 
 
-        uint64_t set = this->get_set_index(base_addr);
-        uint64_t way = this->get_way((base_addr >> 6) << 6, set);
+      uint64_t set = this->get_set_index(base_addr);
+      uint64_t way = this->get_way((base_addr >> 6) << 6, set);
 
-        if (way < NUM_WAY) {
-          champsim::operable::lru_states.push_back(std::make_pair(set, way));
-          pref.oracle.hit_address = base_addr;
-        }
+      if (way < NUM_WAY) {
+        champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
+        pref.oracle.hit_address = base_addr;
+      }
+    }
+    else if (remaining_acc > 0) {
+      uint64_t set = this->get_set_index(base_addr);
+      uint64_t way = this->get_way((base_addr >> 6) << 6, set);
+
+      if (way < NUM_WAY) {
+        champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
+      }
     }
     else {
       pref.oracle.hit_address = 0;
@@ -180,7 +188,10 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
     pref.page_bitmap.evict(evicted_addr);
   }
 
-  //pref.oracle.update_fill(addr, evicted_addr);
+  if (prefetch) {
+    champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
+  }
+
   //std::cout << "Filled addr " << addr << " set " << set << " way " << way << " prefetch " << (unsigned)prefetch << " evicted_addr " << evicted_addr << std::endl;
 
   return metadata_in;

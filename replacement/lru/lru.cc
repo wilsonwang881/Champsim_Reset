@@ -2,7 +2,8 @@
 #include <cassert>
 #include <map>
 #include <vector>
-#include <iterator> // WL
+#include <iterator> // WL 
+#include <limits> // WL
 
 #include "cache.h"
 
@@ -23,15 +24,18 @@ uint32_t CACHE::find_victim(uint32_t triggering_cpu, uint64_t instr_id, uint32_t
   {
     for(auto var : champsim::operable::lru_states) 
     {
-      if (var.second < NUM_WAY)
-        ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) = 0; 
+      uint64_t target_set = std::get<0>(var);
+      uint64_t way = std::get<1>(var);
+      uint64_t setting = (std::get<2>(var) == 0) ? 0 : 0xFFFFFFFFFFFFFFF;
+
+      if (way < NUM_WAY)
+        ::last_used_cycles[this].at(target_set * NUM_WAY + way) = setting; 
     }
 
     champsim::operable::lru_states.clear();
   }
 
   // WL
-
 
   // Find the way whose last use cycle is most distant
   auto victim = std::min_element(begin, end);
@@ -53,11 +57,13 @@ void CACHE::update_replacement_state(uint32_t triggering_cpu, uint32_t set, uint
   {
     for(auto var : champsim::operable::lru_states) 
     {
-      //std::cout << "LRU: handling set " << var.first << " way " << var.second << std::endl;
+      uint64_t target_set = std::get<0>(var);
+      uint64_t target_way = std::get<1>(var);
+      uint64_t setting = (std::get<2>(var) == 0) ? 0 : 0xFFFFFFFFFFFFFFF;
 
-      if (var.second < NUM_WAY)
+      if (target_way < NUM_WAY)
       {
-        ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) = 0; 
+        ::last_used_cycles[this].at(target_set * NUM_WAY + target_way) = setting; 
         //std::cout << "LRU: result " << ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) << std::endl;
       }
     }

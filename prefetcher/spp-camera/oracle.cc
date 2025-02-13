@@ -11,9 +11,6 @@ void spp::SPP_ORACLE::init() {
   if (RECORD_OR_REPLAY) {
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
     rec_file.close();
-  } else {
-    //rec_file_write.open(L2C_PHY_ACC_WRITE_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
-    //rec_file_write.close();
   }
 
   for (size_t i = 0; i < SET_NUM * WAY_NUM; i++) {
@@ -24,7 +21,6 @@ void spp::SPP_ORACLE::init() {
     set_kill_counter[i] = 0;
   }
 
-  lru_counter = 0;
   available_pf = SET_NUM * WAY_NUM - 16;
 
   for(uint64_t i = 0; i < SET_NUM; i++) {
@@ -38,31 +34,6 @@ uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit,
 
   if (!ORACLE_ACTIVE) 
     return possible_do_not_fill_addr;
-
-  if (RECORD_OR_REPLAY && can_write) {
-    acc_timestamp tmpp;
-    tmpp.cycle_demanded = cycle - interval_start_cycle;
-    tmpp.addr = (addr >> 6) << 6;
-    tmpp.miss_or_hit = hit;
-    access.push_back(tmpp); 
-
-    if (access.size() >= (ACCESS_LEN / 10000)) {
-      rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::app);
-
-      for(auto var : access)
-          rec_file << var.cycle_demanded << " " << var.addr << " " << var.miss_or_hit << std::endl;
-
-      rec_file.close();
-      std::cout << "L2C oracle: writing " << access.size() << " accesses to file." << std::endl;
-      access.clear();
-      access.shrink_to_fit();
-    }
-
-    if (access.size() >= ACCESS_LEN) {
-      file_write();
-      can_write = false;
-    }
-  }
 
   if (!RECORD_OR_REPLAY && can_write) {
     acc_timestamp tmpp;
@@ -81,7 +52,7 @@ uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit,
 
         set_kill_counter[set_check]++;
 
-        if (set_kill_counter[set_check] > 1) {
+        if (set_kill_counter[set_check] > 8) {
           std::cout << "Simulation killed at a with set " << set_check << " way " << way_check << std::endl;
           kill_simulation(cycle, addr, hit);
         }
@@ -92,7 +63,7 @@ uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit,
         if (cache_state[set_check * WAY_NUM + way_check].pending_accesses < 0) {
           set_kill_counter[set_check]++;
 
-          if (set_kill_counter[set_check] > 7) {
+          if (set_kill_counter[set_check] > 8) {
             std::cout << "Simulation killed at b with set " << set_check << " way " << way_check << std::endl;
             kill_simulation(cycle, addr, hit);
           }
@@ -114,21 +85,6 @@ uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit,
 
     tmpp.addr = (addr >> 6) << 6;    
     access.push_back(tmpp); 
-
-    /*
-    if (access.size() >= (ACCESS_LEN / 10000)) {
-      rec_file_write.open(L2C_PHY_ACC_WRITE_FILE_NAME, std::ofstream::app);
-
-      for(auto var : access) {
-          rec_file_write << var.cycle_demanded << " " << var.addr << " " << var.miss_or_hit << std::endl;
-      }
-
-      rec_file_write.close();
-      std::cout << "L2C oracle: writing " << access.size() << " accesses to write file." << std::endl;
-      access.clear();
-      access.shrink_to_fit();
-    }
-    */
 
     if (access.size() >= ACCESS_LEN) {
       file_write();
@@ -160,8 +116,8 @@ void spp::SPP_ORACLE::file_write() {
   if (!ORACLE_ACTIVE) 
     return;
 
-  if (RECORD_OR_REPLAY && can_write && access.size() > 0) {
-    rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::app);
+  if (can_write && access.size() > 0) {
+    rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
 
     for(auto var : access)
       rec_file << var.cycle_demanded << " " << var.addr << " " << var.miss_or_hit << std::endl;
@@ -171,19 +127,6 @@ void spp::SPP_ORACLE::file_write() {
     std::cout << "L2C oracle: writing " << access.size() << " accesses to file." << std::endl;
     access.clear();
   } 
-  else if (can_write && access.size() > 0) {
-    //rec_file_write.open(L2C_PHY_ACC_WRITE_FILE_NAME, std::ofstream::app);
-
-    /*
-    for(auto var : access)
-        rec_file_write << var.cycle_demanded << " " << var.addr << " " << var.miss_or_hit << std::endl;
-
-    rec_file_write << "0 0 0" << std::endl;
-    rec_file_write.close();
-    */
-    std::cout << "L2C oracle: writing " << access.size() << " accesses to write file." << std::endl;
-    access.clear();
-  }
 }
 
 void spp::SPP_ORACLE::file_read()
@@ -285,12 +228,8 @@ void spp::SPP_ORACLE::file_read()
       if (auto search = eviction_check.find(set); search != eviction_check.end()) {
 
         if (eviction_check[set].size() < (WAY_NUM)) {
-           
-          //if (auto it = std::find(eviction_check[set].begin(), eviction_check[set].end(), addr); it == eviction_check[set].end()) 
-          {
-            eviction_check[set].push_back(addr); 
-            oracle_pf[i].require_eviction = false;
-          } 
+          eviction_check[set].push_back(addr); 
+          oracle_pf[i].require_eviction = false;
         }
       }
       else {
@@ -352,11 +291,8 @@ int spp::SPP_ORACLE::check_pf_status(uint64_t addr) {
   addr = (addr >> 6) << 6;
 
   for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
-    if (cache_state[i].addr == addr) {
-      cache_state[i].timestamp = lru_counter;
-      lru_counter++;
+    if (cache_state[i].addr == addr)
       break;  
-    } 
   }
 
   if ((i - set * WAY_NUM) < WAY_NUM)
@@ -418,22 +354,6 @@ bool spp::SPP_ORACLE::check_require_eviction(uint64_t addr) {
   return need_eviction;
 }
 
-void spp::SPP_ORACLE::update_fill(uint64_t addr, uint64_t evicting_addr) {
-
-  addr = (addr >> 6) << 6;
-  uint64_t addr_set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
-
-  evicting_addr = (evicting_addr >> 6) << 6;
-
-  for (size_t i = addr_set * WAY_NUM; i < (addr_set + 1) * WAY_NUM; i++) {
-    if (cache_state[i].addr == evicting_addr && set_kill_counter[i] >= 1) {
-      cache_state[i].addr = addr;
-      cache_state[i].pending_accesses = 99999999;
-      cache_state[i].require_eviction = false;
-    } 
-  }
-}
-
 uint64_t spp::SPP_ORACLE::poll(uint64_t address) {
   uint64_t target = 0;
 
@@ -466,31 +386,19 @@ uint64_t spp::SPP_ORACLE::poll(uint64_t address) {
         way = check_set_pf_avail(ite->addr);
         
         if (way < WAY_NUM) {
+          cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
+          target = ite->addr;
+          cache_state[set * WAY_NUM + way].addr = target;
+          cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
+          //std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << std::endl;
+          set_availability[set]--;
+          available_pf--;
+          hit_address = 0;
 
-          /*
-          if (cache_state[set * WAY_NUM + way].addr == address && address != 0) {
-            checked_set.erase(set);
-            cache_state[set * WAY_NUM + way].pending_accesses += (int)(ite->miss_or_hit);
-            ite = oracle_pf.erase(ite); 
-            ite--;
-          }
-          else 
-          */ 
-          {
-            cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
-            target = ite->addr;
-            cache_state[set * WAY_NUM + way].addr = target;
-            cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
-            //std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << std::endl;
-            set_availability[set]--;
-            available_pf--;
-            hit_address = 0;
-
-            if (initial_fill > 0)
-              initial_fill--;
-            
-            break;
-          }
+          if (initial_fill > 0)
+            initial_fill--;
+          
+          break;
         }    
       }
     }
@@ -520,28 +428,12 @@ void spp::SPP_ORACLE::kill_simulation(uint64_t cycle, uint64_t addr, bool hit) {
   to_be_added.addr = shifted_addr;
   to_be_added.miss_or_hit = 0;
 
-  acc_timestamp tmpp;
-  tmpp.cycle_demanded = cycle - interval_start_cycle;
-  tmpp.addr = shifted_addr;
-  tmpp.miss_or_hit = hit;
-  access.push_back(tmpp);
-
   // Check if there is vacancy in the cache record.
   //readin.insert(readin.begin() + readin_index, to_be_added);
   std::cout << "Updated address " << shifted_addr << " at index " << readin_index << " with hit/miss " << to_be_added.miss_or_hit << std::endl;
-  rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
-  rec_file.close();
-
-  rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::app);
-
-  for(auto var : access)
-      rec_file << var.cycle_demanded << " " << var.addr << " " << var.miss_or_hit << std::endl;
-
-  rec_file << "0 0 0" << std::endl;
-  rec_file.close();
   std::cout << "L2C oracle: writing " << access.size() << " accesses to write file." << std::endl;
-  std::cout << "Updating address and hit/miss record complete" << std::endl;
   file_write();
+  std::cout << "Updating address and hit/miss record complete" << std::endl;
   exit(0);
 }
 

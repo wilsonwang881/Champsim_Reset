@@ -69,7 +69,7 @@ std::vector<uint64_t> champsim::operable::reset_ins_count_global;
 std::vector<std::string> champsim::operable::emptied_cache;
 uint64_t champsim::operable::number_of_instructions_to_skip_before_log = 0;
 uint64_t champsim::operable::cpu0_num_retired = 0;
-std::deque<std::pair<uint64_t, uint64_t>> champsim::operable::lru_states;
+std::deque<std::tuple<uint64_t, uint64_t, uint64_t>> champsim::operable::lru_states;
 // WL
 
 // WL 
