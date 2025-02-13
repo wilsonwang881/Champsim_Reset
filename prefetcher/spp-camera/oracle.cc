@@ -1,9 +1,6 @@
 #include "oracle.h"
 
 void spp::SPP_ORACLE::init() {
-  if (!ORACLE_ACTIVE) 
-    return;
-
   can_write = true; // Change to false for context switch simulation.
   first_round = true;
 
@@ -32,15 +29,11 @@ void spp::SPP_ORACLE::init() {
 uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, bool replay) {
   uint64_t possible_do_not_fill_addr = 0;
 
-  if (!ORACLE_ACTIVE) 
-    return possible_do_not_fill_addr;
-
   if (!RECORD_OR_REPLAY && can_write) {
     acc_timestamp tmpp;
     tmpp.cycle_demanded = cycle - interval_start_cycle;
     tmpp.miss_or_hit = hit;
 
-    readin_index++;
     uint64_t set_check = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
 
     if (!hit && replay) {
@@ -52,7 +45,7 @@ uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit,
 
         set_kill_counter[set_check]++;
 
-        if (set_kill_counter[set_check] > 8) {
+        if (set_kill_counter[set_check] > 7) {
           std::cout << "Simulation killed at a with set " << set_check << " way " << way_check << std::endl;
           kill_simulation(cycle, addr, hit);
         }
@@ -63,7 +56,7 @@ uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit,
         if (cache_state[set_check * WAY_NUM + way_check].pending_accesses < 0) {
           set_kill_counter[set_check]++;
 
-          if (set_kill_counter[set_check] > 8) {
+          if (set_kill_counter[set_check] > 7) {
             std::cout << "Simulation killed at b with set " << set_check << " way " << way_check << std::endl;
             kill_simulation(cycle, addr, hit);
           }
@@ -113,9 +106,6 @@ void spp::SPP_ORACLE::refresh_cache_state() {
 
 void spp::SPP_ORACLE::file_write() {
 
-  if (!ORACLE_ACTIVE) 
-    return;
-
   if (can_write && access.size() > 0) {
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
 
@@ -132,10 +122,6 @@ void spp::SPP_ORACLE::file_write() {
 void spp::SPP_ORACLE::file_read()
 {
   oracle_pf.clear();
-
-  if (!ORACLE_ACTIVE) 
-    return;
-
   acc_timestamp tmpp;
 
   if (!RECORD_OR_REPLAY) {
@@ -241,7 +227,7 @@ void spp::SPP_ORACLE::file_read()
     
     /*
     for(auto var : oracle_pf) {
-      if (var.cycle_demanded == 907) {
+      if (var.cycle_demanded == 978) {
         std::cout << "addr " << var.addr << " in set " << var.cycle_demanded << " require_eviction " << var.require_eviction << std::endl; 
       } 
     }
@@ -354,7 +340,33 @@ bool spp::SPP_ORACLE::check_require_eviction(uint64_t addr) {
   return need_eviction;
 }
 
+void spp::SPP_ORACLE::update_persistent_lru_addr(uint64_t addr, bool pop) {
+
+  addr = (addr >> 6) << 6;
+  uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
+
+  if (!pop) {
+    size_t before_size = persistent_lru_addr[set].size();
+    persistent_lru_addr[set].insert(addr);
+
+    if (persistent_lru_addr[set].size() > before_size) {
+      set_kill_counter[set]++;
+      //std::cout << "Increment persistent lru in set " << set << " addr " << addr << " to " << persistent_lru_addr[set].size() << std::endl;
+    }
+  } 
+  else {
+    auto search = persistent_lru_addr[set].find(addr);
+
+    if (search != persistent_lru_addr[set].end()) {
+      persistent_lru_addr[set].erase(search);
+      set_kill_counter[set]--;
+      //std::cout << "Decrement persistent lru in set " << set << " addr " << addr << " to " << persistent_lru_addr[set].size() << std::endl;
+    }
+  }
+}
+
 uint64_t spp::SPP_ORACLE::poll(uint64_t address) {
+
   uint64_t target = 0;
 
   if (oracle_pf.empty()) 
@@ -429,17 +441,12 @@ void spp::SPP_ORACLE::kill_simulation(uint64_t cycle, uint64_t addr, bool hit) {
   to_be_added.miss_or_hit = 0;
 
   // Check if there is vacancy in the cache record.
-  //readin.insert(readin.begin() + readin_index, to_be_added);
-  std::cout << "Updated address " << shifted_addr << " at index " << readin_index << " with hit/miss " << to_be_added.miss_or_hit << std::endl;
-  std::cout << "L2C oracle: writing " << access.size() << " accesses to write file." << std::endl;
   file_write();
   std::cout << "Updating address and hit/miss record complete" << std::endl;
   exit(0);
 }
 
 void spp::SPP_ORACLE::finish() {
-  if (!ORACLE_ACTIVE) 
-    return;
 
   if (!RECORD_OR_REPLAY) {
     rec_file.close();

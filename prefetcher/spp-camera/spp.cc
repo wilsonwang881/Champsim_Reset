@@ -53,7 +53,7 @@ void spp::prefetcher::issue(CACHE* cache)
     auto q_occupancy = cache->get_pq_occupancy();
     auto mshr_occupancy = cache->get_mshr_occupancy();
 
-    if (mshr_occupancy < cache->get_mshr_size())  // q_occupancy[2] <= 15 && 
+    if (q_occupancy < cache->get_pq_size())  // q_occupancy[2] <= 15 && 
     {
 
       auto [addr, priority] = context_switch_issue_queue.front();

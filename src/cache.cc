@@ -506,10 +506,10 @@ long CACHE::operate()
   // Perform tag checks
   auto do_tag_check = [this](auto& pkt) {
     if (this->try_hit(pkt)) {
-      pkt.has_been_checked = true;
+      //pkt.has_been_checked = true;
       return true;
     }
-    pkt.has_been_checked = true;
+    //pkt.has_been_checked = true;
     if (pkt.type == access_type::WRITE && !this->match_offset_bits) {
       return this->handle_write(pkt); // Treat writes (that is, writebacks) like fills
     }

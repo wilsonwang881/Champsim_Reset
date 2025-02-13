@@ -27,10 +27,13 @@ namespace spp {
 
     public:
 
-    std::map<uint64_t, uint64_t> set_availability;
-
+    const static uint64_t SET_NUM = 1024;
+    const static uint64_t WAY_NUM = 8;
     constexpr static bool ORACLE_ACTIVE = true;
     constexpr static bool RECORD_OR_REPLAY = false;
+
+    std::map<uint64_t, uint64_t> set_availability;
+    std::unordered_set<uint64_t> persistent_lru_addr[SET_NUM];
 
     struct acc_timestamp {
       uint64_t cycle_demanded;
@@ -45,12 +48,9 @@ namespace spp {
     uint64_t interval_start_cycle;
     uint64_t pf_issued_last_round = 0;
     uint64_t pf_issued = 0;
-    const static uint64_t SET_NUM = 1024;
-    const static uint64_t WAY_NUM = 8;
     uint64_t available_pf = SET_NUM * WAY_NUM;
     uint64_t hit_address = 0;
     uint64_t initial_fill = SET_NUM * WAY_NUM;
-    uint64_t previous_miss_addr;
 
     struct blk_state {
       uint64_t addr;
@@ -63,7 +63,6 @@ namespace spp {
     uint8_t set_kill_counter[SET_NUM * WAY_NUM];
     std::deque<acc_timestamp> oracle_pf;
     std::deque<acc_timestamp> readin;
-    uint64_t readin_index = 0;
 
     void init();
     uint64_t update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch);
@@ -74,6 +73,7 @@ namespace spp {
     int check_pf_status(uint64_t addr);
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     bool check_require_eviction(uint64_t addr);
+    void update_persistent_lru_addr(uint64_t addr, bool pop);
     uint64_t poll(uint64_t addr);
     void kill_simulation(uint64_t cycle, uint64_t addr, bool hit);
     void finish();
