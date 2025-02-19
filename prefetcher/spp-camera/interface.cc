@@ -49,6 +49,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     }
   }
 
+  pref.oracle.access_counter++;
+
   //if (pref.context_switch_queue_empty())
   {
     pref.update_demand(base_addr,this->get_set_index(base_addr));
@@ -107,10 +109,15 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     bool evict = pref.oracle.check_require_eviction(base_addr);
     int remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 
-    /*
-    if (remaining_acc == 0) 
-      pref.oracle.update_persistent_lru_addr(base_addr, true);
-      */
+    if (remaining_acc == 1) {
+      uint64_t set = (base_addr >> 6) & champsim::bitmask(champsim::lg2(NUM_SET));
+      auto future_access = std::find_if(pref.oracle.oracle_pf.begin(), pref.oracle.oracle_pf.end(), [set = set](auto entry) {return entry.set == set;});
+
+      if (future_access != pref.oracle.oracle_pf.end())
+      {
+        pref.context_switch_issue_queue.push_back(std::make_tuple(future_access->addr, 0, future_access->cycle_demanded));
+      }            
+    }      
 
     // Last access to the prefetched block used.
     if ((before_acc > remaining_acc) && (remaining_acc == 0) && evict) { // 
@@ -151,27 +158,27 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     //pref.issued_cs_pf.erase((ip >> 6) << 6);
   }
 
-  uint64_t page_addr = base_addr >> 12;
-  std::pair<uint64_t, bool> demand_itself = std::make_pair(0, false);
+  //uint64_t page_addr = base_addr >> 12;
+  //std::pair<uint64_t, bool> demand_itself = std::make_pair(0, false);
 
-  for(auto var : pref.available_prefetches) {
+  // for(auto var : pref.available_prefetches) {
 
-    uint64_t var_blk_no = (var.first >> 6) & 0x3F;
-    uint64_t blk_no = (base_addr >> 6) & 0x3F;
+  //   uint64_t var_blk_no = (var.first >> 6) & 0x3F;
+  //   uint64_t blk_no = (base_addr >> 6) & 0x3F;
 
-    if (((var.first >> 12) == page_addr) && var_blk_no != blk_no)
-      pref.context_switch_issue_queue.push_back(var); 
-    else if (((var.first >> 12) == page_addr) && ((var.first >> 6) == (base_addr >> 6))) 
-      demand_itself = var;
-  }
+  //   if (((var.first >> 12) == page_addr) && var_blk_no != blk_no)
+  //     pref.context_switch_issue_queue.push_back({var.first, 0, var.second}); 
+  //   else if (((var.first >> 12) == page_addr) && ((var.first >> 6) == (base_addr >> 6))) 
+  //     demand_itself = var;
+  // }
 
-  for(auto var : pref.context_switch_issue_queue) {
-    pref.available_prefetches.erase(var); 
-  }
+  // for(auto var : pref.context_switch_issue_queue) {
+  //   pref.available_prefetches.erase(var); 
+  // }
 
-  if (demand_itself.first != 0) {
-    pref.available_prefetches.erase(demand_itself);
-  }
+  // if (demand_itself.first != 0) {
+  //   pref.available_prefetches.erase(demand_itself);
+  // }
 
   return metadata_in;
 }
@@ -253,12 +260,23 @@ void CACHE::prefetcher_cycle_operate()
   // No prefetch gathering via the signature and pattern tables.
   else
   {
-    if (pref.oracle.ORACLE_ACTIVE && ((pref.oracle.oracle_pf.size() > 0 && pref.oracle.available_pf > 0 && pref.oracle.hit_address != 0) || pref.oracle.initial_fill != 0))
+    if (pref.oracle.ORACLE_ACTIVE && ((pref.oracle.oracle_pf.size() > 0))) // && pref.oracle.available_pf > 0 && pref.oracle.hit_address != 0) || pref.oracle.initial_fill != 0))
     {
-      uint64_t potential_cs_pf = pref.oracle.poll(pref.oracle.hit_address);
+      std::tuple<uint64_t, uint64_t, bool> potential_cs_pf = pref.oracle.poll(pref.oracle.hit_address);
     
-      if (potential_cs_pf != 0)
-        pref.context_switch_issue_queue.push_back(std::make_pair(potential_cs_pf, 1));
+      if (std::get<0>(potential_cs_pf) != 0) {
+        pref.context_switch_issue_queue.push_back({std::get<0>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<1>(potential_cs_pf)});
+      }
+        
+
+      /*
+      uint64_t index = pref.oracle.access_counter + 1000;
+
+      if (index < pref.oracle.readin.size() && pref.oracle.last_access_counter < pref.oracle.access_counter) {
+        pref.context_switch_issue_queue.push_back(std::make_pair(pref.oracle.readin.at(index).addr, 0));
+        pref.oracle.last_access_counter = pref.oracle.access_counter;
+      }
+      */
     }
 
     pref.issue(this);

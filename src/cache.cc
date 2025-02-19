@@ -31,9 +31,9 @@
 #include <fmt/core.h>
 #include <fmt/ranges.h>
 
-CACHE::tag_lookup_type::tag_lookup_type(request_type req, bool local_pref, bool skip)
+CACHE::tag_lookup_type::tag_lookup_type(request_type req, bool local_pref, bool skip, uint64_t cycle_demanded_)
     : address(req.address), v_address(req.v_address), data(req.data), ip(req.ip), instr_id(req.instr_id), pf_metadata(req.pf_metadata), cpu(req.cpu),
-      type(req.type), prefetch_from_this(local_pref), skip_fill(skip), is_translated(req.is_translated), instr_depend_on_me(req.instr_depend_on_me)
+      type(req.type), prefetch_from_this(local_pref), skip_fill(skip), cycle_demanded(cycle_demanded_), is_translated(req.is_translated), instr_depend_on_me(req.instr_depend_on_me)
 {
   // WL: added ASID matching.
   asid[0] = req.asid[0];
@@ -63,8 +63,10 @@ CACHE::mshr_type CACHE::mshr_type::merge(mshr_type predecessor, mshr_type succes
   retval.data = predecessor.data;
 
   // Disable when recording.
+  /*
   if(!cache->L2C_name.compare(cache->NAME))
     retval.type = (predecessor.type == access_type::PREFETCH) ? predecessor.type : successor.type;
+    */
   // Disable when recording.
 
   retval.asid[0] = predecessor.asid[0]; // WL: added ASID
@@ -621,7 +623,37 @@ int CACHE::prefetch_line(uint64_t pf_addr, bool fill_this_level, uint32_t prefet
   pf_packet.asid[0] = champsim::operable::currently_active_thread_ID; // WL: added ASID
   // pf_packet.instr_id = 0xFFFFFFFFFFFFFFF; // WL: add a different instr_id
 
-  internal_PQ.emplace_back(pf_packet, true, !fill_this_level);
+  internal_PQ.emplace_back(pf_packet, true, !fill_this_level,0);
+  ++sim_stats.pf_issued;
+
+  return true;
+}
+
+int CACHE::prefetch_line(uint64_t pf_addr, bool fill_this_level, uint32_t prefetch_metadata, uint64_t cycle_needed)
+{
+  ++sim_stats.pf_requested;
+
+  if (std::size(internal_PQ) >= PQ_SIZE)
+    return false;
+
+  request_type pf_packet;
+  pf_packet.type = access_type::PREFETCH;
+  pf_packet.pf_metadata = prefetch_metadata;
+  pf_packet.cpu = cpu;
+  pf_packet.address = pf_addr;
+  pf_packet.v_address = virtual_prefetch ? pf_addr : 0;
+  pf_packet.is_translated = !virtual_prefetch;
+  pf_packet.asid[0] = champsim::operable::currently_active_thread_ID; // WL: added ASID
+  // pf_packet.instr_id = 0xFFFFFFFFFFFFFFF; // WL: add a different instr_id
+
+  auto pq_matches = [pf_addr = pf_addr] (auto& entry) {return pf_addr == entry.address;};
+  auto pq_found = std::find_if(internal_PQ.begin(), internal_PQ.end(), pq_matches);
+  if(pq_found != internal_PQ.end()) {
+    internal_PQ.erase(pq_found);
+  }
+  auto pq_place_at = [demanded = cycle_needed](auto& entry) {return entry.cycle_demanded < demanded;};
+  auto pq_insert_it = std::find_if(internal_PQ.begin(), internal_PQ.end(), pq_place_at);
+  internal_PQ.emplace(pq_insert_it,pf_packet,true,!fill_this_level,cycle_needed);
   ++sim_stats.pf_issued;
 
   return true;

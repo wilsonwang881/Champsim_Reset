@@ -60,7 +60,7 @@ namespace spp {
     public:
 
     std::set<std::pair<uint64_t, bool>> available_prefetches;
-    std::deque<std::pair<uint64_t, bool>> context_switch_issue_queue; // WL
+    std::deque<std::tuple<uint64_t, bool, uint64_t>> context_switch_issue_queue; // WL
                                                                       //
     SPP_PAGE_BITMAP page_bitmap; // WL
     SPP_ORACLE oracle;           // WL 

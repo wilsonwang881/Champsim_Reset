@@ -37,9 +37,12 @@ namespace spp {
 
     struct acc_timestamp {
       uint64_t cycle_demanded;
+      uint64_t set;
       uint64_t addr;
       uint64_t miss_or_hit;
       bool require_eviction;
+      bool pfed_lower_lvl;
+      uint64_t reuse_distance;
     };
 
     bool can_write;
@@ -51,6 +54,8 @@ namespace spp {
     uint64_t available_pf = SET_NUM * WAY_NUM;
     uint64_t hit_address = 0;
     uint64_t initial_fill = SET_NUM * WAY_NUM;
+    uint64_t access_counter = 0;
+    uint64_t last_access_counter = 0;
 
     struct blk_state {
       uint64_t addr;
@@ -74,7 +79,7 @@ namespace spp {
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     bool check_require_eviction(uint64_t addr);
     void update_persistent_lru_addr(uint64_t addr, bool pop);
-    uint64_t poll(uint64_t addr);
+    std::tuple<uint64_t, uint64_t, bool> poll(uint64_t addr);
     void kill_simulation(uint64_t cycle, uint64_t addr, bool hit);
     void finish();
   };
