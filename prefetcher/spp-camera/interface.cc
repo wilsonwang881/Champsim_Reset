@@ -37,6 +37,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   auto &pref = ::SPP[{this, cpu}];
 
   // Return if a demand misses and cannot merge in MSHR and MSHR is full.
+  /*
   if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && !(type == 2 && cache_hit) && !cache_hit) {
 
     auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
@@ -48,6 +49,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       return metadata_in; 
     }
   }
+  */
 
   pref.oracle.access_counter++;
 
@@ -57,6 +59,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     pref.initiate_lookahead(base_addr);
   }
 
+  /*
   if (pref.oracle.ORACLE_ACTIVE && pref.oracle.RECORD_OR_REPLAY) {
     uint64_t evict_candidate = pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 0);
 
@@ -65,11 +68,13 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       this->do_not_fill_address.push_back(evict_candidate);
     }    
   }
+  */
 
   //std::cout << "Hit/miss " << (unsigned)cache_hit << " set " << this->get_set_index(base_addr) << " addr " << base_addr << " at cycle " << this->current_cycle << " type " << (unsigned)type << std::endl;
 
   if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && !(type == 2 && cache_hit)) {
 
+    /*
     auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
                                  [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
                                    return (entry.address >> shamt) == match; 
@@ -79,23 +84,30 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       useful_prefetch = true; 
       cache_hit = true;
     }
+    */
 
     if (useful_prefetch) {
 
       uint64_t res = pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0);
+      /*
       if (res != 0)
         this->do_not_fill_address.push_back(res);
+        */
     }
     else {
       uint64_t res = pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1);
+      /*
       if (res != 0)
         this->do_not_fill_address.push_back(res);
+        */
     }      
 
+    /*
     if (!cache_hit && this->get_mshr_occupancy() >= this->get_mshr_size()) {
       std::cout << "Simulation killed due to no available MSHR." << std::endl;
       pref.oracle.kill_simulation(this->current_cycle, base_addr, cache_hit);
     }
+    */
     /*
     if (pref.oracle.oracle_pf.empty() && cache_hit) {
       pref.oracle.update_persistent_lru_addr(base_addr, true); 
@@ -103,31 +115,22 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     */
   }
 
+  pref.oracle.hit_address = (base_addr >> 6) << 6;
+
   if (pref.oracle.ORACLE_ACTIVE && cache_hit && !pref.oracle.RECORD_OR_REPLAY) //!pref.oracle.oracle_pf.empty() && 
   {
     int before_acc = pref.oracle.check_pf_status(base_addr);
     bool evict = pref.oracle.check_require_eviction(base_addr);
     int remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 
-    if (remaining_acc == 1) {
-      uint64_t set = (base_addr >> 6) & champsim::bitmask(champsim::lg2(NUM_SET));
-      auto future_access = std::find_if(pref.oracle.oracle_pf.begin(), pref.oracle.oracle_pf.end(), [set = set](auto entry) {return entry.set == set;});
-
-      if (future_access != pref.oracle.oracle_pf.end())
-      {
-        pref.context_switch_issue_queue.push_back(std::make_tuple(future_access->addr, 0, future_access->cycle_demanded));
-      }            
-    }      
-
     // Last access to the prefetched block used.
-    if ((before_acc > remaining_acc) && (remaining_acc == 0) && evict) { // 
+    if ((before_acc > remaining_acc) && (remaining_acc == 0) && evict) {  
 
       uint64_t set = this->get_set_index(base_addr);
       uint64_t way = this->get_way((base_addr >> 6) << 6, set);
 
       if (way < NUM_WAY) {
         champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
-        pref.oracle.hit_address = base_addr;
       }
     }
     else if (remaining_acc > 0) {
@@ -136,11 +139,9 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
       if (way < NUM_WAY) {
         champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
+        //std::cout << "Updated LRU for addr " << base_addr << " at set " << set << std::endl;
         //pref.oracle.update_persistent_lru_addr(base_addr, false); 
       } 
-    }
-    else {
-      pref.oracle.hit_address = 0;
     }
   }
 
@@ -211,6 +212,14 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 void CACHE::prefetcher_cycle_operate()
 {
   auto &pref = ::SPP[{this, cpu}];
+
+  if (pref.oracle.done) {
+    champsim::operable::kill_simulation_l2 = true; 
+  }
+  if (champsim::operable::kill_simulation_l2 && champsim::operable::kill_simulation_l3) {
+    exit(0); 
+  }
+
   //pref.warmup = warmup; 
 
   //pref.warmup = warmup_complete[cpu];
@@ -260,7 +269,7 @@ void CACHE::prefetcher_cycle_operate()
   // No prefetch gathering via the signature and pattern tables.
   else
   {
-    if (pref.oracle.ORACLE_ACTIVE && ((pref.oracle.oracle_pf.size() > 0))) // && pref.oracle.available_pf > 0 && pref.oracle.hit_address != 0) || pref.oracle.initial_fill != 0))
+    if (pref.oracle.ORACLE_ACTIVE && ((pref.oracle.oracle_pf.size() > 0))) // && pref.oracle.available_pf > 0 && pref.oracle.hit_address != 0)
     {
       std::tuple<uint64_t, uint64_t, bool> potential_cs_pf = pref.oracle.poll(pref.oracle.hit_address);
     

@@ -103,10 +103,9 @@ CACHE::BLOCK::BLOCK(mshr_type mshr)
 bool CACHE::handle_fill(const mshr_type& fill_mshr)
 {
   cpu = fill_mshr.cpu;
-  //auto search = std::find(do_not_fill_address.begin(), do_not_fill_address.end(), fill_mshr.address);
+  auto search = std::find(do_not_fill_address.begin(), do_not_fill_address.end(), fill_mshr.address);
 
-  /*
-  if ((fill_mshr.type != access_type::PREFETCH && !L2C_name.compare(NAME)) || search != do_not_fill_address.end()) {
+  if (/*(fill_mshr.type != access_type::PREFETCH && !L2C_name.compare(NAME)) ||*/ search != do_not_fill_address.end()) {
         // COLLECT STATS
     if(search != do_not_fill_address.end())
       do_not_fill_address.erase(search);
@@ -119,7 +118,6 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
     
     return true;
   }
-  */
 
   // find victim
   auto [set_begin, set_end] = get_set_span(fill_mshr.address);

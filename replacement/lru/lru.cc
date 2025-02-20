@@ -25,15 +25,31 @@ uint32_t CACHE::find_victim(uint32_t triggering_cpu, uint64_t instr_id, uint32_t
     for(auto var : champsim::operable::lru_states) 
     {
       uint64_t target_set = std::get<0>(var);
-      uint64_t way = std::get<1>(var);
+      uint64_t target_way = std::get<1>(var);
       uint64_t setting = (std::get<2>(var) == 0) ? 0 : 0xFFFFFFFFFFFFFFF;
 
-      if (way < NUM_WAY)
-        ::last_used_cycles[this].at(target_set * NUM_WAY + way) = setting; 
+      if (target_way < NUM_WAY)
+        ::last_used_cycles[this].at(target_set * NUM_WAY + target_way) = setting; 
     }
 
     champsim::operable::lru_states.clear();
   }
+
+  if(champsim::operable::lru_states_llc.size() > 0 && LLC_name.compare(this->NAME) == 0)
+  {
+    for(auto var : champsim::operable::lru_states_llc) 
+    {
+      uint64_t target_set = std::get<0>(var);
+      uint64_t target_way = std::get<1>(var);
+      uint64_t setting = (std::get<2>(var) == 0) ? 0 : 0xFFFFFFFFFFFFFFF;
+
+      if (target_way < NUM_WAY)
+        ::last_used_cycles[this].at(target_set * NUM_WAY + target_way) = setting; 
+    }
+
+    champsim::operable::lru_states_llc.clear();
+  }
+
 
   // WL
 
@@ -48,10 +64,11 @@ void CACHE::update_replacement_state(uint32_t triggering_cpu, uint32_t set, uint
                                      uint8_t hit)
 {
   // Mark the way as being used on the current cycle
-  if (!hit || access_type{type} != access_type::WRITE) // Skip this for writeback hits
+  if (hit || access_type{type} != access_type::WRITE) // Skip this for writeback hits
   {
     ::last_used_cycles[this].at(set * NUM_WAY + way) = current_cycle;
   }
+
   // WL
   if(champsim::operable::lru_states.size() > 0 && L2C_name.compare(this->NAME) == 0)
   {
@@ -70,6 +87,22 @@ void CACHE::update_replacement_state(uint32_t triggering_cpu, uint32_t set, uint
 
     champsim::operable::lru_states.clear();
   }
+
+  if(champsim::operable::lru_states_llc.size() > 0 && LLC_name.compare(this->NAME) == 0)
+  {
+    for(auto var : champsim::operable::lru_states_llc) 
+    {
+      uint64_t target_set = std::get<0>(var);
+      uint64_t target_way = std::get<1>(var);
+      uint64_t setting = (std::get<2>(var) == 0) ? 0 : 0xFFFFFFFFFFFFFFF;
+
+      if (target_way < NUM_WAY)
+        ::last_used_cycles[this].at(target_set * NUM_WAY + target_way) = setting; 
+    }
+
+    champsim::operable::lru_states_llc.clear();
+  }
+
   // WL
 
 }

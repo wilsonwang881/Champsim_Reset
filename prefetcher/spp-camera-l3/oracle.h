@@ -18,18 +18,18 @@
 #include "champsim.h"
 #include "champsim_constants.h"
 
-namespace spp {
+namespace spp_l3 {
 
   class SPP_ORACLE {
     constexpr static uint64_t ACCESS_LEN = 100000000;
-    std::string L2C_PHY_ACC_FILE_NAME = "L2C_phy_acc.txt";
+    std::string L2C_PHY_ACC_FILE_NAME = "L3C_phy_acc.txt";
     std::fstream rec_file;
 
     public:
 
-    const static uint64_t SET_NUM = 1024;
-    const static uint64_t WAY_NUM = 8;
-    bool ORACLE_ACTIVE = false;
+    const static uint64_t SET_NUM = 2048;
+    const static uint64_t WAY_NUM = 16;
+    bool ORACLE_ACTIVE = true;
     bool RECORD_OR_REPLAY = false;
     bool done;
 

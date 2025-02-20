@@ -1,6 +1,6 @@
 #include "oracle.h"
 
-void spp::SPP_ORACLE::init() {
+void spp_l3::SPP_ORACLE::init() {
   can_write = true; // Change to false for context switch simulation.
   first_round = true;
 
@@ -23,9 +23,11 @@ void spp::SPP_ORACLE::init() {
     set_availability[i];
     set_availability[i] = WAY_NUM;
   }
+
+  file_read();
 }
 
-uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, bool replay) {
+uint64_t spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, bool replay) {
   uint64_t possible_do_not_fill_addr = 0;
 
   if (!RECORD_OR_REPLAY && can_write) {
@@ -58,6 +60,7 @@ uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit,
 
         if (cache_state[set_check * WAY_NUM + way_check].pending_accesses < 0) {
           set_kill_counter[set_check].insert((addr >> 6) << 6);
+          cache_state[set_check * WAY_NUM + way_check].pending_accesses = 0;
 
           if (set_kill_counter[set_check].size() > WAY_NUM) {
             std::cout << "Simulation killed at b with set " << set_check << " way " << way_check << std::endl;
@@ -91,7 +94,7 @@ uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit,
   return possible_do_not_fill_addr;
 }
 
-void spp::SPP_ORACLE::refresh_cache_state() {
+void spp_l3::SPP_ORACLE::refresh_cache_state() {
 
   for (size_t i = 0; i < SET_NUM * WAY_NUM; i++) {
     cache_state[i].addr = 0;
@@ -107,7 +110,7 @@ void spp::SPP_ORACLE::refresh_cache_state() {
   }
 }
 
-void spp::SPP_ORACLE::file_write() {
+void spp_l3::SPP_ORACLE::file_write() {
 
   if (can_write && access.size() > 0) {
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
@@ -117,12 +120,12 @@ void spp::SPP_ORACLE::file_write() {
 
     rec_file << "0 0 0" << std::endl;
     rec_file.close();
-    std::cout << "L2C oracle: writing " << access.size() << " accesses to file." << std::endl;
+    std::cout << "L3C oracle: writing " << access.size() << " accesses to file." << std::endl;
     access.clear();
   } 
 }
 
-void spp::SPP_ORACLE::file_read()
+void spp_l3::SPP_ORACLE::file_read()
 {
   oracle_pf.clear();
   acc_timestamp tmpp;
@@ -147,7 +150,7 @@ void spp::SPP_ORACLE::file_read()
     }
 
     rec_file.close();
-    std::cout << "L2C oracle: read " << readin.size() << " accesses from file." << std::endl;
+    std::cout << "L3C oracle: read " << readin.size() << " accesses from file." << std::endl;
     std::deque<uint64_t> to_be_erased;
 
     // Use the hashmap to gather accesses.
@@ -226,11 +229,11 @@ void spp::SPP_ORACLE::file_read()
       }
     }
     
-    std::cout << "L2C oracle: pre-processing collects " << oracle_pf.size() << " accesses from file read." << std::endl;
+    std::cout << "L3C oracle: pre-processing collects " << oracle_pf.size() << " accesses from file read." << std::endl;
   }
 }
 
-uint64_t spp::SPP_ORACLE::check_set_pf_avail(uint64_t addr) 
+uint64_t spp_l3::SPP_ORACLE::check_set_pf_avail(uint64_t addr) 
 {
   uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
   uint64_t res = (set + 1) * WAY_NUM;
@@ -243,7 +246,7 @@ uint64_t spp::SPP_ORACLE::check_set_pf_avail(uint64_t addr)
       assert(false); 
 
     if (cache_state[i].addr == 0 && cache_state[i].pending_accesses != 0 && cache_state[i].require_eviction) {
-      std::cout << "pending_access = " << cache_state[i].pending_accesses << std::endl;
+      std::cout << "pending_access = " << cache_state[i].pending_accesses << " addr " << addr << std::endl;
       assert(false); 
     }
       
@@ -262,7 +265,7 @@ uint64_t spp::SPP_ORACLE::check_set_pf_avail(uint64_t addr)
   return res - set * WAY_NUM;
 }
 
-int spp::SPP_ORACLE::check_pf_status(uint64_t addr) {
+int spp_l3::SPP_ORACLE::check_pf_status(uint64_t addr) {
   uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
 
   // Find the "way" to update pf/block status.
@@ -280,7 +283,7 @@ int spp::SPP_ORACLE::check_pf_status(uint64_t addr) {
     return -1;
 }
 
-int spp::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
+int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
   if (RECORD_OR_REPLAY)
     return 1; 
 
@@ -315,7 +318,7 @@ int spp::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
     return -1;
 }
 
-bool spp::SPP_ORACLE::check_require_eviction(uint64_t addr) {
+bool spp_l3::SPP_ORACLE::check_require_eviction(uint64_t addr) {
 
   addr = (addr >> 6) << 6;
   uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
@@ -334,7 +337,7 @@ bool spp::SPP_ORACLE::check_require_eviction(uint64_t addr) {
 }
 
 /*
-void spp::SPP_ORACLE::update_persistent_lru_addr(uint64_t addr, bool pop) {
+void spp_l3::SPP_ORACLE::update_persistent_lru_addr(uint64_t addr, bool pop) {
 
   addr = (addr >> 6) << 6;
   uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
@@ -360,7 +363,7 @@ void spp::SPP_ORACLE::update_persistent_lru_addr(uint64_t addr, bool pop) {
 }
 */
 
-std::tuple<uint64_t, uint64_t, bool> spp::SPP_ORACLE::poll(uint64_t address) {
+std::tuple<uint64_t, uint64_t, bool> spp_l3::SPP_ORACLE::poll(uint64_t address) {
 
   std::tuple<uint64_t, uint64_t, bool> target = std::make_tuple(0, 0, 0);
 
@@ -418,24 +421,24 @@ std::tuple<uint64_t, uint64_t, bool> spp::SPP_ORACLE::poll(uint64_t address) {
     ite = oracle_pf.erase(ite); 
 
   if ((oracle_pf.size() % 10000) == 0) {
-      std::cout << "L2C: remaining oracle access = " << oracle_pf.size() - pf_issued << std::endl;
+      std::cout << "LLC: remaining oracle access = " << oracle_pf.size() - pf_issued << std::endl;
       oracle_pf.shrink_to_fit();
   }
 
   return target;
 }
 
-void spp::SPP_ORACLE::kill_simulation(uint64_t cycle, uint64_t addr, bool hit) {
+void spp_l3::SPP_ORACLE::kill_simulation(uint64_t cycle, uint64_t addr, bool hit) {
 
   // Check if there is vacancy in the cache record.
   file_write();
-  std::cout << "Updating address and hit/miss record complete in L2" << std::endl;
-  ORACLE_ACTIVE = false;
+  std::cout << "Updating address and hit/miss record complete in LLC" << std::endl;
   done = true;
-  //exit(0);
+  ORACLE_ACTIVE = false;
+  exit(0);
 }
 
-void spp::SPP_ORACLE::finish() {
+void spp_l3::SPP_ORACLE::finish() {
 
   if (!RECORD_OR_REPLAY) {
     rec_file.close();

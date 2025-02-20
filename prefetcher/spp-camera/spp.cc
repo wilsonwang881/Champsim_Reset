@@ -48,6 +48,7 @@ void spp::prefetcher::issue(CACHE* cache)
     
   // WL: issue context switch prefetches first 
   //if (!reset_misc::dq_prefetch_communicate.empty()) {
+  /*
   if (!context_switch_queue_empty()) {
 
     auto q_occupancy = cache->get_pq_occupancy();
@@ -85,6 +86,7 @@ void spp::prefetcher::issue(CACHE* cache)
   }
 
   return;
+  */
 
   // WL 
 
