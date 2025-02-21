@@ -41,7 +41,6 @@ namespace {
 
 void spp::prefetcher::issue(CACHE* cache)
 {
-  return;
   /*
   if (oracle.ORACLE_ACTIVE && oracle.RECORD_OR_REPLAY)
     return;
