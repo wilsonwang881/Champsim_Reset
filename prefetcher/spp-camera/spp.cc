@@ -48,14 +48,13 @@ void spp::prefetcher::issue(CACHE* cache)
     
   // WL: issue context switch prefetches first 
   //if (!reset_misc::dq_prefetch_communicate.empty()) {
-  /*
   if (!context_switch_queue_empty()) {
 
     auto q_occupancy = cache->get_pq_occupancy();
     auto mshr_occupancy = cache->get_mshr_occupancy();
 
     //if (q_occupancy < cache->get_pq_size())  // q_occupancy[2] <= 15 && 
-    if (mshr_occupancy < 32)
+    if (mshr_occupancy < 16)
     {
 
       auto [addr, priority, cycle] = context_switch_issue_queue.front();
@@ -86,7 +85,6 @@ void spp::prefetcher::issue(CACHE* cache)
   }
 
   return;
-  */
 
   // WL 
 

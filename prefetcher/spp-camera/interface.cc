@@ -276,8 +276,10 @@ void CACHE::prefetcher_cycle_operate()
       if (std::get<0>(potential_cs_pf) != 0) {
         pref.context_switch_issue_queue.push_back({std::get<0>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<1>(potential_cs_pf)});
       }
+      else {
+        std::cout << "Poll failed at cycle " << this->current_cycle << " MSHR " << this->get_mshr_occupancy() << std::endl;
+      }
         
-
       /*
       uint64_t index = pref.oracle.access_counter + 1000;
 

@@ -29,7 +29,7 @@ namespace spp {
 
     const static uint64_t SET_NUM = 1024;
     const static uint64_t WAY_NUM = 8;
-    bool ORACLE_ACTIVE = false;
+    bool ORACLE_ACTIVE = true;
     bool RECORD_OR_REPLAY = false;
     bool done;
 

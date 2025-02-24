@@ -58,6 +58,7 @@ uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit,
 
         if (cache_state[set_check * WAY_NUM + way_check].pending_accesses < 0) {
           set_kill_counter[set_check].insert((addr >> 6) << 6);
+          cache_state[set_check * WAY_NUM + way_check].pending_accesses = 0;
 
           if (set_kill_counter[set_check].size() > WAY_NUM) {
             std::cout << "Simulation killed at b with set " << set_check << " way " << way_check << std::endl;
@@ -243,6 +244,7 @@ uint64_t spp::SPP_ORACLE::check_set_pf_avail(uint64_t addr)
       assert(false); 
 
     if (cache_state[i].addr == 0 && cache_state[i].pending_accesses != 0 && cache_state[i].require_eviction) {
+      std::cout << "addr " << " set " << set << " addr " << addr << " " << (i - set * WAY_NUM) << std::endl;
       std::cout << "pending_access = " << cache_state[i].pending_accesses << std::endl;
       assert(false); 
     }
@@ -432,7 +434,7 @@ void spp::SPP_ORACLE::kill_simulation(uint64_t cycle, uint64_t addr, bool hit) {
   std::cout << "Updating address and hit/miss record complete in L2" << std::endl;
   ORACLE_ACTIVE = false;
   done = true;
-  //exit(0);
+  exit(0);
 }
 
 void spp::SPP_ORACLE::finish() {
