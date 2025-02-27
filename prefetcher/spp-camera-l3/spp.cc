@@ -19,11 +19,14 @@ void spp_l3::prefetcher::issue(CACHE* cache)
   //if (!reset_misc::dq_prefetch_communicate.empty()) {
   if (!context_switch_issue_queue.empty()) {
 
-    auto q_occupancy = cache->get_pq_occupancy();
     auto mshr_occupancy = cache->get_mshr_occupancy();
+    auto rq_occupancy = cache->get_rq_occupancy().back();
+    auto wq_occupancy = cache->get_wq_occupancy().back();
+    auto pq_occupancy = cache->get_pq_occupancy().back();
 
     //if (q_occupancy < cache->get_pq_size())  // q_occupancy[2] <= 15 && 
     if (mshr_occupancy < 32)
+    //if((cache->get_mshr_size() - rq_occupancy - mshr_occupancy - wq_occupancy - pq_occupancy) > 0)
     {
 
       auto [addr, priority, cycle] = context_switch_issue_queue.front();
@@ -36,7 +39,7 @@ void spp_l3::prefetcher::issue(CACHE* cache)
         issued_cs_pf.insert((addr >> 6) << 6);
         total_issued_cs_pf++;
 
-        //std::cout << "Issued " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << std::endl;
+        //std::cout << "Issued " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << " MSHR usage: " << mshr_occupancy << " queue size " << context_switch_issue_queue.size() << " wq " << wq_occupancy << " rq " << rq_occupancy << " pq " << pq_occupancy << std::endl;
       }
     }
   }

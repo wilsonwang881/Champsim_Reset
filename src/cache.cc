@@ -105,7 +105,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
   cpu = fill_mshr.cpu;
   auto search = std::find(do_not_fill_address.begin(), do_not_fill_address.end(), fill_mshr.address);
 
-  if (/*(fill_mshr.type != access_type::PREFETCH && !L2C_name.compare(NAME)) ||*/ search != do_not_fill_address.end()) {
+  if (!LLC_name.compare(NAME) && search != do_not_fill_address.end()) {
         // COLLECT STATS
     if(search != do_not_fill_address.end())
       do_not_fill_address.erase(search);
@@ -267,7 +267,7 @@ bool CACHE::try_hit(const tag_lookup_type& handle_pkt)
 
   // update prefetcher on load instructions and prefetches from upper levels
   auto metadata_thru = handle_pkt.pf_metadata;
-  if (should_activate_prefetcher(handle_pkt) && !handle_pkt.has_been_checked) {
+  if (should_activate_prefetcher(handle_pkt)/* && !handle_pkt.has_been_checked*/) {
     uint64_t pf_base_addr = (virtual_prefetch ? handle_pkt.v_address : handle_pkt.address) & ~champsim::bitmask(match_offset_bits ? 0 : OFFSET_BITS);
 
     metadata_thru = impl_prefetcher_cache_operate(pf_base_addr, handle_pkt.ip, hit, useful_prefetch, champsim::to_underlying(handle_pkt.type), metadata_thru);
@@ -476,11 +476,6 @@ long CACHE::operate()
   tag_bw -= stash_bandwidth_consumed;
   progress += stash_bandwidth_consumed;
 
-  auto pq_bandwidth_consumed =
-      champsim::transform_while_n(internal_PQ, std::back_inserter(inflight_tag_check), tag_bw, can_translate, initiate_tag_check<false>());
-  tag_bw -= pq_bandwidth_consumed;
-  progress += pq_bandwidth_consumed;
-
   std::vector<long long> channels_bandwidth_consumed{};
   for (auto* ul : upper_levels) {
     for (auto q : {std::ref(ul->WQ), std::ref(ul->RQ), std::ref(ul->PQ)}) {
@@ -492,7 +487,10 @@ long CACHE::operate()
     }
   }
 
-
+  auto pq_bandwidth_consumed =
+      champsim::transform_while_n(internal_PQ, std::back_inserter(inflight_tag_check), tag_bw, can_translate, initiate_tag_check<false>());
+  tag_bw -= pq_bandwidth_consumed;
+  progress += pq_bandwidth_consumed;
   // Issue translations
   issue_translation();
 

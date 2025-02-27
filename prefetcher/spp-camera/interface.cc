@@ -74,7 +74,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
   if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && !(type == 2 && cache_hit)) {
 
-    /*
     auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
                                  [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
                                    return (entry.address >> shamt) == match; 
@@ -83,8 +82,9 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     if (search_mshr != this->MSHR.end() && champsim::to_underlying(search_mshr->type) == 2) {
       useful_prefetch = true; 
       cache_hit = true;
+      pref.oracle.hit_in_MSHR++;
+      //std::cout << "Hit in MSHR" << std::endl;
     }
-    */
 
     if (useful_prefetch) {
 
@@ -199,7 +199,7 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   if (blk_asid_match)// && !blk_pfed 
     pref.page_bitmap.evict(evicted_addr);
 
-  //std::cout << "Filled addr " << addr << " set " << set << " way " << way << " prefetch " << (unsigned)prefetch << " evicted_addr " << evicted_addr << std::endl;
+  //std::cout << "Filled addr " << addr << " set " << set << " way " << way << " prefetch " << (unsigned)prefetch << " evicted_addr " << evicted_addr << " at cycle " << this->current_cycle << std::endl;
 
   if (pref.oracle.ORACLE_ACTIVE && prefetch) {
     champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
@@ -274,10 +274,10 @@ void CACHE::prefetcher_cycle_operate()
       std::tuple<uint64_t, uint64_t, bool> potential_cs_pf = pref.oracle.poll(pref.oracle.hit_address);
     
       if (std::get<0>(potential_cs_pf) != 0) {
-        pref.context_switch_issue_queue.push_back({std::get<0>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<1>(potential_cs_pf)});
+         pref.context_switch_issue_queue.push_back({std::get<0>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<1>(potential_cs_pf)});
       }
       else {
-        std::cout << "Poll failed at cycle " << this->current_cycle << " MSHR " << this->get_mshr_occupancy() << std::endl;
+        //std::cout << "Poll failed at cycle " << this->current_cycle << " MSHR " << this->get_mshr_occupancy() << std::endl;
       }
         
       /*

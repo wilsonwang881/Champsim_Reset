@@ -28,10 +28,11 @@ namespace spp_l3 {
     public:
 
     const static uint64_t SET_NUM = 2048;
-    const static uint64_t WAY_NUM = 16;
+    const static uint64_t WAY_NUM = 24;
     bool ORACLE_ACTIVE = true;
     bool RECORD_OR_REPLAY = false;
     bool done;
+    uint64_t hit_in_MSHR = 0;
 
     std::map<uint64_t, uint64_t> set_availability;
     std::unordered_set<uint64_t> persistent_lru_addr[SET_NUM];
@@ -43,7 +44,6 @@ namespace spp_l3 {
       uint64_t miss_or_hit;
       bool require_eviction;
       bool pfed_lower_lvl;
-      uint64_t reuse_distance;
     };
 
     bool can_write;
@@ -78,8 +78,7 @@ namespace spp_l3 {
     int check_pf_status(uint64_t addr);
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     bool check_require_eviction(uint64_t addr);
-    void update_persistent_lru_addr(uint64_t addr, bool pop);
-    std::tuple<uint64_t, uint64_t, bool> poll(uint64_t addr);
+    std::tuple<uint64_t, uint64_t, bool> poll(uint64_t mode);
     void kill_simulation(uint64_t cycle, uint64_t addr, bool hit);
     void finish();
   };

@@ -48,15 +48,15 @@ void spp::prefetcher::issue(CACHE* cache)
     
   // WL: issue context switch prefetches first 
   //if (!reset_misc::dq_prefetch_communicate.empty()) {
+    /*
   if (!context_switch_queue_empty()) {
 
     auto q_occupancy = cache->get_pq_occupancy();
     auto mshr_occupancy = cache->get_mshr_occupancy();
 
     //if (q_occupancy < cache->get_pq_size())  // q_occupancy[2] <= 15 && 
-    if (mshr_occupancy < 16)
+    if (mshr_occupancy < 32)
     {
-
       auto [addr, priority, cycle] = context_switch_issue_queue.front();
       bool prefetched = cache->prefetch_line(addr, priority, 0);
 
@@ -68,7 +68,7 @@ void spp::prefetcher::issue(CACHE* cache)
         total_issued_cs_pf++;
         issued_pf_this_round++;
 
-        //std::cout << "Issued " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << std::endl;
+        //std::cout << "Issued " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << " priority " << priority << " pending queue size " << context_switch_issue_queue.size() << std::endl;
         //filter.update_issue(addr, cache->get_set(addr));
       }
     }
@@ -85,7 +85,7 @@ void spp::prefetcher::issue(CACHE* cache)
   }
 
   return;
-
+*/
   // WL 
 
   // Issue eligible outstanding prefetches

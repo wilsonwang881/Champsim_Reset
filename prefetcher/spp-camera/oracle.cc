@@ -54,7 +54,9 @@ uint64_t spp::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit,
         }
       }
       else if(way_check < WAY_NUM) {
+        //std::cout << "Before accesses " << cache_state[set_check * WAY_NUM + way_check].pending_accesses << std::endl;
         cache_state[set_check * WAY_NUM + way_check].pending_accesses--;
+        //std::cout << "Missed accessed addr = " << addr << " at set " << set_check << " way " << way_check<< " remaining accesses " << cache_state[set_check * WAY_NUM + way_check].pending_accesses << std::endl;
 
         if (cache_state[set_check * WAY_NUM + way_check].pending_accesses < 0) {
           set_kill_counter[set_check].insert((addr >> 6) << 6);
@@ -394,35 +396,43 @@ std::tuple<uint64_t, uint64_t, bool> spp::SPP_ORACLE::poll(uint64_t address) {
       available_pf--;
       hit_address = 0;
       erase = true;
+      llc_pf_knowledge[ite->set].erase(ite->addr);
     }    
   }
-  /*
   else {
-
-    while (ite != oracle_pf.end() && (ite - oracle_pf.begin()) < 1) {
+    while (ite != oracle_pf.end()) { // && (ite - oracle_pf.begin()) < 1
       
       if (!ite->pfed_lower_lvl) {
-        std::get<0>(target) = ite->addr;
-        std::get<1>(target) = ite->cycle_demanded;
-        std::get<2>(target) = false;
-        ite->pfed_lower_lvl = true;
-        break;
-        //std::cout << "PF lower level: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << std::endl;
+
+        auto search = llc_pf_knowledge[ite->set].find(ite->addr);
+
+        if (search == llc_pf_knowledge[ite->set].end() && llc_pf_knowledge[ite->set].size() < LLC_WAY_NUM) {
+          std::get<0>(target) = ite->addr;
+          std::get<1>(target) = ite->cycle_demanded;
+          std::get<2>(target) = false;
+          ite->pfed_lower_lvl = true;
+          //std::cout << "PF lower level: addr = " << ite->addr << " set " << ite->set << " accesses = " << ite->miss_or_hit << " require_eviction " << ite->require_eviction << std::endl;
+          llc_pf_knowledge[ite->set].insert(ite->addr);
+          break;
+        }
+        else if (search != llc_pf_knowledge[ite->set].end()) {
+          ite->pfed_lower_lvl = true; 
+        }
       }
-      else {
-        ite++;
-      }
+
+      ite++;
     }
   }
-  */
 
   if (std::get<0>(target) != 0 && ite != oracle_pf.end() && erase)  
     ite = oracle_pf.erase(ite); 
 
+  /*
   if ((oracle_pf.size() % 10000) == 0) {
-      std::cout << "L2C: remaining oracle access = " << oracle_pf.size() - pf_issued << std::endl;
-      oracle_pf.shrink_to_fit();
+    std::cout << "L2C: remaining oracle access = " << oracle_pf.size() - pf_issued << std::endl;
+    oracle_pf.shrink_to_fit();
   }
+  */
 
   return target;
 }
@@ -443,6 +453,7 @@ void spp::SPP_ORACLE::finish() {
     rec_file.close();
     can_write = true;
     std::cout << "Last round write in replaying mode" << std::endl;
+    std::cout << "Hits in MSHR: " << (unsigned)hit_in_MSHR << std::endl;
     file_write();
   } else {
     can_write = true;

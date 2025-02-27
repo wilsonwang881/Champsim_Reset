@@ -64,6 +64,8 @@ namespace spp {
                                                                       //
     SPP_PAGE_BITMAP page_bitmap; // WL
     SPP_ORACLE oracle;           // WL 
+                                 //
+    std::map<uint64_t, uint64_t> pf_use_time; // WL
 
     bool warmup = true;
     

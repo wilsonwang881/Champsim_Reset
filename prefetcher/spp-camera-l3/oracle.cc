@@ -41,21 +41,14 @@ uint64_t spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool h
       uint64_t way_check = check_set_pf_avail(addr);   
 
       if (way_check == WAY_NUM) {
-
-        uint64_t set_before_size = set_kill_counter[set_check].size();
         set_kill_counter[set_check].insert((addr >> 6) << 6);
-        uint64_t set_after_size = set_kill_counter[set_check].size();
-
-        if (set_before_size == set_after_size) {
-          //std::cout << "Same size" << std::endl; 
-        }
 
         if (set_kill_counter[set_check].size() > WAY_NUM) {
           std::cout << "Simulation killed at a with set " << set_check << " way " << way_check << std::endl;
           kill_simulation(cycle, addr, hit);
         }
       }
-      else if(way_check < WAY_NUM) {
+      else if(way_check < WAY_NUM && cache_state[set_check * WAY_NUM + way_check].addr != ((addr >> 6) << 6)) {
         cache_state[set_check * WAY_NUM + way_check].pending_accesses--;
 
         if (cache_state[set_check * WAY_NUM + way_check].pending_accesses < 0) {
@@ -80,6 +73,9 @@ uint64_t spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool h
 
         tmpp.miss_or_hit = hit;
       }      
+      else if(way_check < WAY_NUM && cache_state[set_check * WAY_NUM + way_check].addr == ((addr >>6) << 6)){
+        assert(false);
+      }
     }
 
     tmpp.addr = (addr >> 6) << 6;    
@@ -217,7 +213,7 @@ void spp_l3::SPP_ORACLE::file_read()
 
       if (auto search = eviction_check.find(set); search != eviction_check.end()) {
 
-        if (eviction_check[set].size() < (WAY_NUM)) {
+        if (eviction_check[set].size() < WAY_NUM) {
           eviction_check[set].push_back(addr); 
           oracle_pf[i].require_eviction = false;
         }
@@ -336,34 +332,7 @@ bool spp_l3::SPP_ORACLE::check_require_eviction(uint64_t addr) {
   return need_eviction;
 }
 
-/*
-void spp_l3::SPP_ORACLE::update_persistent_lru_addr(uint64_t addr, bool pop) {
-
-  addr = (addr >> 6) << 6;
-  uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
-
-  if (!pop) {
-    size_t before_size = persistent_lru_addr[set].size();
-    persistent_lru_addr[set].insert(addr);
-
-    if (persistent_lru_addr[set].size() > before_size) {
-      set_kill_counter[set]++;
-      //std::cout << "Increment persistent lru in set " << set << " addr " << addr << " to " << persistent_lru_addr[set].size() << std::endl;
-    }
-  } 
-  else {
-    auto search = persistent_lru_addr[set].find(addr);
-
-    if (search != persistent_lru_addr[set].end()) {
-      persistent_lru_addr[set].erase(search);
-      set_kill_counter[set]--;
-      //std::cout << "Decrement persistent lru in set " << set << " addr " << addr << " to " << persistent_lru_addr[set].size() << std::endl;
-    }
-  }
-}
-*/
-
-std::tuple<uint64_t, uint64_t, bool> spp_l3::SPP_ORACLE::poll(uint64_t address) {
+std::tuple<uint64_t, uint64_t, bool> spp_l3::SPP_ORACLE::poll(uint64_t mode) {
 
   std::tuple<uint64_t, uint64_t, bool> target = std::make_tuple(0, 0, 0);
 
@@ -379,7 +348,7 @@ std::tuple<uint64_t, uint64_t, bool> spp_l3::SPP_ORACLE::poll(uint64_t address) 
 
   set_vacancy = set_availability[set];
 
-  if (set_vacancy > 0) {
+  if (set_vacancy > 0 && mode == 1) {
 
     way = check_set_pf_avail(ite->addr);
     
@@ -397,25 +366,35 @@ std::tuple<uint64_t, uint64_t, bool> spp_l3::SPP_ORACLE::poll(uint64_t address) 
       erase = true;
     }    
   }
-  /*
-  else {
+  else if (mode == 2) {
 
-    while (ite != oracle_pf.end() && (ite - oracle_pf.begin()) < 1) {
+    while (ite != oracle_pf.end()) {
       
-      if (!ite->pfed_lower_lvl) {
-        std::get<0>(target) = ite->addr;
-        std::get<1>(target) = ite->cycle_demanded;
-        std::get<2>(target) = false;
-        ite->pfed_lower_lvl = true;
-        break;
-        //std::cout << "PF lower level: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << std::endl;
+      set = ite->set;
+
+      if (set_availability[set] > 0) {
+
+        way = check_set_pf_avail(ite->addr);
+
+        if (way < WAY_NUM && cache_state[set * WAY_NUM + way].addr != ite->addr) {
+          cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
+          std::get<0>(target) = ite->addr;
+          std::get<1>(target) = ite->cycle_demanded;
+          std::get<2>(target) = true;
+          cache_state[set * WAY_NUM + way].addr = ite->addr;
+          cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
+          //std::cout << "Runahead PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << std::endl;
+          set_availability[set]--;
+          available_pf--;
+          hit_address = 0;
+          erase = true;
+          break;
+        }
       }
-      else {
-        ite++;
-      }
+
+      ite++;
     }
   }
-  */
 
   if (std::get<0>(target) != 0 && ite != oracle_pf.end() && erase)  
     ite = oracle_pf.erase(ite); 
@@ -444,6 +423,7 @@ void spp_l3::SPP_ORACLE::finish() {
     rec_file.close();
     can_write = true;
     std::cout << "Last round write in replaying mode" << std::endl;
+    std::cout << "Hits in MSHR: " << (unsigned)hit_in_MSHR << std::endl;
     file_write();
   } else {
     can_write = true;

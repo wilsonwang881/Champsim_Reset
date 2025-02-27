@@ -71,8 +71,8 @@
     },
 
     "L2C": {
-        "sets": 2560,
-        "ways": 8,
+        "sets": 2048,
+        "ways": 10,
         "rq_size": 32,
         "wq_size": 32,
         "pq_size": 16,
@@ -83,7 +83,7 @@
         "prefetch_as_load": false,
         "virtual_prefetch": false,
         "prefetch_activate": "LOAD,WRITE,TRANSLATION,RFO,PREFETCH",
-        "prefetcher": "spp-camera"
+        "prefetcher": "no"
     },
 
     "ITLB": {
@@ -150,8 +150,8 @@
 
     "LLC": {
         "frequency": 4000,
-        "sets": 3072,
-        "ways": 16,
+        "sets": 2048,
+        "ways": 24,
         "rq_size": 32,
         "wq_size": 32,
         "pq_size": 32,
@@ -162,7 +162,7 @@
         "prefetch_as_load": false,
         "virtual_prefetch": false,
         "prefetch_activate": "LOAD,WRITE,TRANSLATION,RFO,PREFETCH",
-        "prefetcher": "no",
+        "prefetcher": "spp-camera-l3",
         "replacement": "lru"
     },
 

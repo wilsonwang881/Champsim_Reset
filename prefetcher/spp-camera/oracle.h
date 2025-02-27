@@ -27,14 +27,17 @@ namespace spp {
 
     public:
 
-    const static uint64_t SET_NUM = 1024;
-    const static uint64_t WAY_NUM = 8;
-    bool ORACLE_ACTIVE = true;
+    const static uint64_t SET_NUM = 2048;
+    const static uint64_t WAY_NUM = 10;
+    const static uint64_t LLC_WAY_NUM = 24;
+    bool ORACLE_ACTIVE = false;
     bool RECORD_OR_REPLAY = false;
     bool done;
+    uint64_t hit_in_MSHR = 0;
 
     std::map<uint64_t, uint64_t> set_availability;
     std::unordered_set<uint64_t> persistent_lru_addr[SET_NUM];
+
 
     struct acc_timestamp {
       uint64_t cycle_demanded;
@@ -66,6 +69,7 @@ namespace spp {
 
     blk_state cache_state[SET_NUM * WAY_NUM];
     std::array<std::set<uint64_t>, SET_NUM> set_kill_counter;
+    std::array<std::set<uint64_t>, SET_NUM> llc_pf_knowledge;
     std::deque<acc_timestamp> oracle_pf;
     std::deque<acc_timestamp> readin;
 

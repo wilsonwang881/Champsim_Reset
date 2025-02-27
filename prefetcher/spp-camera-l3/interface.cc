@@ -21,7 +21,6 @@ void CACHE::prefetcher_initialize() {
   if (pref.oracle.ORACLE_ACTIVE)
     pref.oracle.init();
 
-  // Testing the no context switch case.
   // WL 
 }
 
@@ -44,6 +43,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   */
 
   pref.oracle.access_counter++;
+  bool found_in_MSHR = false;
 
   //std::cout << "Hit/miss " << (unsigned)cache_hit << " set " << this->get_set_index(base_addr) << " addr " << base_addr << " at cycle " << this->current_cycle << " type " << (unsigned)type << std::endl;
 
@@ -55,8 +55,10 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                                  });
 
     if (search_mshr != this->MSHR.end() && champsim::to_underlying(search_mshr->type) == 2) {
-      //useful_prefetch = true; 
-      //cache_hit = true;
+      useful_prefetch = true; 
+      cache_hit = true;
+      pref.oracle.hit_in_MSHR++;
+      found_in_MSHR = true;
       //std::cout << "Hit in MSHR " << (unsigned)cache_hit << " set " << this->get_set_index(base_addr) << " addr " << base_addr << " at cycle " << this->current_cycle << " type " << (unsigned)type << std::endl;
     }
 
@@ -65,7 +67,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
       if (res != 0) {
         //std::cout << "Pushed addr " << base_addr << " to do not fill queue" << std::endl;
-        this->do_not_fill_address.push_back(res);
+        //this->do_not_fill_address.push_back(res);
       } 
     }
     else {
@@ -73,7 +75,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
       if (res != 0) {
         //std::cout << "Pushed addr " << base_addr << " to do not fill queue" << std::endl;
-        this->do_not_fill_address.push_back(res);
+        //this->do_not_fill_address.push_back(res);
       }
     }      
   }
@@ -91,7 +93,10 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       uint64_t set = this->get_set_index(base_addr);
       uint64_t way = this->get_way((base_addr >> 6) << 6, set);
 
-      if (way < NUM_WAY) {
+      if (found_in_MSHR) {
+        this->do_not_fill_address.push_back(base_addr);
+      }
+      else if (way < NUM_WAY) {
         champsim::operable::lru_states_llc.push_back(std::make_tuple(set, way, 0));
       }
     }
@@ -143,10 +148,25 @@ void CACHE::prefetcher_cycle_operate() {
   // No prefetch gathering via the signature and pattern tables.
   if (pref.oracle.ORACLE_ACTIVE && ((pref.oracle.oracle_pf.size() > 0))) // && pref.oracle.available_pf > 0 && pref.oracle.hit_address != 0)
   {
-    std::tuple<uint64_t, uint64_t, bool> potential_cs_pf = pref.oracle.poll(pref.oracle.hit_address);
+    std::tuple<uint64_t, uint64_t, bool> potential_cs_pf = pref.oracle.poll(1);
   
     if (std::get<0>(potential_cs_pf) != 0) {
-      pref.context_switch_issue_queue.push_back({std::get<0>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<1>(potential_cs_pf)});
+      auto pq_place_at = [demanded = std::get<1>(potential_cs_pf)](auto& entry) {return std::get<2>(entry) > demanded;};
+      auto pq_insert_it = std::find_if(pref.context_switch_issue_queue.begin(), pref.context_switch_issue_queue.end(), pq_place_at);
+      pref.context_switch_issue_queue.emplace(pq_insert_it,std::get<0>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<1>(potential_cs_pf));
+
+      //pref.context_switch_issue_queue.push_front({std::get<0>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<1>(potential_cs_pf)});
+    }
+    else if ((pref.context_switch_issue_queue.size() + this->get_mshr_occupancy() + this->get_pq_occupancy().back()) < this->get_mshr_size()){
+      potential_cs_pf = pref.oracle.poll(2);
+
+      if (std::get<0>(potential_cs_pf) != 0) {
+        auto pq_place_at = [demanded = std::get<1>(potential_cs_pf)](auto& entry) {return std::get<2>(entry) > demanded;};
+        auto pq_insert_it = std::find_if(pref.context_switch_issue_queue.begin(), pref.context_switch_issue_queue.end(), pq_place_at);
+        pref.context_switch_issue_queue.emplace(pq_insert_it,std::get<0>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<1>(potential_cs_pf));
+        //pref.context_switch_issue_queue.push_back({std::get<0>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<1>(potential_cs_pf)});
+        //std::cout << "Polled failed MSHR usage: " << this->get_mshr_occupancy() << " queue size " << pref.context_switch_issue_queue.size() << " at cycle " << this->current_cycle << std::endl;
+      }
     }
   }
 
