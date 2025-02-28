@@ -2,7 +2,6 @@
 
 void spp_l3::SPP_ORACLE::init() {
   can_write = true; // Change to false for context switch simulation.
-  first_round = true;
 
   // Clear the L2C access file if in recording mode.
   if (RECORD_OR_REPLAY) {
@@ -27,8 +26,7 @@ void spp_l3::SPP_ORACLE::init() {
   file_read();
 }
 
-uint64_t spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, bool replay) {
-  uint64_t possible_do_not_fill_addr = 0;
+void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, bool replay) {
 
   if (!RECORD_OR_REPLAY && can_write) {
     acc_timestamp tmpp;
@@ -43,39 +41,27 @@ uint64_t spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool h
       if (way_check == WAY_NUM) {
         set_kill_counter[set_check].insert((addr >> 6) << 6);
 
-        if (set_kill_counter[set_check].size() > WAY_NUM) {
+        if (set_kill_counter[set_check].size() >= WAY_NUM) {
           std::cout << "Simulation killed at a with set " << set_check << " way " << way_check << std::endl;
           kill_simulation(cycle, addr, hit);
         }
       }
       else if(way_check < WAY_NUM && cache_state[set_check * WAY_NUM + way_check].addr != ((addr >> 6) << 6)) {
-        cache_state[set_check * WAY_NUM + way_check].pending_accesses--;
+        assert(cache_state[set_check * WAY_NUM + way_check].addr == 0);
 
-        if (cache_state[set_check * WAY_NUM + way_check].pending_accesses < 0) {
-          set_kill_counter[set_check].insert((addr >> 6) << 6);
-          cache_state[set_check * WAY_NUM + way_check].pending_accesses = 0;
+        set_kill_counter[set_check].insert((addr >> 6) << 6);
 
-          if (set_kill_counter[set_check].size() > WAY_NUM) {
-            std::cout << "Simulation killed at b with set " << set_check << " way " << way_check << std::endl;
-            kill_simulation(cycle, addr, hit);
-          }
+        if (set_kill_counter[set_check].size() >= WAY_NUM) {
+          std::cout << "Simulation killed at b with set " << set_check << " way " << way_check << std::endl;
+          kill_simulation(cycle, addr, hit);
         }
-        
-        if (cache_state[set_check * WAY_NUM + way_check].pending_accesses == 0) {
-          cache_state[set_check * WAY_NUM + way_check].pending_accesses = 0;
-          cache_state[set_check * WAY_NUM + way_check].addr = 0;
-          cache_state[set_check * WAY_NUM + way_check].timestamp = 0;
-          available_pf++;
-          available_pf = std::min(available_pf, (uint64_t)(1024 * 8 - 16));
-          set_availability.find(set_check)->second++;
-          possible_do_not_fill_addr = addr;
-        }
-
-        tmpp.miss_or_hit = hit;
       }      
-      else if(way_check < WAY_NUM && cache_state[set_check * WAY_NUM + way_check].addr == ((addr >>6) << 6)){
-        assert(false);
+      else if(way_check < WAY_NUM && cache_state[set_check * WAY_NUM + way_check].addr == ((addr >> 6) << 6)){
+        cache_state[set_check * WAY_NUM + way_check].pending_accesses = 1;
+        update_pf_avail(addr, cycle);
       }
+      else
+        assert(false);
     }
 
     tmpp.addr = (addr >> 6) << 6;    
@@ -85,24 +71,6 @@ uint64_t spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool h
       file_write();
       can_write = false;
     }
-  }
-
-  return possible_do_not_fill_addr;
-}
-
-void spp_l3::SPP_ORACLE::refresh_cache_state() {
-
-  for (size_t i = 0; i < SET_NUM * WAY_NUM; i++) {
-    cache_state[i].addr = 0;
-    cache_state[i].pending_accesses = 0; 
-    cache_state[i].timestamp = 0;
-  }
-
-  available_pf = SET_NUM * WAY_NUM - 16;
-
-  for(uint64_t i = 0; i < SET_NUM; i++) {
-    set_availability[i];
-    set_availability[i] = WAY_NUM;
   }
 }
 
@@ -121,13 +89,11 @@ void spp_l3::SPP_ORACLE::file_write() {
   } 
 }
 
-void spp_l3::SPP_ORACLE::file_read()
-{
+void spp_l3::SPP_ORACLE::file_read() {
   oracle_pf.clear();
   acc_timestamp tmpp;
 
   if (!RECORD_OR_REPLAY) {
-
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ifstream::in);
     uint64_t readin_cycle_demanded, readin_addr, readin_miss_or_hit;
 
@@ -157,9 +123,8 @@ void spp_l3::SPP_ORACLE::file_read()
 
       if (readin.at(i).miss_or_hit == 0) {
         // Found in the hashmap already.
-        if (auto search = parsing.find(addr); search != parsing.end()) {
+        if (auto search = parsing.find(addr); search != parsing.end()) 
           search->second.push_back(1); 
-        } 
         else {
           parsing[addr];
           parsing[addr].push_back(1);
@@ -207,7 +172,6 @@ void spp_l3::SPP_ORACLE::file_read()
     }
 
     for (int i = oracle_pf.size() - 1; i >= 0; i--) {
-      
       uint64_t set = oracle_pf[i].set;
       uint64_t addr = oracle_pf[i].addr;
 
@@ -229,8 +193,7 @@ void spp_l3::SPP_ORACLE::file_read()
   }
 }
 
-uint64_t spp_l3::SPP_ORACLE::check_set_pf_avail(uint64_t addr) 
-{
+uint64_t spp_l3::SPP_ORACLE::check_set_pf_avail(uint64_t addr) {
   uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
   uint64_t res = (set + 1) * WAY_NUM;
   addr = (addr >> 6) << 6;
@@ -246,14 +209,8 @@ uint64_t spp_l3::SPP_ORACLE::check_set_pf_avail(uint64_t addr)
       assert(false); 
     }
       
-
-    if (cache_state[i].addr == addr) {
-      res = i; //(set + 1) * WAY_NUM;
-      break;
-    }
-
-    if (cache_state[i].pending_accesses == 0 && cache_state[i].addr == 0) {
-      res = i; 
+    if (cache_state[i].addr == addr || (cache_state[i].pending_accesses == 0 && cache_state[i].addr == 0)) {
+      res = i;
       break;
     }
   }
@@ -292,15 +249,13 @@ int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
     if (cache_state[i].addr == addr) {
       cache_state[i].pending_accesses--;
       //std::cout << "Accessed addr = " << addr << " at set " << set << " way " << i - set * WAY_NUM << " remaining accesses " << cache_state[i].pending_accesses << std::endl;
-
       cache_state[i].timestamp = cycle; 
 
       if (cache_state[i].pending_accesses == 0) {
         cache_state[i].addr = 0; 
         cache_state[i].timestamp = 0;
-        //cache_state[i].require_eviction = true;
         available_pf++;
-        available_pf = std::min(available_pf, (uint64_t)(1024 * 8 - 16));
+        available_pf = std::min(available_pf, (uint64_t)(WAY_NUM * SET_NUM - 16));
         set_availability.find(set)->second++;
       }
 
@@ -332,7 +287,7 @@ bool spp_l3::SPP_ORACLE::check_require_eviction(uint64_t addr) {
   return need_eviction;
 }
 
-std::tuple<uint64_t, uint64_t, bool> spp_l3::SPP_ORACLE::poll(uint64_t mode) {
+std::tuple<uint64_t, uint64_t, bool> spp_l3::SPP_ORACLE::poll(uint64_t mode, uint64_t cycle) {
 
   std::tuple<uint64_t, uint64_t, bool> target = std::make_tuple(0, 0, 0);
 
@@ -345,14 +300,12 @@ std::tuple<uint64_t, uint64_t, bool> spp_l3::SPP_ORACLE::poll(uint64_t mode) {
   auto ite = oracle_pf.begin();
   bool erase = false;
   uint64_t set = ite->set; 
-
   set_vacancy = set_availability[set];
 
   if (set_vacancy > 0 && mode == 1) {
-
     way = check_set_pf_avail(ite->addr);
     
-    if (way < WAY_NUM) {
+    if ((way < WAY_NUM && cache_state[set * WAY_NUM + way].addr != ite->addr) || (way == WAY_NUM && (ite->cycle_demanded - cycle) < 50)) {
       cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
       std::get<0>(target) = ite->addr;
       std::get<1>(target) = ite->cycle_demanded;
@@ -369,14 +322,12 @@ std::tuple<uint64_t, uint64_t, bool> spp_l3::SPP_ORACLE::poll(uint64_t mode) {
   else if (mode == 2) {
 
     while (ite != oracle_pf.end()) {
-      
       set = ite->set;
 
       if (set_availability[set] > 0) {
-
         way = check_set_pf_avail(ite->addr);
 
-        if (way < WAY_NUM && cache_state[set * WAY_NUM + way].addr != ite->addr) {
+        if ((way < WAY_NUM) && (cache_state[set * WAY_NUM + way].addr != ite->addr)) {
           cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
           std::get<0>(target) = ite->addr;
           std::get<1>(target) = ite->cycle_demanded;

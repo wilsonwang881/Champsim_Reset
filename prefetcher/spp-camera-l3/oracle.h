@@ -47,15 +47,12 @@ namespace spp_l3 {
     };
 
     bool can_write;
-    bool first_round;
     std::vector<acc_timestamp> access;
     uint64_t interval_start_cycle;
     uint64_t pf_issued_last_round = 0;
     uint64_t pf_issued = 0;
     uint64_t available_pf = SET_NUM * WAY_NUM;
     uint64_t hit_address = 0;
-    uint64_t access_counter = 0;
-    uint64_t last_access_counter = 0;
 
     struct blk_state {
       uint64_t addr;
@@ -70,15 +67,14 @@ namespace spp_l3 {
     std::deque<acc_timestamp> readin;
 
     void init();
-    uint64_t update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch);
-    void refresh_cache_state();
+    void update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch);
     void file_write();
     void file_read();
     uint64_t check_set_pf_avail(uint64_t addr);
     int check_pf_status(uint64_t addr);
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     bool check_require_eviction(uint64_t addr);
-    std::tuple<uint64_t, uint64_t, bool> poll(uint64_t mode);
+    std::tuple<uint64_t, uint64_t, bool> poll(uint64_t mode, uint64_t cycle);
     void kill_simulation(uint64_t cycle, uint64_t addr, bool hit);
     void finish();
   };
