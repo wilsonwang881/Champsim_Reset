@@ -105,7 +105,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
   cpu = fill_mshr.cpu;
   auto search = std::find(do_not_fill_address.begin(), do_not_fill_address.end(), fill_mshr.address);
 
-  if (!LLC_name.compare(NAME) && search != do_not_fill_address.end()) {
+  if (!L2C_name.compare(NAME) && search != do_not_fill_address.end()) {
         // COLLECT STATS
     if(search != do_not_fill_address.end())
       do_not_fill_address.erase(search);
@@ -681,7 +681,7 @@ int CACHE::prefetch_line(uint64_t pf_addr, bool fill_this_level, uint32_t prefet
 
     fwd_pkt.asid[0] = handle_pkt.asid[0];
     fwd_pkt.asid[1] = handle_pkt.asid[1];
-    fwd_pkt.type = (handle_pkt.type == access_type::WRITE) ? access_type::RFO : handle_pkt.type;
+    fwd_pkt.type = access_type::PREFETCH; //(handle_pkt.type == access_type::WRITE) ? access_type::RFO : handle_pkt.type;
     fwd_pkt.pf_metadata = handle_pkt.pf_metadata;
     fwd_pkt.cpu = handle_pkt.cpu;
 

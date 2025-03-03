@@ -28,11 +28,12 @@ namespace spp_l3 {
     public:
 
     const static uint64_t SET_NUM = 2048;
-    const static uint64_t WAY_NUM = 24;
+    const static uint64_t WAY_NUM = 10;
     bool ORACLE_ACTIVE = true;
     bool RECORD_OR_REPLAY = false;
     bool done;
     uint64_t hit_in_MSHR = 0;
+    std::set<uint64_t> heartbeat_printed;
 
     std::map<uint64_t, uint64_t> set_availability;
     std::unordered_set<uint64_t> persistent_lru_addr[SET_NUM];
@@ -44,6 +45,7 @@ namespace spp_l3 {
       uint64_t miss_or_hit;
       bool require_eviction;
       bool pfed_lower_lvl;
+      uint64_t type;
     };
 
     bool can_write;
@@ -67,7 +69,7 @@ namespace spp_l3 {
     std::deque<acc_timestamp> readin;
 
     void init();
-    void update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch);
+    void update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch, uint64_t type);
     void file_write();
     void file_read();
     uint64_t check_set_pf_avail(uint64_t addr);
@@ -75,7 +77,7 @@ namespace spp_l3 {
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     bool check_require_eviction(uint64_t addr);
     std::tuple<uint64_t, uint64_t, bool> poll(uint64_t mode, uint64_t cycle);
-    void kill_simulation(uint64_t cycle, uint64_t addr, bool hit);
+    void kill_simulation();
     void finish();
   };
 }

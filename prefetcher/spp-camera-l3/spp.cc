@@ -20,7 +20,7 @@ void spp_l3::prefetcher::issue(CACHE* cache) {
     auto wq_occupancy = cache->get_wq_occupancy().back();
     auto pq_occupancy = cache->get_pq_occupancy().back();
 
-    if ((mshr_occupancy + rq_occupancy + wq_occupancy + pq_occupancy) < 64) {
+    if ((mshr_occupancy + rq_occupancy + wq_occupancy + pq_occupancy) < cache->get_mshr_size()) {
       auto [addr, priority, cycle] = context_switch_issue_queue.front();
       bool prefetched = cache->prefetch_line(addr, priority, 0, 0);
 
