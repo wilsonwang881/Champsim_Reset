@@ -28,9 +28,11 @@ namespace spp_l3 {
     public:
 
     std::set<std::pair<uint64_t, bool>> available_prefetches;
-    std::deque<std::tuple<uint64_t, bool, uint64_t>> context_switch_issue_queue;
+    std::deque<std::tuple<uint64_t, bool, uint64_t, bool>> context_switch_issue_queue;
+    std::set<uint64_t> pending_RFO_write_misses;
     SPP_ORACLE oracle;
     bool warmup = true;
+    bool debug_print = false;
     void issue(CACHE* cache);
     bool context_switch_prefetch_gathered = false;
     uint64_t cache_cycle;

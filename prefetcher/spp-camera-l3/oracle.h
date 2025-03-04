@@ -22,6 +22,7 @@ namespace spp_l3 {
 
   class SPP_ORACLE {
     constexpr static uint64_t ACCESS_LEN = 100000000;
+    constexpr static bool DEBUG_PRINT = false;
     std::string L2C_PHY_ACC_FILE_NAME = "L3C_phy_acc.txt";
     std::fstream rec_file;
 
@@ -32,6 +33,7 @@ namespace spp_l3 {
     bool ORACLE_ACTIVE = true;
     bool RECORD_OR_REPLAY = false;
     bool done;
+    uint64_t new_misses = 0;
     uint64_t hit_in_MSHR = 0;
     std::set<uint64_t> heartbeat_printed;
 
@@ -54,7 +56,6 @@ namespace spp_l3 {
     uint64_t pf_issued_last_round = 0;
     uint64_t pf_issued = 0;
     uint64_t available_pf = SET_NUM * WAY_NUM;
-    uint64_t hit_address = 0;
 
     struct blk_state {
       uint64_t addr;
@@ -76,7 +77,7 @@ namespace spp_l3 {
     int check_pf_status(uint64_t addr);
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     bool check_require_eviction(uint64_t addr);
-    std::tuple<uint64_t, uint64_t, bool> poll(uint64_t mode, uint64_t cycle);
+    std::tuple<uint64_t, uint64_t, bool, bool> poll(uint64_t mode, uint64_t cycle);
     void kill_simulation();
     void finish();
   };

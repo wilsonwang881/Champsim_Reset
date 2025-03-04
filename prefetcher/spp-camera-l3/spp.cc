@@ -18,19 +18,28 @@ void spp_l3::prefetcher::issue(CACHE* cache) {
     auto mshr_occupancy = cache->get_mshr_occupancy();
     auto rq_occupancy = cache->get_rq_occupancy().back();
     auto wq_occupancy = cache->get_wq_occupancy().back();
-    auto pq_occupancy = cache->get_pq_occupancy().back();
+    auto [addr, priority, cycle, RFO_write] = context_switch_issue_queue.front();
 
-    if ((mshr_occupancy + rq_occupancy + wq_occupancy + pq_occupancy) < cache->get_mshr_size()) {
-      auto [addr, priority, cycle] = context_switch_issue_queue.front();
-      bool prefetched = cache->prefetch_line(addr, priority, 0, 0);
+    if (!RFO_write && 
+        (mshr_occupancy < cache->get_mshr_size())) {
+      
+      bool prefetched = cache->prefetch_line(addr, priority, 0);
 
       if (prefetched) {
         context_switch_issue_queue.pop_front();
         issued_cs_pf.insert((addr >> 6) << 6);
         total_issued_cs_pf++;
 
-        //std::cout << "Issued " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << " MSHR usage: " << mshr_occupancy << " queue size " << context_switch_issue_queue.size() << " wq " << wq_occupancy << " rq " << rq_occupancy << " pq " << pq_occupancy << std::endl;
+        if (debug_print) 
+          std::cout << "Issued " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << " MSHR usage: " << mshr_occupancy << " queue size " << context_switch_issue_queue.size() << " wq " << wq_occupancy << " rq " << rq_occupancy << " pending RFO/write misses " << pending_RFO_write_misses.size() << std::endl;
       }
+    }
+    else if (RFO_write) {
+      pending_RFO_write_misses.insert(addr);
+      context_switch_issue_queue.pop_front();
+
+      if (debug_print) 
+        std::cout << "Pending RFO/write misses " << pending_RFO_write_misses.size() << " at cycle " << cache->current_cycle << std::endl;
     }
   }
 }

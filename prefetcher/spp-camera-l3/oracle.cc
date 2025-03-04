@@ -41,15 +41,17 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
 
       if (way_check == WAY_NUM) {
         set_kill_counter[set_check].insert((addr >> 6) << 6);
+        new_misses++;
 
         if (set_kill_counter[set_check].size() > WAY_NUM) {
           std::cout << "Simulation killed at a with set " << set_check << " way " << way_check << std::endl;
           kill_simulation();
         }
       }
-      else if(way_check < WAY_NUM && cache_state[set_check * WAY_NUM + way_check].addr != ((addr >> 6) << 6)) {
+      else if(way_check < WAY_NUM && 
+              cache_state[set_check * WAY_NUM + way_check].addr != ((addr >> 6) << 6)) {
         assert(cache_state[set_check * WAY_NUM + way_check].addr == 0);
-
+        new_misses++;
         set_kill_counter[set_check].insert((addr >> 6) << 6);
 
         if (set_kill_counter[set_check].size() > WAY_NUM) {
@@ -57,12 +59,14 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
           kill_simulation();
         }
       }      
-      else if(way_check < WAY_NUM && cache_state[set_check * WAY_NUM + way_check].addr == ((addr >> 6) << 6)){
-        //cache_state[set_check * WAY_NUM + way_check].pending_accesses = 1;
+      else if(way_check < WAY_NUM && 
+              cache_state[set_check * WAY_NUM + way_check].addr == ((addr >> 6) << 6)){
         update_pf_avail(addr, cycle);
       }
-      else
+      else {
+        std::cout << "Failed: way " << way_check << " set " << set_check << " addr " << ((addr >> 6) << 6) << " cache_state addr " << cache_state[set_check * WAY_NUM + way_check].addr  << std::endl;
         assert(false);
+      }
     }
 
     tmpp.addr = (addr >> 6) << 6;    
@@ -85,7 +89,7 @@ void spp_l3::SPP_ORACLE::file_write() {
 
     rec_file << "0 0 0 0" << std::endl;
     rec_file.close();
-    std::cout << "L3C oracle: writing " << access.size() << " accesses to file." << std::endl;
+    std::cout << "Oracle: writing " << access.size() << " accesses to file." << std::endl;
     access.clear();
   } 
 }
@@ -114,7 +118,7 @@ void spp_l3::SPP_ORACLE::file_read() {
     }
 
     rec_file.close();
-    std::cout << "L3C oracle: read " << readin.size() << " accesses from file." << std::endl;
+    std::cout << "Oracle: read " << readin.size() << " accesses from file." << std::endl;
     std::deque<uint64_t> to_be_erased;
 
     // Use the hashmap to gather accesses.
@@ -195,12 +199,13 @@ void spp_l3::SPP_ORACLE::file_read() {
     uint64_t non_pf_counter = 0;
 
     for(auto var : oracle_pf) {
-      if (var.type == 3) 
+      if (var.type == 1 || var.type == 3) 
         non_pf_counter++; 
     }
 
-    std::cout << "L3C oracle: pre-processing collects " << oracle_pf.size() << " accesses from file read." << std::endl;
-    std::cout << "L3C oracle: skip prefetching " << non_pf_counter << " targets because they are WRITE requests." << std::endl;
+    std::cout << "Oracle: pre-processing collects " << oracle_pf.size() << " prefetch targets from file read." << std::endl;
+    std::cout << "Oracle: skipping " << non_pf_counter << " prefetch targets because they are RFO/WRITE misses." << std::endl;
+    std::cout << "Oracle: issuing " << (oracle_pf.size() - non_pf_counter) << " prefetches." << std::endl;
   }
 }
 
@@ -259,7 +264,10 @@ int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
   for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
     if (cache_state[i].addr == addr) {
       cache_state[i].pending_accesses--;
-      //std::cout << "Accessed addr = " << addr << " at set " << set << " way " << i - set * WAY_NUM << " remaining accesses " << cache_state[i].pending_accesses << std::endl;
+
+      if (DEBUG_PRINT) 
+        std::cout << "Accessed addr = " << addr << " at set " << set << " way " << i - set * WAY_NUM << " remaining accesses " << cache_state[i].pending_accesses << std::endl;
+
       cache_state[i].timestamp = cycle; 
 
       if (cache_state[i].pending_accesses == 0) {
@@ -276,8 +284,9 @@ int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
 
   if ((i - set * WAY_NUM) < WAY_NUM)
     return cache_state[i].pending_accesses;
-  else
+  else {
     return -1;
+  }
 }
 
 bool spp_l3::SPP_ORACLE::check_require_eviction(uint64_t addr) {
@@ -298,9 +307,9 @@ bool spp_l3::SPP_ORACLE::check_require_eviction(uint64_t addr) {
   return need_eviction;
 }
 
-std::tuple<uint64_t, uint64_t, bool> spp_l3::SPP_ORACLE::poll(uint64_t mode, uint64_t cycle) {
+std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll(uint64_t mode, uint64_t cycle) {
 
-  std::tuple<uint64_t, uint64_t, bool> target = std::make_tuple(0, 0, 0);
+  std::tuple<uint64_t, uint64_t, bool, bool> target = std::make_tuple(0, 0, 0, 0);
 
   if (oracle_pf.empty()) 
     return target; 
@@ -316,25 +325,31 @@ std::tuple<uint64_t, uint64_t, bool> spp_l3::SPP_ORACLE::poll(uint64_t mode, uin
   if (set_vacancy > 0 && mode == 1) {
     way = check_set_pf_avail(ite->addr);
     
-    if ((way < WAY_NUM && cache_state[set * WAY_NUM + way].addr != ite->addr) || (way == WAY_NUM && (ite->cycle_demanded - cycle) < 50)) {
+    if (way < WAY_NUM && 
+        cache_state[set * WAY_NUM + way].addr != ite->addr) {
       cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
 
       std::get<0>(target) = ite->addr;
 
-      if (ite->type == 3) {
-        std::get<0>(target) = 0;
-        //std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;
+      if (ite->type == 3 || 
+          ite->type == 1) {
+        //std::get<3>(target) = true;
+        //std::get<0>(target) = 0;
+
+        if (DEBUG_PRINT) 
+          std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;
       } 
 
       std::get<1>(target) = ite->cycle_demanded;
       std::get<2>(target) = true;
       cache_state[set * WAY_NUM + way].addr = ite->addr;
       cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
-      //std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << std::endl;
       set_availability[set]--;
       available_pf--;
-      hit_address = 0;
       erase = true;
+
+      if (DEBUG_PRINT) 
+        std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << std::endl;
     }    
   }
   else if (mode == 2) {
@@ -345,25 +360,32 @@ std::tuple<uint64_t, uint64_t, bool> spp_l3::SPP_ORACLE::poll(uint64_t mode, uin
       if (set_availability[set] > 0) {
         way = check_set_pf_avail(ite->addr);
 
-        if ((way < WAY_NUM) && (cache_state[set * WAY_NUM + way].addr != ite->addr)) {
+        if ((way < WAY_NUM) && 
+            (cache_state[set * WAY_NUM + way].addr != ite->addr)) {
           cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
 
           std::get<0>(target) = ite->addr;
 
-          if (ite->type == 3) {
-            std::get<0>(target) = 0;
-            //std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;
+          if (ite->type == 3 || 
+              ite->type == 1) {
+            //std::get<3>(target) = true;
+            //std::get<0>(target) = 0;
+
+            if (DEBUG_PRINT) 
+              std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;
           } 
 
           std::get<1>(target) = ite->cycle_demanded;
           std::get<2>(target) = true;
           cache_state[set * WAY_NUM + way].addr = ite->addr;
           cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
-          //std::cout << "Runahead PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << std::endl;
           set_availability[set]--;
           available_pf--;
-          hit_address = 0;
           erase = true;
+
+          if (DEBUG_PRINT) 
+            std::cout << "Runahead PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << std::endl;
+
           break;
         }
       }
@@ -375,8 +397,9 @@ std::tuple<uint64_t, uint64_t, bool> spp_l3::SPP_ORACLE::poll(uint64_t mode, uin
   if (ite != oracle_pf.end() && erase)  
     ite = oracle_pf.erase(ite); 
 
-  if ((oracle_pf.size() % 10000) == 0 && heartbeat_printed.find(oracle_pf.size()) == heartbeat_printed.end()) {
-      std::cout << "LLC: remaining oracle access = " << oracle_pf.size() - pf_issued << std::endl;
+  if ((oracle_pf.size() % 10000) == 0 && 
+      heartbeat_printed.find(oracle_pf.size()) == heartbeat_printed.end()) {
+      std::cout << "Oracle: remaining oracle access = " << oracle_pf.size() - pf_issued << std::endl;
       oracle_pf.shrink_to_fit();
       heartbeat_printed.insert(oracle_pf.size());
   }
@@ -400,9 +423,11 @@ void spp_l3::SPP_ORACLE::finish() {
     rec_file.close();
     can_write = true;
     std::cout << "Last round write in replaying mode" << std::endl;
-    std::cout << "Hits in MSHR: " << (unsigned)hit_in_MSHR << std::endl;
+    std::cout << "Hits in MSHR: " << hit_in_MSHR << std::endl;
+    std::cout << "New misses recorded: " << new_misses << std::endl;
     file_write();
-  } else {
+  } 
+  else {
     can_write = true;
     std::cout << "Last round write" << std::endl;
     file_write();
