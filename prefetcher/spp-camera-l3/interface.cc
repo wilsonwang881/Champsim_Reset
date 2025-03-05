@@ -41,19 +41,30 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   if (pref.debug_print) 
     std::cout << "Hit/miss " << (unsigned)cache_hit << " set " << this->get_set_index(base_addr) << " addr " << base_addr << " at cycle " << this->current_cycle << " type " << (unsigned)type << " MSHR usage " << this->get_mshr_occupancy() << std::endl;
 
-  if (pref.oracle.ORACLE_ACTIVE && (type == 1 || type == 3)) {
-    pref.pending_RFO_write_misses.erase((base_addr >> 6) << 6);
-
-    if (pref.debug_print) 
-      std::cout << "Erased addr " << ((base_addr >> 6) << 6) << " pending RFO/write queue size " << pref.pending_RFO_write_misses.size() << std::endl;
-  }
-
   if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && !(type == 2 && cache_hit)) {
 
     auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
                                  [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
                                    return (entry.address >> shamt) == match; 
                                  });
+
+    auto search_pq = std::find_if(std::begin(this->internal_PQ), std::end(this->internal_PQ),
+                                 [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
+                                   return (entry.address >> shamt) == match; 
+                                 });
+
+    if (search_pq != this->internal_PQ.end() && !cache_hit)
+      this->internal_PQ.erase(search_pq); 
+
+    auto search_oracle_pq = std::find_if(std::begin(pref.oracle.oracle_pf), std::end(pref.oracle.oracle_pf),
+                                 [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
+                                   return (entry.addr >> shamt) == match; 
+                                 });
+
+    bool found_in_pending_queue = (search_oracle_pq != pref.oracle.oracle_pf.end());
+
+    if (search_oracle_pq != pref.oracle.oracle_pf.end())
+      pref.oracle.oracle_pf.erase(search_oracle_pq); 
 
     if (search_mshr != this->MSHR.end()) {
 
@@ -69,11 +80,11 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     }
 
     if (useful_prefetch) 
-      pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0, type);
+      pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0, type, false);
     else if (pref.oracle.check_pf_status(base_addr) > 0 && !cache_hit) {
       int before_acc = pref.oracle.check_pf_status(base_addr);
       bool evict = pref.oracle.check_require_eviction(base_addr);
-      pref.oracle.update_demand(this->current_cycle, base_addr, 0, 1, type);
+      pref.oracle.update_demand(this->current_cycle, base_addr, 0, 1, type, found_in_pending_queue);
 
       if (before_acc == 1 && evict) {
         uint64_t set = this->get_set_index(base_addr);
@@ -89,11 +100,10 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       }
     }
     else
-      pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1, type);
+      pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1, type, false);
   }
 
   if (pref.oracle.ORACLE_ACTIVE && cache_hit && !pref.oracle.RECORD_OR_REPLAY) {
-    //int before_acc = pref.oracle.check_pf_status(base_addr);
     bool evict = pref.oracle.check_require_eviction(base_addr);
     int remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 

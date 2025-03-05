@@ -23,7 +23,7 @@ void spp_l3::prefetcher::issue(CACHE* cache) {
     if (!RFO_write && 
         (mshr_occupancy < cache->get_mshr_size())) {
       
-      bool prefetched = cache->prefetch_line(addr, priority, 0);
+      bool prefetched = cache->prefetch_line(addr, priority, 0, 0);
 
       if (prefetched) {
         context_switch_issue_queue.pop_front();
@@ -31,15 +31,12 @@ void spp_l3::prefetcher::issue(CACHE* cache) {
         total_issued_cs_pf++;
 
         if (debug_print) 
-          std::cout << "Issued " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << " MSHR usage: " << mshr_occupancy << " queue size " << context_switch_issue_queue.size() << " wq " << wq_occupancy << " rq " << rq_occupancy << " pending RFO/write misses " << pending_RFO_write_misses.size() << std::endl;
+          std::cout << "Issued " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << " MSHR usage: " << mshr_occupancy << " queue size " << context_switch_issue_queue.size() << " wq " << wq_occupancy << " rq " << rq_occupancy << std::endl;
       }
     }
     else if (RFO_write) {
-      pending_RFO_write_misses.insert(addr);
+      assert(false);
       context_switch_issue_queue.pop_front();
-
-      if (debug_print) 
-        std::cout << "Pending RFO/write misses " << pending_RFO_write_misses.size() << " at cycle " << cache->current_cycle << std::endl;
     }
   }
 }

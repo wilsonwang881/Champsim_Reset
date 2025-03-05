@@ -48,6 +48,7 @@ namespace spp_l3 {
       bool require_eviction;
       bool pfed_lower_lvl;
       uint64_t type;
+      uint64_t reuse_distance;
     };
 
     bool can_write;
@@ -70,7 +71,7 @@ namespace spp_l3 {
     std::deque<acc_timestamp> readin;
 
     void init();
-    void update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch, uint64_t type);
+    void update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch, uint64_t type, bool found_in_pending_queue);
     void file_write();
     void file_read();
     uint64_t check_set_pf_avail(uint64_t addr);
