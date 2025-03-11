@@ -19,6 +19,20 @@ void CACHE::prefetcher_initialize() {
 
   if (pref.oracle.ORACLE_ACTIVE)
     pref.oracle.init();
+
+  while (pref.oracle.oracle_pf.size() != 0) {
+    std::tuple<uint64_t, uint64_t, bool, bool> potential_cs_pf = pref.oracle.poll(1, this->current_cycle);
+  
+    if (std::get<0>(potential_cs_pf) != 0) {
+      auto pq_place_at = [demanded = std::get<1>(potential_cs_pf)](auto& entry) {return std::get<2>(entry) > demanded;};
+      auto pq_insert_it = std::find_if(pref.context_switch_issue_queue.begin(), pref.context_switch_issue_queue.end(), pq_place_at);
+      pref.context_switch_issue_queue.emplace(pq_insert_it,std::get<0>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<1>(potential_cs_pf), std::get<3>(potential_cs_pf));
+    }
+    else 
+      break;
+  }
+
+  std::cout << "Gathered " << pref.context_switch_issue_queue.size() << " prefetch target at the beginning." << std::endl;
 }
 
 uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in) {
@@ -61,14 +75,14 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                                    return (entry.addr >> shamt) == match; 
                                  });
 
-    bool found_in_pending_queue = (search_oracle_pq != pref.oracle.oracle_pf.end());
+    bool found_in_pending_queue = (search_oracle_pq != pref.oracle.oracle_pf.end()) || (search_pq != this->internal_PQ.end());
 
     if (search_oracle_pq != pref.oracle.oracle_pf.end())
       pref.oracle.oracle_pf.erase(search_oracle_pq); 
 
-    if (search_mshr != this->MSHR.end()) {
+    if (search_mshr != this->MSHR.end() || found_in_pending_queue) {
 
-      if (champsim::to_underlying(search_mshr->type) == 2) 
+      //if (champsim::to_underlying(search_mshr->type) == 2) 
         useful_prefetch = true; 
 
       cache_hit = true;
@@ -99,8 +113,14 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
           champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
       }
     }
-    else
-      pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1, type, false);
+    else {
+      if (type == 3 || type == 1) {
+        pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1, type, true);
+      }
+      else {
+         pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1, type, false);
+      }
+    }
   }
 
   if (pref.oracle.ORACLE_ACTIVE && cache_hit && !pref.oracle.RECORD_OR_REPLAY) {
@@ -122,7 +142,16 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       uint64_t way = this->get_way((base_addr >> 6) << 6, set);
 
       if (way < NUM_WAY) {
-        champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
+
+        /*
+        if (remaining_acc == 1 && (type == 1 || type == 3)) {
+          remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle); 
+          assert(remaining_acc == 0);
+          champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
+        }
+        */
+        //else
+          champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
       } 
     }
   }
@@ -169,8 +198,7 @@ void CACHE::prefetcher_cycle_operate() {
       auto pq_insert_it = std::find_if(pref.context_switch_issue_queue.begin(), pref.context_switch_issue_queue.end(), pq_place_at);
       pref.context_switch_issue_queue.emplace(pq_insert_it,std::get<0>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<1>(potential_cs_pf), std::get<3>(potential_cs_pf));
     }
-    else if (pref.context_switch_issue_queue.size() < this->get_mshr_size()) {
-    //else {
+    else if (pref.context_switch_issue_queue.size() < (NUM_WAY * NUM_SET)) {
       potential_cs_pf = pref.oracle.poll(2, this->current_cycle);
 
       if (std::get<0>(potential_cs_pf) != 0) {

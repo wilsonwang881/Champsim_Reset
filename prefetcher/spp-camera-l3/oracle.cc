@@ -16,7 +16,7 @@ void spp_l3::SPP_ORACLE::init() {
     cache_state[i].require_eviction = true;
   }
 
-  available_pf = SET_NUM * WAY_NUM - 16;
+  available_pf = SET_NUM * WAY_NUM;
 
   for(uint64_t i = 0; i < SET_NUM; i++) {
     set_availability[i];
@@ -40,7 +40,6 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
       uint64_t way_check = check_set_pf_avail(addr);   
 
       if (way_check == WAY_NUM) {
-
         if (oracle_pf.empty() && !found_in_pending_queue) {
           set_kill_counter[set_check].insert((addr >> 6) << 6);
           new_misses++;
@@ -59,6 +58,7 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
           set_kill_counter[set_check].insert((addr >> 6) << 6);
           new_misses++;
         }
+
         if (set_kill_counter[set_check].size() > WAY_NUM) {
           std::cout << "Simulation killed at b with set " << set_check << " way " << way_check << std::endl;
           kill_simulation();
@@ -125,95 +125,90 @@ void spp_l3::SPP_ORACLE::file_read() {
     rec_file.close();
     std::cout << "Oracle: read " << readin.size() << " accesses from file." << std::endl;
 
-    // Separate accesses into different sets.
-    std::array<std::deque<acc_timestamp>, SET_NUM> set_processing;
+    if (BELADY_CACHE_REPLACEMENT_POLICY_ACTIVE) {
+      // Separate accesses into different sets.
+      std::array<std::deque<acc_timestamp>, SET_NUM> set_processing;
 
-    for(auto var : readin) 
-      set_processing[var.set].push_back(var);
+      for(auto var : readin) 
+        set_processing[var.set].push_back(var);
 
-    // Calculate the re-use distance.
-    for(auto &set : set_processing) {
-
-      for(uint64_t i = 0; i < set.size(); i++) {
-
-        uint64_t distance = -1;
-
-        for (uint64_t j = i + 1; j < set.size(); j++) {
-          if (set[j].addr == set[i].addr) {
-            distance = j - i;
-            break; 
-          }  
-        }
-
-        set[i].reuse_distance = distance;
-      }
-    }
-
-    // Use the optimal cache replacement policy to work out hit/miss for each access.
-    for(auto &set : set_processing) {
-      
-      std::vector<acc_timestamp> set_container;
-
-      for (uint64_t i = 0; i < set.size(); i++) {
+      // Use the optimal cache replacement policy to work out hit/miss for each access.
+      for(auto &set : set_processing) {
         
-        bool found = false;
+        std::vector<acc_timestamp> set_container;
 
-        for(auto blk : set_container) {
-          if (blk.addr == set[i].addr) {
-            found = true;
-            break;
-          } 
-        }
+        for (uint64_t i = 0; i < set.size(); i++) {
+          bool found = false;
 
-        // The set has the block.
-        if (found) 
-          set[i].miss_or_hit = 1; 
-        // The set does not have the block.
-        else {
-
-          // The set has space.
-          if (set_container.size() < WAY_NUM) {
-
-            // Update the set.
-            set_container.push_back(set[i]);
-
-            // Set the new block to be a miss.
-            set[i].miss_or_hit = 0;
-
-            // Safety check.
-            assert(set_container.size() <= WAY_NUM);
+          for(auto blk : set_container) {
+            if (blk.addr == set[i].addr) {
+              found = true;
+              break;
+            } 
           }
-          // The set has no space.
+
+          // The set has the block.
+          if (found) 
+            set[i].miss_or_hit = 1; 
+          // The set does not have the block.
           else {
+            // The set has space.
+            if (set_container.size() < WAY_NUM) {
 
-            // Evict the block with the longest reuse distance.
-            uint64_t reuse_distance = set_container[0].reuse_distance;
-            uint64_t eviction_candidate = 0;
+              // Update the set.
+              set_container.push_back(set[i]);
 
-            for (uint64_t j = 0; j < WAY_NUM; j++) {
-              if (set_container[j].reuse_distance > reuse_distance) 
-                eviction_candidate = j; 
+              // Set the new block to be a miss.
+              set[i].miss_or_hit = 0;
+
+              // Safety check.
+              assert(set_container.size() <= WAY_NUM);
             }
+            // The set has no space.
+            else {
+              // Calculate the re-use distance.
+              for(auto &el : set_container) {
+                for(uint64_t j = i + 1; j < set.size(); j++) {
+                  uint64_t distance = -1;
 
-            // Evict the block.
-            set_container.erase(set_container.begin()+eviction_candidate);
+                  if (set[j].addr == el.addr) {
+                    distance = j - i;
+                    break; 
+                  }  
 
-            // Set the new block to be a miss.
-            set[i].miss_or_hit = 0;
+                  el.reuse_distance = distance;
+                }
+              }
 
-            // Update the set.
-            set_container.push_back(set[i]);
+              // Evict the block with the longest reuse distance.
+              uint64_t reuse_distance = set_container[0].reuse_distance;
+              uint64_t eviction_candidate = 0;
 
-            // Safety check.
-            assert(set_container.size() <= WAY_NUM);
+              for (uint64_t j = 0; j < WAY_NUM; j++) {
+                if (set_container[j].reuse_distance > reuse_distance) 
+                  eviction_candidate = j; 
+              }
+
+              // Evict the block.
+              set_container.erase(set_container.begin()+eviction_candidate);
+
+              // Set the new block to be a miss.
+              set[i].miss_or_hit = 0;
+
+              // Update the set.
+              set_container.push_back(set[i]);
+
+              // Safety check.
+              assert(set_container.size() <= WAY_NUM);
+            }
           }
         }
       }
-    }
 
-    for(auto &acc : readin) {
-      acc.miss_or_hit = set_processing[acc.set].front().miss_or_hit;
-      set_processing[acc.set].pop_front();
+      for(auto &acc : readin) {
+        acc.miss_or_hit = set_processing[acc.set].front().miss_or_hit;
+        set_processing[acc.set].pop_front();
+      }
     }
 
     // Use the hashmap to gather accesses.
@@ -369,8 +364,9 @@ int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
         cache_state[i].addr = 0; 
         cache_state[i].timestamp = 0;
         available_pf++;
-        available_pf = std::min(available_pf, (uint64_t)(WAY_NUM * SET_NUM - 16));
+        assert(available_pf <= (WAY_NUM * SET_NUM));
         set_availability.find(set)->second++;
+        assert(set_availability[set] <= WAY_NUM);
       }
 
       break;  
@@ -422,13 +418,12 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll(uint64_t mod
     
     if ((way < WAY_NUM) && 
         cache_state[set * WAY_NUM + way].addr != ite->addr) {
-      cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
 
       std::get<0>(target) = ite->addr;
 
-      if (ite->type == 3) {
+      if (ite->type == 3 || ite->type == 1) {
         //std::get<3>(target) = true;
-        std::get<0>(target) = 0;
+        //std::get<0>(target) = 0;
 
         if (DEBUG_PRINT) 
           std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;
@@ -436,10 +431,17 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll(uint64_t mod
 
       std::get<1>(target) = ite->cycle_demanded;
       std::get<2>(target) = true;
-      cache_state[set * WAY_NUM + way].addr = ite->addr;
-      cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
-      set_availability[set]--;
-      available_pf--;
+
+      //if (ite->type != 3) {
+        cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
+        cache_state[set * WAY_NUM + way].addr = ite->addr;
+        cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
+        set_availability[set]--;
+        assert(set_availability[set] >= 0);
+        available_pf--;
+        assert(available_pf >= 0);
+      //}
+
       erase = true;
 
       if (DEBUG_PRINT) 
@@ -456,13 +458,12 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll(uint64_t mod
 
         if ((way < WAY_NUM) && 
             (cache_state[set * WAY_NUM + way].addr != ite->addr)) {
-          cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
 
           std::get<0>(target) = ite->addr;
 
           if (ite->type == 3) {
             //std::get<3>(target) = true;
-            std::get<0>(target) = 0;
+            //std::get<0>(target) = 0;
 
             if (DEBUG_PRINT) 
               std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;
@@ -470,10 +471,17 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll(uint64_t mod
 
           std::get<1>(target) = ite->cycle_demanded;
           std::get<2>(target) = true;
-          cache_state[set * WAY_NUM + way].addr = ite->addr;
-          cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
-          set_availability[set]--;
-          available_pf--;
+
+          //if (ite->type != 3) {
+            cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
+            cache_state[set * WAY_NUM + way].addr = ite->addr;
+            cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
+            set_availability[set]--;
+            assert(set_availability[set] >= 0);
+            available_pf--;
+            assert(available_pf >= 0);
+          //}
+
           erase = true;
 
           if (DEBUG_PRINT) 

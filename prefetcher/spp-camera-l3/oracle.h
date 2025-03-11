@@ -23,22 +23,21 @@ namespace spp_l3 {
   class SPP_ORACLE {
     constexpr static uint64_t ACCESS_LEN = 100000000;
     constexpr static bool DEBUG_PRINT = false;
+    constexpr static bool BELADY_CACHE_REPLACEMENT_POLICY_ACTIVE = true;
     std::string L2C_PHY_ACC_FILE_NAME = "L3C_phy_acc.txt";
     std::fstream rec_file;
 
     public:
 
-    const static uint64_t SET_NUM = 2048;
-    const static uint64_t WAY_NUM = 10;
+    const static int SET_NUM = 2048;
+    const static int WAY_NUM = 10;
     bool ORACLE_ACTIVE = true;
     bool RECORD_OR_REPLAY = false;
     bool done;
     uint64_t new_misses = 0;
     uint64_t hit_in_MSHR = 0;
     std::set<uint64_t> heartbeat_printed;
-
-    std::map<uint64_t, uint64_t> set_availability;
-    std::unordered_set<uint64_t> persistent_lru_addr[SET_NUM];
+    std::map<int, int> set_availability;
 
     struct acc_timestamp {
       uint64_t cycle_demanded;
@@ -56,7 +55,7 @@ namespace spp_l3 {
     uint64_t interval_start_cycle;
     uint64_t pf_issued_last_round = 0;
     uint64_t pf_issued = 0;
-    uint64_t available_pf = SET_NUM * WAY_NUM;
+    int available_pf = SET_NUM * WAY_NUM;
 
     struct blk_state {
       uint64_t addr;
