@@ -38,6 +38,8 @@ namespace spp_l3 {
     std::set<uint64_t> issued_cs_pf;
     uint64_t issued_cs_pf_hit;
     uint64_t total_issued_cs_pf;
+    std::set<uint64_t> rfo_write_addr;
+    uint64_t rfo_write_mshr_cap = 0;
   };
 } // namespace spp
 

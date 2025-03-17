@@ -21,7 +21,7 @@
 namespace spp_l3 {
 
   class SPP_ORACLE {
-    constexpr static uint64_t ACCESS_LEN = 100000000;
+    constexpr static uint64_t ACCESS_LEN = 2000000000;
     constexpr static bool DEBUG_PRINT = false;
     constexpr static bool BELADY_CACHE_REPLACEMENT_POLICY_ACTIVE = true;
     std::string L2C_PHY_ACC_FILE_NAME = "L3C_phy_acc.txt";
