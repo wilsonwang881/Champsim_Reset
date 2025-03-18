@@ -108,13 +108,13 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       std::cout << "WRITE operation " << ((base_addr >> 6) << 6) << " update erased ? " << erased << " rfo_write_mshr_cap " << pref.rfo_write_mshr_cap << std::endl; 
 
     if (erased) {
-      assert(pref.rfo_write_mshr_cap > 0);
-      pref.rfo_write_mshr_cap--; 
+      //assert(pref.rfo_write_mshr_cap > 0);
+      //pref.rfo_write_mshr_cap--; 
       cache_hit = true;
     }
   }
 
-  if (pref.oracle.ORACLE_ACTIVE && cache_hit && !pref.oracle.RECORD_OR_REPLAY) {
+  if (pref.oracle.ORACLE_ACTIVE && type != 2 && cache_hit && !pref.oracle.RECORD_OR_REPLAY) {
     bool evict = pref.oracle.check_require_eviction(base_addr);
     int remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 
@@ -159,10 +159,6 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
 void CACHE::prefetcher_cycle_operate() {
   auto &pref = ::SPP_L3[{this, cpu}];
-
-  if (pref.oracle.done) {
-    champsim::operable::kill_simulation_l3 = true; 
-  }
 
   if (champsim::operable::kill_simulation_l2 && champsim::operable::kill_simulation_l3) {
     exit(0); 

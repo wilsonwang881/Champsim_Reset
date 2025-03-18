@@ -513,7 +513,6 @@ void spp_l3::SPP_ORACLE::kill_simulation() {
   // Check if there is vacancy in the cache record.
   file_write();
   std::cout << "Updating address and hit/miss record complete in LLC" << std::endl;
-  done = true;
   ORACLE_ACTIVE = false;
   exit(0);
 }
