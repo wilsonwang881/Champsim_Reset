@@ -33,14 +33,13 @@ namespace spp_l3 {
     SPP_ORACLE oracle;
     bool debug_print = false;
     void issue(CACHE* cache);
-    bool context_switch_prefetch_gathered = false;
     uint64_t cache_cycle;
     std::set<uint64_t> issued_cs_pf;
     uint64_t issued_cs_pf_hit;
     uint64_t total_issued_cs_pf;
     std::set<uint64_t> rfo_write_addr;
   };
-} // namespace spp
+} // namespace spp_l3
 
 #endif
 
