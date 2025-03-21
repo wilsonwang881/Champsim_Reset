@@ -275,8 +275,8 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   return;
   */
   context_switch_issue_queue.clear();
-  oracle.file_read();
-  oracle.file_write();
+  //oracle.file_read();
+  //oracle.file_write();
   oracle.can_write = true;
   oracle.interval_start_cycle = cache->current_cycle;
 

@@ -21,7 +21,7 @@
 namespace spp_l3 {
 
   class SPP_ORACLE {
-    constexpr static uint64_t ACCESS_LEN = 2000000000;
+    constexpr static uint64_t ACCESS_LEN = 1000000000;
     constexpr static bool DEBUG_PRINT = false;
     constexpr static bool BELADY_CACHE_REPLACEMENT_POLICY_ACTIVE = true;
     std::string L2C_PHY_ACC_FILE_NAME = "L3C_phy_acc.txt";
@@ -70,14 +70,14 @@ namespace spp_l3 {
     std::deque<acc_timestamp> readin;
 
     void init();
-    void update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch, uint64_t type, bool found_in_pending_queue);
+    void update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch, uint64_t type);
     void file_write();
     void file_read();
     uint64_t check_set_pf_avail(uint64_t addr);
     int check_pf_status(uint64_t addr);
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     bool check_require_eviction(uint64_t addr);
-    std::tuple<uint64_t, uint64_t, bool, bool> poll(uint64_t mode, uint64_t cycle);
+    std::tuple<uint64_t, uint64_t, bool, bool> poll();
     void kill_simulation();
     void finish();
   };

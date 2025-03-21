@@ -26,7 +26,7 @@ void spp_l3::SPP_ORACLE::init() {
   file_read();
 }
 
-void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, bool replay, uint64_t type, bool found_in_pending_queue) {
+void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, bool replay, uint64_t type) {
 
   if (!RECORD_OR_REPLAY && can_write) {
     acc_timestamp tmpp;
@@ -40,7 +40,8 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
       uint64_t way_check = check_set_pf_avail(addr);   
 
       if (way_check == WAY_NUM) {
-        if (oracle_pf.empty() && !found_in_pending_queue) {
+
+        if (type != 3) {
           set_kill_counter[set_check].insert((addr >> 6) << 6);
           new_misses++;
         }
@@ -54,7 +55,7 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
               cache_state[set_check * WAY_NUM + way_check].addr != ((addr >> 6) << 6)) {
         assert(cache_state[set_check * WAY_NUM + way_check].addr == 0);
 
-        if (oracle_pf.empty() && !found_in_pending_queue) {
+        if (type != 3) {
           set_kill_counter[set_check].insert((addr >> 6) << 6);
           new_misses++;
         }
@@ -65,9 +66,8 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
         }
       }      
       else if(way_check < WAY_NUM && 
-              cache_state[set_check * WAY_NUM + way_check].addr == ((addr >> 6) << 6)){
+              cache_state[set_check * WAY_NUM + way_check].addr == ((addr >> 6) << 6))
         update_pf_avail(addr, cycle);
-      }
       else {
         std::cout << "Failed: way " << way_check << " set " << set_check << " addr " << ((addr >> 6) << 6) << " cache_state addr " << cache_state[set_check * WAY_NUM + way_check].addr  << std::endl;
         assert(false);
@@ -134,7 +134,6 @@ void spp_l3::SPP_ORACLE::file_read() {
 
       // Use the optimal cache replacement policy to work out hit/miss for each access.
       for(auto &set : set_processing) {
-        
         std::vector<acc_timestamp> set_container;
 
         for (uint64_t i = 0; i < set.size(); i++) {
@@ -154,7 +153,6 @@ void spp_l3::SPP_ORACLE::file_read() {
           else {
             // The set has space.
             if (set_container.size() < WAY_NUM) {
-
               // Update the set.
               set_container.push_back(set[i]);
 
@@ -351,7 +349,9 @@ int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
 
   // Find the "way" to update pf/block status.
   size_t i;
+
   for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
+
     if (cache_state[i].addr == addr) {
       cache_state[i].pending_accesses--;
 
@@ -364,8 +364,8 @@ int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
         cache_state[i].addr = 0; 
         cache_state[i].timestamp = 0;
         available_pf++;
-        assert(available_pf <= (WAY_NUM * SET_NUM));
-        set_availability.find(set)->second++;
+        //assert(available_pf <= (WAY_NUM * SET_NUM));
+        set_availability[set]++;
         assert(set_availability[set] <= WAY_NUM);
       }
 
@@ -381,14 +381,12 @@ int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
 }
 
 bool spp_l3::SPP_ORACLE::check_require_eviction(uint64_t addr) {
-
   addr = (addr >> 6) << 6;
   uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
   bool need_eviction = true;
 
   // Find the "way" to update pf/block status.
-  size_t i;
-  for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
+  for (size_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
     if (cache_state[i].addr == addr) {
       need_eviction = cache_state[i].require_eviction;
       break;  
@@ -398,41 +396,39 @@ bool spp_l3::SPP_ORACLE::check_require_eviction(uint64_t addr) {
   return need_eviction;
 }
 
-std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll(uint64_t mode, uint64_t cycle) {
-
+std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
   std::tuple<uint64_t, uint64_t, bool, bool> target = std::make_tuple(0, 0, 0, 0);
 
   if (oracle_pf.empty()) 
     return target; 
 
-  uint64_t way, set_vacancy;
-
   // Find the address to be prefetched.
+  uint64_t way;
   auto ite = oracle_pf.begin();
   bool erase = false;
-  uint64_t set = ite->set; 
-  set_vacancy = set_availability[set];
+  uint64_t set; 
 
-  if (set_vacancy > 0 && mode == 1) {
-    way = check_set_pf_avail(ite->addr);
-    
-    if ((way < WAY_NUM) && 
-        cache_state[set * WAY_NUM + way].addr != ite->addr) {
+  while (ite < oracle_pf.end()) {
+    set = ite->set;
 
-      std::get<0>(target) = ite->addr;
+    if (set_availability[set] > 0) {
+      way = check_set_pf_avail(ite->addr);
 
-      if (ite->type == 3) {
-        std::get<3>(target) = true;
-        //std::get<0>(target) = 0;
+      if ((way < WAY_NUM) && 
+          (cache_state[set * WAY_NUM + way].addr != ite->addr)) {
 
-        if (DEBUG_PRINT) 
-          std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;
-      } 
+        std::get<0>(target) = ite->addr;
 
-      std::get<1>(target) = ite->cycle_demanded;
-      std::get<2>(target) = true;
+        if (ite->type == 3) {
+          std::get<3>(target) = true;
+          //std::get<0>(target) = 0;
 
-      //if (ite->type != 3) {
+          if (DEBUG_PRINT) 
+            std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;
+        } 
+
+        std::get<1>(target) = ite->cycle_demanded;
+        std::get<2>(target) = true;
         cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
         cache_state[set * WAY_NUM + way].addr = ite->addr;
         cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
@@ -440,62 +436,19 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll(uint64_t mod
         assert(set_availability[set] >= 0);
         available_pf--;
         assert(available_pf >= 0);
-      //}
+        erase = true;
 
-      erase = true;
+        if (DEBUG_PRINT) 
+          std::cout << "Runahead PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << " type " << ite->type << std::endl;
 
-      if (DEBUG_PRINT) 
-        std::cout << "PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << " type " << ite->type << std::endl;
-    }    
-  }
-  else if (mode == 2) {
-
-    while (ite != oracle_pf.end()) {
-      set = ite->set;
-
-      if (set_availability[set] > 0) {
-        way = check_set_pf_avail(ite->addr);
-
-        if ((way < WAY_NUM) && 
-            (cache_state[set * WAY_NUM + way].addr != ite->addr)) {
-
-          std::get<0>(target) = ite->addr;
-
-          if (ite->type == 3) {
-            std::get<3>(target) = true;
-            //std::get<0>(target) = 0;
-
-            if (DEBUG_PRINT) 
-              std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;
-          } 
-
-          std::get<1>(target) = ite->cycle_demanded;
-          std::get<2>(target) = true;
-
-          //if (ite->type != 3) {
-            cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
-            cache_state[set * WAY_NUM + way].addr = ite->addr;
-            cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
-            set_availability[set]--;
-            assert(set_availability[set] >= 0);
-            available_pf--;
-            assert(available_pf >= 0);
-          //}
-
-          erase = true;
-
-          if (DEBUG_PRINT) 
-            std::cout << "Runahead PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << " type " << ite->type << std::endl;
-
-          break;
-        }
+        break;
       }
-
-      ite++;
     }
+
+    ite++;
   }
 
-  if (ite != oracle_pf.end() && erase)  
+  if (ite != oracle_pf.end() && erase) 
     ite = oracle_pf.erase(ite); 
 
   if ((oracle_pf.size() % 10000) == 0 && 

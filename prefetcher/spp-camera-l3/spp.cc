@@ -44,4 +44,19 @@ void spp_l3::prefetcher::issue(CACHE* cache) {
   }
 }
 
+bool spp_l3::prefetcher::call_poll() {
+  std::tuple<uint64_t, uint64_t, bool, bool> potential_cs_pf = oracle.poll();
+      
+  // Update the prefetch queue.
+  if (std::get<0>(potential_cs_pf) != 0) {
+    auto pq_place_at = [demanded = std::get<1>(potential_cs_pf)](auto& entry) {return std::get<2>(entry) > demanded;};
+    auto pq_insert_it = std::find_if(context_switch_issue_queue.begin(), context_switch_issue_queue.end(), pq_place_at);
+    context_switch_issue_queue.emplace(pq_insert_it,std::get<0>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<1>(potential_cs_pf), std::get<3>(potential_cs_pf));
+    
+    return true;
+  }
+  else 
+    return false;
+}
+
 
