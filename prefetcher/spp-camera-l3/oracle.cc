@@ -41,7 +41,7 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
 
       if (way_check == WAY_NUM) {
 
-        if (type != 3) {
+        if (oracle_pf.empty() && type != 3) {
           set_kill_counter[set_check].insert((addr >> 6) << 6);
           new_misses++;
         }
@@ -55,7 +55,7 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
               cache_state[set_check * WAY_NUM + way_check].addr != ((addr >> 6) << 6)) {
         assert(cache_state[set_check * WAY_NUM + way_check].addr == 0);
 
-        if (type != 3) {
+        if (oracle_pf.empty() && type != 3) {
           set_kill_counter[set_check].insert((addr >> 6) << 6);
           new_misses++;
         }
