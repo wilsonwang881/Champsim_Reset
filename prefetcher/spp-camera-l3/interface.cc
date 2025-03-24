@@ -151,42 +151,47 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     } 
   }
 
+  uint64_t set = this->get_set_index(base_addr);
+  uint64_t way = this->get_way(base_addr, set);
+
   if (pref.oracle.ORACLE_ACTIVE && type != 2 && type != 3 && cache_hit && !pref.oracle.RECORD_OR_REPLAY) {
     bool evict = pref.oracle.check_require_eviction(base_addr);
     int remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 
     // Last access to the prefetched block used.
     if ((remaining_acc == 0) && evict) {  
-      uint64_t set = this->get_set_index(base_addr);
-      uint64_t way = this->get_way(base_addr, set);
 
       auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
                                    [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
                                      return (entry.address >> shamt) == match; 
                                    });
 
-      if (search_mshr != this->MSHR.end()) 
-        found_in_MSHR = true;  
-
-      if (found_in_MSHR) {
-        if (pref.debug_print) 
-          std::cout << "set " << set << " addr " << base_addr << " pushed to do not fill set" << std::endl; 
-
-        this->do_not_fill_address.push_back(base_addr);
-      } 
-
-      if (way < NUM_WAY) {
-        if (pref.debug_print) 
-          std::cout << "set " << set << " addr " << base_addr << " cleared LRU bits" << std::endl; 
-
-        champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
-      }
-
       pref.call_poll();
+      int updated_remaining_acc = pref.oracle.check_pf_status(base_addr);
+
+      if (updated_remaining_acc == -1) {
+
+        if (search_mshr != this->MSHR.end()) 
+         found_in_MSHR = true;  
+
+        if (found_in_MSHR) {
+          if (pref.debug_print) 
+            std::cout << "set " << set << " addr " << base_addr << " pushed to do not fill set" << std::endl; 
+
+          this->do_not_fill_address.push_back(base_addr);
+        } 
+
+        if (way < NUM_WAY) {
+          if (pref.debug_print) 
+            std::cout << "set " << set << " addr " << base_addr << " cleared LRU bits" << std::endl; 
+
+          champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
+        }
+      }
+      else 
+        champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
     }
     else if (remaining_acc > 0) {
-      uint64_t set = this->get_set_index(base_addr);
-      uint64_t way = this->get_way(base_addr, set);
 
       if (way < NUM_WAY) 
         champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
@@ -198,8 +203,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
     // Last access to the prefetched block used.
     if (current_acc == 1 && evict) {  
-      uint64_t set = this->get_set_index(base_addr);
-      uint64_t way = this->get_way(base_addr, set);
 
       //if (pref.debug_print) 
 
@@ -208,21 +211,21 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
         std::cout << "set " << set << " addr " << base_addr << " pushed to wait fill set" << std::endl; 
       }
       else if (original_hit) {
-       pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
+        pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
+        pref.call_poll();
+        int updated_remaining_acc = pref.oracle.check_pf_status(base_addr);
 
-       if (way < NUM_WAY && original_hit) {
-        if (pref.debug_print) 
-          std::cout << "set " << set << " addr " << base_addr << " cleared LRU bits" << std::endl; 
+        if (updated_remaining_acc == -1) {
+          if (way < NUM_WAY && original_hit) {
+            if (pref.debug_print) 
+              std::cout << "set " << set << " addr " << base_addr << " cleared LRU bits" << std::endl; 
 
-         champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0)); 
-       }
-
-       pref.call_poll();
+           champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0)); 
+          } 
+        }
       }
     }
     else if (current_acc > 1) {
-      uint64_t set = this->get_set_index(base_addr);
-      uint64_t way = this->get_way(base_addr, set);
       pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 
       if (way < NUM_WAY) 
@@ -249,11 +252,14 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
     // Clear the counter of a WRITE when the WRITE actually fills.
     if (auto search = pref.pending_write_fills.find(addr); search != pref.pending_write_fills.end()) {
-      champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
       pref.pending_write_fills.erase(search);
       pref.oracle.update_pf_avail(addr, current_cycle - pref.oracle.interval_start_cycle);
       std::cout << "set " << this->get_set_index(addr) << " cleared WRITE " << addr << std::endl;
       pref.call_poll();
+      int updated_remaining_acc = pref.oracle.check_pf_status(addr);
+
+      if (updated_remaining_acc == -1) 
+        champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
     }
     else 
       champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
