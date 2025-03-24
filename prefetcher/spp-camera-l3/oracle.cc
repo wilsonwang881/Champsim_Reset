@@ -41,7 +41,7 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
 
       if (way_check == WAY_NUM) {
 
-        if (oracle_pf.empty() && type != 3) {
+        if (oracle_pf.empty() && type != 3) { 
           set_kill_counter[set_check].insert((addr >> 6) << 6);
           new_misses++;
         }
@@ -55,7 +55,7 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
               cache_state[set_check * WAY_NUM + way_check].addr != ((addr >> 6) << 6)) {
         assert(cache_state[set_check * WAY_NUM + way_check].addr == 0);
 
-        if (oracle_pf.empty() && type != 3) {
+        if (oracle_pf.empty() && type != 3) { 
           set_kill_counter[set_check].insert((addr >> 6) << 6);
           new_misses++;
         }
@@ -302,6 +302,7 @@ uint64_t spp_l3::SPP_ORACLE::check_set_pf_avail(uint64_t addr) {
   uint64_t res = (set + 1) * WAY_NUM;
   addr = (addr >> 6) << 6;
   uint64_t i;
+  bool found = false;
  
   for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
 
@@ -313,11 +314,34 @@ uint64_t spp_l3::SPP_ORACLE::check_set_pf_avail(uint64_t addr) {
       assert(false); 
     }
       
-    if (cache_state[i].addr == addr || (cache_state[i].pending_accesses == 0 && cache_state[i].addr == 0)) {
+    if (cache_state[i].addr == addr) {
       res = i;
+      found = true;
+      //std::cout << "Found addr " << addr << " set " << set << " with same addr" << std::endl;
       break;
     }
   }
+
+  if (!found) {
+
+    for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
+
+      if (cache_state[i].addr != 0 && cache_state[i].pending_accesses == 0 && cache_state[i].require_eviction)
+        assert(false); 
+
+      if (cache_state[i].addr == 0 && cache_state[i].pending_accesses != 0 && cache_state[i].require_eviction) {
+        std::cout << "pending_access = " << cache_state[i].pending_accesses << " addr " << addr << std::endl;
+        assert(false); 
+      }
+        
+      if (cache_state[i].pending_accesses == 0 && cache_state[i].addr == 0) {
+        res = i;
+        //std::cout << "Found addr " << addr << " set " << set << " with zero addr" << std::endl;
+        break;
+      }
+    }
+  }
+  
 
   return res - set * WAY_NUM;
 }
@@ -414,10 +438,7 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
     if (set_availability[set] > 0) {
       way = check_set_pf_avail(ite->addr);
 
-      if ((way < WAY_NUM) && 
-          (cache_state[set * WAY_NUM + way].addr != ite->addr)) {
-
-        std::get<0>(target) = ite->addr;
+      if (way < WAY_NUM) {
 
         if (ite->type == 3) {
           std::get<3>(target) = true;
@@ -429,12 +450,18 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
 
         std::get<1>(target) = ite->cycle_demanded;
         std::get<2>(target) = true;
-        cache_state[set * WAY_NUM + way].pending_accesses = (int)(ite->miss_or_hit);
+        cache_state[set * WAY_NUM + way].pending_accesses += (int)(ite->miss_or_hit);
+
+        if (cache_state[set * WAY_NUM + way].addr != ite->addr) {
+          set_availability[set]--;
+          available_pf--;
+          std::get<0>(target) = ite->addr;
+        } 
+
         cache_state[set * WAY_NUM + way].addr = ite->addr;
         cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
-        set_availability[set]--;
+
         assert(set_availability[set] >= 0);
-        available_pf--;
         assert(available_pf >= 0);
         erase = true;
 
