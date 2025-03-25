@@ -204,8 +204,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     // Last access to the prefetched block used.
     if (current_acc == 1 && evict) {  
 
-      //if (pref.debug_print) 
-
       if (found_in_MSHR && !original_hit) {
         pref.pending_write_fills.insert(base_addr); 
         std::cout << "set " << set << " addr " << base_addr << " pushed to wait fill set" << std::endl; 

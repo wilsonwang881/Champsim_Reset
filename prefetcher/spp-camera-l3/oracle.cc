@@ -379,7 +379,7 @@ int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
     if (cache_state[i].addr == addr) {
       cache_state[i].pending_accesses--;
 
-      if (DEBUG_PRINT) 
+      if (ORACLE_DEBUG_PRINT) 
         std::cout << "Accessed addr = " << addr << " at set " << set << " way " << i - set * WAY_NUM << " remaining accesses " << cache_state[i].pending_accesses << std::endl;
 
       cache_state[i].timestamp = cycle; 
@@ -442,9 +442,9 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
 
         if (ite->type == 3) {
           std::get<3>(target) = true;
-          //std::get<0>(target) = 0;
+          std::get<0>(target) = 0;
 
-          if (DEBUG_PRINT) 
+          if (ORACLE_DEBUG_PRINT) 
             std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;
         } 
 
@@ -465,7 +465,7 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
         assert(available_pf >= 0);
         erase = true;
 
-        if (DEBUG_PRINT) 
+        if (ORACLE_DEBUG_PRINT) 
           std::cout << "Runahead PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << " type " << ite->type << std::endl;
 
         break;
