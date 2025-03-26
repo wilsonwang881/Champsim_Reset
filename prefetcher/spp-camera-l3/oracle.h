@@ -21,7 +21,7 @@
 namespace spp_l3 {
 
   class SPP_ORACLE {
-    constexpr static uint64_t ACCESS_LEN = 1000000000;
+    constexpr static uint64_t ACCESS_LEN = 100000;
     constexpr static bool ORACLE_DEBUG_PRINT = false;
     constexpr static bool BELADY_CACHE_REPLACEMENT_POLICY_ACTIVE = true;
     std::string L2C_PHY_ACC_FILE_NAME = "L3C_phy_acc.txt";
@@ -35,9 +35,13 @@ namespace spp_l3 {
     bool RECORD_OR_REPLAY = false;
     bool done;
     uint64_t new_misses = 0;
-    uint64_t hit_in_MSHR = 0;
+    uint64_t runahead_hits = 0;
     std::set<uint64_t> heartbeat_printed;
     std::map<int, int> set_availability;
+    uint64_t MSHR_hits = 0;
+    uint64_t internal_PQ_hits = 0;
+    uint64_t cs_q_hits = 0;
+    uint64_t oracle_pf_hits = 0;
 
     struct acc_timestamp {
       uint64_t cycle_demanded;
@@ -50,12 +54,10 @@ namespace spp_l3 {
       uint64_t reuse_distance;
     };
 
-    bool can_write;
     std::vector<acc_timestamp> access;
     uint64_t interval_start_cycle;
     uint64_t pf_issued_last_round = 0;
     uint64_t pf_issued = 0;
-    int available_pf = SET_NUM * WAY_NUM;
 
     struct blk_state {
       uint64_t addr;
@@ -67,7 +69,6 @@ namespace spp_l3 {
     blk_state cache_state[SET_NUM * WAY_NUM];
     std::array<std::set<uint64_t>, SET_NUM> set_kill_counter;
     std::deque<acc_timestamp> oracle_pf;
-    std::deque<acc_timestamp> readin;
 
     void init();
     void update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch, uint64_t type);

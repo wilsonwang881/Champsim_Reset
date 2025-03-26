@@ -18,12 +18,17 @@ void spp_l3::prefetcher::issue(CACHE* cache) {
     auto mshr_occupancy = cache->get_mshr_occupancy();
     auto rq_occupancy = cache->get_rq_occupancy().back();
     auto wq_occupancy = cache->get_wq_occupancy().back();
-    auto [addr, priority, cycle, RFO_write] = context_switch_issue_queue.front();
+    auto [addr, cycle, priority, RFO_write] = context_switch_issue_queue.front();
     uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(cache->NUM_SET));
     uint64_t way = cache->get_way(addr, set);
+    auto search_mshr = std::find_if(std::begin(cache->MSHR), std::end(cache->MSHR),
+                                 [match = addr >> cache->OFFSET_BITS, shamt = cache->OFFSET_BITS](const auto& entry) {
+                                   return (entry.address >> shamt) == match; 
+                                 });
 
-    if (!RFO_write && 
-        ((mshr_occupancy) < cache->get_mshr_size())) {
+
+    if ((mshr_occupancy < cache->get_mshr_size()) &&
+        search_mshr == cache->MSHR.end()) { //!RFO_write && 
       
       if (way == cache->NUM_WAY) {
         bool prefetched = cache->prefetch_line(addr, priority, 0, 0);
@@ -55,10 +60,10 @@ bool spp_l3::prefetcher::call_poll() {
       
   // Update the prefetch queue.
   if (std::get<0>(potential_cs_pf) != 0) {
-    auto pq_place_at = [demanded = std::get<1>(potential_cs_pf)](auto& entry) {return std::get<2>(entry) > demanded;};
+    auto pq_place_at = [demanded = std::get<1>(potential_cs_pf)](auto& entry) {return std::get<1>(entry) > demanded;};
     auto pq_insert_it = std::find_if(context_switch_issue_queue.begin(), context_switch_issue_queue.end(), pq_place_at);
-    context_switch_issue_queue.emplace(pq_insert_it,std::get<0>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<1>(potential_cs_pf), std::get<3>(potential_cs_pf));
-    
+    context_switch_issue_queue.emplace(pq_insert_it,std::get<0>(potential_cs_pf), std::get<1>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<3>(potential_cs_pf));
+
     return true;
   }
   else 

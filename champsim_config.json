@@ -55,8 +55,8 @@
     },
 
     "L1D": {
-        "sets": 96,
-        "ways": 8,
+        "sets": 64,
+        "ways": 12,
         "rq_size": 64,
         "wq_size": 64,
         "pq_size": 8,
@@ -67,7 +67,7 @@
         "prefetch_as_load": false,
         "virtual_prefetch": true,
         "prefetch_activate": "LOAD,WRITE, PREFETCH",
-        "prefetcher": "berti"
+        "prefetcher": "no"
     },
 
     "L2C": {
@@ -83,7 +83,7 @@
         "prefetch_as_load": false,
         "virtual_prefetch": false,
         "prefetch_activate": "LOAD,WRITE,TRANSLATION,RFO,PREFETCH",
-        "prefetcher": "spp-camera"
+        "prefetcher": "spp-camera-l3"
     },
 
     "ITLB": {
@@ -100,8 +100,8 @@
     },
 
     "DTLB": {
-        "sets": 24,
-        "ways": 4,
+        "sets": 16,
+        "ways": 6,
         "rq_size": 16,
         "wq_size": 16,
         "pq_size": 0,

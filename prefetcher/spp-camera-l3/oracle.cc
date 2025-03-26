@@ -1,7 +1,6 @@
 #include "oracle.h"
 
 void spp_l3::SPP_ORACLE::init() {
-  can_write = true; // Change to false for context switch simulation.
 
   // Clear the access file if in recording mode.
   if (RECORD_OR_REPLAY) {
@@ -16,8 +15,6 @@ void spp_l3::SPP_ORACLE::init() {
     cache_state[i].require_eviction = true;
   }
 
-  available_pf = SET_NUM * WAY_NUM;
-
   for(uint64_t i = 0; i < SET_NUM; i++) {
     set_availability[i];
     set_availability[i] = WAY_NUM;
@@ -28,7 +25,7 @@ void spp_l3::SPP_ORACLE::init() {
 
 void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, bool replay, uint64_t type) {
 
-  if (!RECORD_OR_REPLAY && can_write) {
+  if (!RECORD_OR_REPLAY) {
     acc_timestamp tmpp;
     tmpp.cycle_demanded = cycle - interval_start_cycle;
     tmpp.miss_or_hit = hit;
@@ -55,7 +52,7 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
               cache_state[set_check * WAY_NUM + way_check].addr != ((addr >> 6) << 6)) {
         assert(cache_state[set_check * WAY_NUM + way_check].addr == 0);
 
-        if (oracle_pf.empty() && type != 3) { 
+        if (oracle_pf.empty() && type != 3) {  
           set_kill_counter[set_check].insert((addr >> 6) << 6);
           new_misses++;
         }
@@ -79,20 +76,18 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
 
     if (access.size() >= ACCESS_LEN) {
       file_write();
-      can_write = false;
     }
   }
 }
 
 void spp_l3::SPP_ORACLE::file_write() {
 
-  if (can_write && access.size() > 0) {
-    rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
+  if (access.size() > 0) {
+    rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::app);
 
     for(auto var : access)
       rec_file << var.cycle_demanded << " " << var.addr << " " << var.miss_or_hit << " " << (unsigned)var.type << std::endl;
 
-    rec_file << "0 0 0 0" << std::endl;
     rec_file.close();
     std::cout << "Oracle: writing " << access.size() << " accesses to file." << std::endl;
     access.clear();
@@ -102,6 +97,7 @@ void spp_l3::SPP_ORACLE::file_write() {
 void spp_l3::SPP_ORACLE::file_read() {
   oracle_pf.clear();
   acc_timestamp tmpp;
+  std::deque<acc_timestamp> readin;
 
   if (!RECORD_OR_REPLAY) {
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ifstream::in);
@@ -122,6 +118,8 @@ void spp_l3::SPP_ORACLE::file_read() {
       readin.push_back(tmpp);
     }
 
+    rec_file.close();
+    rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
     rec_file.close();
     std::cout << "Oracle: read " << readin.size() << " accesses from file." << std::endl;
 
@@ -166,16 +164,16 @@ void spp_l3::SPP_ORACLE::file_read() {
             else {
               // Calculate the re-use distance.
               for(auto &el : set_container) {
-                for(uint64_t j = i + 1; j < set.size(); j++) {
-                  uint64_t distance = -1;
+                uint64_t distance = std::numeric_limits<uint64_t>::max();
 
+                for(uint64_t j = i + 1; j < set.size(); j++) {
                   if (set[j].addr == el.addr) {
                     distance = j - i;
                     break; 
                   }  
-
-                  el.reuse_distance = distance;
                 }
+
+                el.reuse_distance = distance;
               }
 
               // Evict the block with the longest reuse distance.
@@ -317,7 +315,6 @@ uint64_t spp_l3::SPP_ORACLE::check_set_pf_avail(uint64_t addr) {
     if (cache_state[i].addr == addr) {
       res = i;
       found = true;
-      //std::cout << "Found addr " << addr << " set " << set << " with same addr" << std::endl;
       break;
     }
   }
@@ -336,12 +333,10 @@ uint64_t spp_l3::SPP_ORACLE::check_set_pf_avail(uint64_t addr) {
         
       if (cache_state[i].pending_accesses == 0 && cache_state[i].addr == 0) {
         res = i;
-        //std::cout << "Found addr " << addr << " set " << set << " with zero addr" << std::endl;
         break;
       }
     }
   }
-  
 
   return res - set * WAY_NUM;
 }
@@ -387,8 +382,6 @@ int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
       if (cache_state[i].pending_accesses == 0) {
         cache_state[i].addr = 0; 
         cache_state[i].timestamp = 0;
-        available_pf++;
-        //assert(available_pf <= (WAY_NUM * SET_NUM));
         set_availability[set]++;
         assert(set_availability[set] <= WAY_NUM);
       }
@@ -454,7 +447,6 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
 
         if (cache_state[set * WAY_NUM + way].addr != ite->addr) {
           set_availability[set]--;
-          available_pf--;
           std::get<0>(target) = ite->addr;
         } 
 
@@ -462,7 +454,6 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
         cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
 
         assert(set_availability[set] >= 0);
-        assert(available_pf >= 0);
         erase = true;
 
         if (ORACLE_DEBUG_PRINT) 
@@ -478,7 +469,7 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
   if (ite != oracle_pf.end() && erase) 
     ite = oracle_pf.erase(ite); 
 
-  if ((oracle_pf.size() % 10000) == 0 && 
+  if ((((oracle_pf.size() % 10000 == 0) || oracle_pf.size() == 0)) && 
       heartbeat_printed.find(oracle_pf.size()) == heartbeat_printed.end()) {
       std::cout << "Oracle: remaining oracle access = " << oracle_pf.size() - pf_issued << std::endl;
       oracle_pf.shrink_to_fit();
@@ -501,14 +492,16 @@ void spp_l3::SPP_ORACLE::finish() {
 
   if (!RECORD_OR_REPLAY) {
     rec_file.close();
-    can_write = true;
     std::cout << "Last round write in replaying mode" << std::endl;
-    std::cout << "Hits in MSHR: " << hit_in_MSHR << std::endl;
+    std::cout << "Hits in runahead prefetch list: " << runahead_hits << std::endl;
+    std::cout << "Hits in MSHR " << MSHR_hits << std::endl;
+    std::cout << "Hits in internal_PQ " << internal_PQ_hits << std::endl;
+    std::cout << "Hits in ready to issue prefetch queue " << cs_q_hits << std::endl;
+    std::cout << "Hits in oracle_pf " << oracle_pf_hits << std::endl;
     std::cout << "New misses recorded: " << new_misses << std::endl;
     file_write();
   } 
   else {
-    can_write = true;
     std::cout << "Last round write" << std::endl;
     file_write();
   }

@@ -7,8 +7,7 @@
 #include <deque>
 #include <unordered_map>
 #include <vector>
-#include <algorithm> // WL: fixing error while compiling related to any_of
-
+#include <algorithm> 
 #include "champsim_constants.h"
 #include "msl/bits.h"
 
@@ -28,7 +27,7 @@ namespace spp_l3 {
     public:
 
     std::set<std::pair<uint64_t, bool>> available_prefetches;
-    std::deque<std::tuple<uint64_t, bool, uint64_t, bool>> context_switch_issue_queue; // addr, pf_to_this_level, cycle, RFO/WRITE
+    std::deque<std::tuple<uint64_t, uint64_t, bool, bool>> context_switch_issue_queue; // addr, pf_to_this_level, cycle, RFO/WRITE
     SPP_ORACLE oracle;
     bool debug_print = false;
     uint64_t last_handled_addr;
