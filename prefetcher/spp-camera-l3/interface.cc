@@ -21,10 +21,7 @@ void CACHE::prefetcher_initialize() {
     pref.oracle.init();
 
     while (true) {
-
       if (pref.oracle.ORACLE_ACTIVE && pref.oracle.oracle_pf.size() > 0) {
-      
-        // Update the prefetch queue.
         if (!pref.call_poll()) 
           break;
       }
@@ -113,15 +110,14 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                                   });
 
           if (search_oracle_pq != pref.oracle.oracle_pf.end()) {
-            if (pref.debug_print) 
-              std::cout << "Hit in oracle_pf set " << this->get_set_index(base_addr) << " addr " << base_addr << " type " << (unsigned)type << std::endl;
-
             pref.oracle.oracle_pf_hits++;
             uint64_t set = search_oracle_pq->set;
             uint64_t way = pref.oracle.check_set_pf_avail(search_oracle_pq->addr);
 
-            if (pref.debug_print) 
+            if (pref.debug_print) {
+              std::cout << "Hit in oracle_pf set " << this->get_set_index(base_addr) << " addr " << base_addr << " type " << (unsigned)type << std::endl;
               std::cout << "Found addr " << search_oracle_pq->addr << " set " << search_oracle_pq->set << " counter " << search_oracle_pq->miss_or_hit << " set_availability " << pref.oracle.set_availability[search_oracle_pq->set] << " found way " << way << std::endl;
+            }
 
             if (way < NUM_WAY) {
               if (pref.oracle.cache_state[set * NUM_WAY + way].addr != search_oracle_pq->addr) 
@@ -134,6 +130,12 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
               pref.oracle.oracle_pf.erase(search_oracle_pq); 
               found_in_pending_queue = true;
             }
+          }
+          else {
+            pref.oracle.unhandled_misses++;
+
+            if (pref.debug_print) 
+               std::cout << "Unhandled miss set " << this->get_set_index(base_addr) << " addr " << base_addr << " type " << (unsigned)type << std::endl;
           }
         }
       }
@@ -153,7 +155,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   if (useful_prefetch && !(type == 2 && cache_hit)) 
     pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0, type);
   else if (!(type == 2 && cache_hit)) 
-      pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1, type);
+    pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1, type);
 
   if (type == 3) {
     int erased = 1; //pref.rfo_write_addr.erase(base_addr);
@@ -184,7 +186,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       int updated_remaining_acc = pref.oracle.check_pf_status(base_addr);
 
       if (updated_remaining_acc == -1) {
-
         if (search_mshr != this->MSHR.end()) 
          found_in_MSHR = true;  
 
@@ -216,7 +217,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
     // Last access to the prefetched block used.
     if (current_acc == 1 && evict) {  
-
       if (found_in_MSHR && !original_hit) {
         pref.pending_write_fills.insert(base_addr); 
         std::cout << "set " << set << " addr " << base_addr << " pushed to wait fill set" << std::endl; 
@@ -277,11 +277,10 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   }
   else {
     champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
-
-    if (pref.debug_print) {
-      std::cout << "set " << this->get_set_index(addr) << " addr " << addr << " cleared LRU bits in cache fill" << std::endl; 
-    }
     pref.call_poll();
+
+    if (pref.debug_print) 
+      std::cout << "set " << this->get_set_index(addr) << " addr " << addr << " cleared LRU bits in cache fill" << std::endl; 
   }
 
   return metadata_in;
@@ -289,15 +288,19 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
 void CACHE::prefetcher_cycle_operate() {
   auto &pref = ::SPP_L3[{this, cpu}];
-  pref.issue(this);
+  uint64_t res = pref.issue(this);
+
+  if (res != 0) {
+    uint64_t set = this->get_set_index(res);
+    uint64_t way = this->get_way(res, set);
+    champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
+  }
 }
 
 void CACHE::prefetcher_final_stats() {
-  std::cout << "Oracle STATISTICS" << std::endl;
-  std::cout << std::endl;
-  std::cout << "Oracle prefetch accuracy: " << ::SPP_L3[{this, cpu}].issued_cs_pf_hit << "/" << ::SPP_L3[{this, cpu}].total_issued_cs_pf << "." << std::endl;
-
   auto &pref = ::SPP_L3[{this, cpu}];
+  std::cout << "Oracle STATISTICS" << std::endl;
+  std::cout << "Oracle prefetch accuracy: " << pref.issued_cs_pf_hit << "/" << pref.total_issued_cs_pf << "." << std::endl;
 
   if (pref.oracle.ORACLE_ACTIVE)
     pref.oracle.finish();

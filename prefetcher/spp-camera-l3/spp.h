@@ -27,7 +27,7 @@ namespace spp_l3 {
     public:
 
     std::set<std::pair<uint64_t, bool>> available_prefetches;
-    std::deque<std::tuple<uint64_t, uint64_t, bool, bool>> context_switch_issue_queue; // addr, pf_to_this_level, cycle, RFO/WRITE
+    std::deque<std::tuple<uint64_t, uint64_t, bool, bool>> context_switch_issue_queue; // addr, cycle, pf_to_this_level, RFO/WRITE
     SPP_ORACLE oracle;
     bool debug_print = false;
     uint64_t last_handled_addr;
@@ -38,7 +38,7 @@ namespace spp_l3 {
     std::set<uint64_t> rfo_write_addr;
     std::set<uint64_t> pending_write_fills;
 
-    void issue(CACHE* cache);
+    uint64_t issue(CACHE* cache);
     bool call_poll();
   };
 } // namespace spp_l3

@@ -63,8 +63,13 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
         }
       }      
       else if(way_check < WAY_NUM && 
-              cache_state[set_check * WAY_NUM + way_check].addr == ((addr >> 6) << 6))
-        update_pf_avail(addr, cycle);
+              cache_state[set_check * WAY_NUM + way_check].addr == ((addr >> 6) << 6)) {
+
+        if (ORACLE_DEBUG_PRINT) {
+          std::cout << "message" << std::endl; 
+        }
+        //update_pf_avail(addr, cycle);
+      }
       else {
         std::cout << "Failed: way " << way_check << " set " << set_check << " addr " << ((addr >> 6) << 6) << " cache_state addr " << cache_state[set_check * WAY_NUM + way_check].addr  << std::endl;
         assert(false);
@@ -492,12 +497,12 @@ void spp_l3::SPP_ORACLE::finish() {
 
   if (!RECORD_OR_REPLAY) {
     rec_file.close();
-    std::cout << "Last round write in replaying mode" << std::endl;
     std::cout << "Hits in runahead prefetch list: " << runahead_hits << std::endl;
     std::cout << "Hits in MSHR " << MSHR_hits << std::endl;
     std::cout << "Hits in internal_PQ " << internal_PQ_hits << std::endl;
     std::cout << "Hits in ready to issue prefetch queue " << cs_q_hits << std::endl;
     std::cout << "Hits in oracle_pf " << oracle_pf_hits << std::endl;
+    std::cout << "Unhandled misses " << unhandled_misses  << std::endl;
     std::cout << "New misses recorded: " << new_misses << std::endl;
     file_write();
   } 

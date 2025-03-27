@@ -12,7 +12,9 @@ namespace {
   std::map<unique_key, spp_l3::prefetcher> SPP_L3;
 }
 
-void spp_l3::prefetcher::issue(CACHE* cache) {
+uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
+  uint64_t res = 0;
+
   if (!context_switch_issue_queue.empty()) {
 
     auto mshr_occupancy = cache->get_mshr_occupancy();
@@ -21,15 +23,9 @@ void spp_l3::prefetcher::issue(CACHE* cache) {
     auto [addr, cycle, priority, RFO_write] = context_switch_issue_queue.front();
     uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(cache->NUM_SET));
     uint64_t way = cache->get_way(addr, set);
-    auto search_mshr = std::find_if(std::begin(cache->MSHR), std::end(cache->MSHR),
-                                 [match = addr >> cache->OFFSET_BITS, shamt = cache->OFFSET_BITS](const auto& entry) {
-                                   return (entry.address >> shamt) == match; 
-                                 });
 
-
-    if ((mshr_occupancy < cache->get_mshr_size()) &&
-        search_mshr == cache->MSHR.end()) { //!RFO_write && 
-      
+    if (!RFO_write) {
+    //if ((mshr_occupancy < cache->get_mshr_size()) { 
       if (way == cache->NUM_WAY) {
         bool prefetched = cache->prefetch_line(addr, priority, 0, 0);
 
@@ -42,8 +38,13 @@ void spp_l3::prefetcher::issue(CACHE* cache) {
             std::cout << "Issued " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << " MSHR usage: " << mshr_occupancy << " queue size " << context_switch_issue_queue.size() << " wq " << wq_occupancy << " rq " << rq_occupancy << std::endl;
         }
       }
-      else 
+      else {
         context_switch_issue_queue.pop_front();
+        res = addr;
+
+        if (debug_print) 
+          std::cout << "Addr " << addr << " set " << set << " way " << way << " hit in cache before issuing" << std::endl; 
+      }
     }
     else if (RFO_write) {
       rfo_write_addr.insert(addr);
@@ -53,6 +54,8 @@ void spp_l3::prefetcher::issue(CACHE* cache) {
         std::cout << "Issue WRITE operation " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << " MSHR usage: " << mshr_occupancy << " queue size " << context_switch_issue_queue.size() << " wq " << wq_occupancy << " rq " << rq_occupancy << std::endl;
     }
   }
+
+  return res;
 }
 
 bool spp_l3::prefetcher::call_poll() {
@@ -69,5 +72,4 @@ bool spp_l3::prefetcher::call_poll() {
   else 
     return false;
 }
-
 

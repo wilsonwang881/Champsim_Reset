@@ -42,6 +42,7 @@ namespace spp_l3 {
     uint64_t internal_PQ_hits = 0;
     uint64_t cs_q_hits = 0;
     uint64_t oracle_pf_hits = 0;
+    uint64_t unhandled_misses = 0;
 
     struct acc_timestamp {
       uint64_t cycle_demanded;
