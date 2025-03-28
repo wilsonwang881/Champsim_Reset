@@ -9,7 +9,8 @@ void spp::SPP_PAGE_BITMAP::init()
     for (size_t j = 0; j < BITMAP_SIZE; j++) 
     {
       tb[i].bitmap[j] = false;
-      tb[i].bitmap_store[j] = false;
+      //tb[i].bitmap_store[j] = false;
+      tb[i].saturated_bit=false;
     }
   }
 
@@ -73,7 +74,15 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr)
     if (tb[i].valid &&
         tb[i].page_no == page) 
     {
-      tb[i].bitmap[block] = true;
+      //tb[i].bitmap[block] = true;
+      if(tb[i].bitmap[block]<COUNT_MAX)
+      {
+        tb[i].bitmap[block]=tb[i].bitmap[block]+1;
+      }
+      if(tb[i].bitmap[block]==COUNT_MAX)
+      {
+        tb[i].saturated_bit=true;
+      }
       update_lru(i);
       return;
     }
@@ -108,10 +117,10 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr)
       tb[i].page_no = page;
 
       for (size_t j = 0; j < BITMAP_SIZE; j++)
-        tb[i].bitmap[j] = false; 
+        tb[i].bitmap[j] = 0; 
 
-      tb[i].bitmap[block] = true;
-      tb[i].bitmap[block_2] = true;
+      tb[i].bitmap[block] = 1;
+      tb[i].bitmap[block_2] = 1;
       update_lru(i);
       return;
     }
@@ -135,13 +144,13 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr)
   tb[index].page_no = page;
 
   for(auto &var : tb[index].bitmap)
-    var = false;
-
+    var = 0;
+/*
   for(auto &var : tb[index].bitmap_store)
     var = false;
-
-  tb[index].bitmap[block] = true;
-  tb[index].bitmap[block_2] = true;
+*/
+  tb[index].bitmap[block] = 1;
+  tb[index].bitmap[block_2] = 1;
   update_lru(index);
 }
 
@@ -156,7 +165,11 @@ void spp::SPP_PAGE_BITMAP::evict(uint64_t addr)
     if (tb[i].valid &&
         tb[i].page_no == page)
     {
-      tb[i].bitmap[block] = false;
+      //tb[i].bitmap[block] = false;
+      if(tb[i].bitmap[block]>0)
+      {
+        tb[i].bitmap[block]=tb[i].bitmap[block]-1;
+      }
     }
   }
 
@@ -184,7 +197,15 @@ void spp::SPP_PAGE_BITMAP::update_bitmap(uint64_t addr)
     if (tb[i].valid &&
         tb[i].page_no == page)
     {
-      tb[i].bitmap[block] = true;
+      //tb[i].bitmap[block] = true;
+      if(tb[i].bitmap[block]<COUNT_MAX)
+      {
+        tb[i].bitmap[block]=tb[i].bitmap[block]+1;
+      }
+      if(tb[i].bitmap[block]==COUNT_MAX)
+      {
+        tb[i].saturated_bit=true;
+      }
     }
   }
 }
@@ -193,43 +214,14 @@ void spp::SPP_PAGE_BITMAP::update_bitmap_store()
 {
   for (size_t i = 0; i < TABLE_SIZE; i++) 
   {
-    if (tb[i].valid) 
+    if (tb[i].valid && (tb[i].saturated_bit==true)) 
     {
-      if (tb[i].page_no_store == tb[i].page_no) 
-      {
-        for (size_t j = 0; j < BITMAP_SIZE; j++) 
-          tb[i].bitmap_store[j] = tb[i].bitmap[j]; // | tb[i].bitmap_store[j];
-
-        tb[i].page_no_store = tb[i].page_no;
-      }
-      else 
-      {
-        bool found = false;
-
-        for (size_t k = 0; k < TABLE_SIZE; k++) 
-        {
-          if (tb[k].page_no == tb[i].page_no_store) 
-          {
-            for (size_t j = 0; j < BITMAP_SIZE; j++) 
-              tb[i].bitmap_store[j] = tb[k].bitmap[j]; // | tb[i].bitmap_store[j];
-
-            found = true;
-            break;
-          }
+        for (size_t j = 0; j < BITMAP_SIZE; j++)
+        { 
+          tb[i].bitmap[j] = tb[i].bitmap[j]>>1; // | tb[i].bitmap_store[j];
         }
-
-        if (!found) 
-        {
-          for (size_t j = 0; j < BITMAP_SIZE; j++) 
-          {
-            tb[i].bitmap_store[j] = tb[i].bitmap[j]; // | tb[i].bitmap_store[j];
-            tb[i].bitmap[j] = false;
-          }
-
-          tb[i].page_no_store = tb[i].page_no;
-        }
-
-      }
+        tb[i].saturated_bit=false;
+      
     }
   }
 }
@@ -252,16 +244,16 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf()
       return left.second < right.second;
       });
 
-  int page_match = 0;
+  //int page_match = 0;
 
   // Get the prefetches.
   for(auto var : i_lru_vec) 
   {
     size_t i = var.first;
 
-    if (tb[i].page_no == tb[i].page_no_store) 
-    {
-      page_match++;
+    //if (tb[i].page_no == tb[i].page_no_store) 
+    //{
+      //page_match++;
       uint64_t page_addr = tb[i].page_no << 12;
 
       if (PAGE_BITMAP_DEBUG_PRINT) 
@@ -269,7 +261,7 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf()
 
       for (size_t j = 0; j < BITMAP_SIZE; j++) 
       {
-        if (tb[i].bitmap[j] && tb[i].bitmap_store[j])
+        if (tb[i].bitmap[j]>=2)
         {
           cs_pf.push_back(std::make_pair(page_addr + (j << 6), false)); 
 
@@ -280,35 +272,10 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf()
 
       if (PAGE_BITMAP_DEBUG_PRINT) 
         std::cout << " ]" << std::endl;
-    }
-    else 
-    {
-      uint64_t page_addr = tb[i].page_no << 12;
-
-      for (size_t j = 0; j < BITMAP_SIZE; j++) 
-      {
-        if (tb[i].bitmap[j])
-          cs_pf.push_back(std::make_pair(page_addr + (j << 6), false)); 
-      }
-
-      for(auto pg : tb) {
-        if (tb[i].page_no == pg.page_no_store) {
-
-          page_match++;
-
-          for (size_t j = 0; j < BITMAP_SIZE; j++) 
-          {
-            if (tb[i].bitmap[j] && pg.bitmap_store[j])
-            {
-              cs_pf.push_back(std::make_pair(page_addr + (j << 6), false)); 
-            }
-          }   
-        } 
-      } 
-    }
+    //}
   }
   
-  std::cout << "Page bitmap page matches: " << page_match << std::endl;
+  //std::cout << "Page bitmap page matches: " << page_match << std::endl;
 
   int pf_from_filter = 0;
 

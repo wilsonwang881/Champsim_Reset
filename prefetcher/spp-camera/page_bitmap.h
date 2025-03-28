@@ -17,16 +17,18 @@ namespace spp
     constexpr static std::size_t FILTER_SIZE = 1024;
     constexpr static std::size_t COUNTER_SIZE = 2048;
     constexpr static bool PAGE_BITMAP_DEBUG_PRINT = false;
-
+    constexpr static int COUNT_MAX=3;
     // Page bitmap entry.
     struct page_r
     {
       bool valid;
       uint64_t page_no;
       uint64_t page_no_store;
-      bool bitmap[BITMAP_SIZE];
-      bool bitmap_store[BITMAP_SIZE];
+      //bool bitmap[BITMAP_SIZE];
+      int bitmap[BITMAP_SIZE];
+      //bool bitmap_store[BITMAP_SIZE];
       uint16_t lru_bits;
+      bool saturated_bit;
     };
 
     page_r tb[TABLE_SIZE];
