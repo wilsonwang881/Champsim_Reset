@@ -156,9 +156,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                                    return (entry.addr >> shamt) == match; 
                                  });
 
-              // Put back the rollback prefetch.
-              pref.oracle.oracle_pf.push_front(rollback_pf); 
-
               // Update cache_state.
               pref.oracle.cache_state[rollback_cache_state_entry_index].addr = base_addr;
               pref.oracle.cache_state[rollback_cache_state_entry_index].pending_accesses = search_oracle_pq->miss_or_hit;
@@ -168,6 +165,9 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
               
               // Erase the moved ahead prefetch in oracle_pf
               pref.oracle.oracle_pf.erase(search_oracle_pq); 
+
+              // Put back the rollback prefetch.
+              pref.oracle.oracle_pf.push_front(rollback_pf); 
 
               // Update metric
               pref.oracle.unhandled_misses_replaced++;
