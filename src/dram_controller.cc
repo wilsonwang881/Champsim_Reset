@@ -300,6 +300,14 @@ bool MEMORY_CONTROLLER::add_rq(const request_type& packet, champsim::channel* ul
 {
   auto& channel = channels[dram_get_channel(packet.address)];
 
+  // WL
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+      fmt::print("[{}] {} address: {:#x} current cycle: {} rq channel size: {}\n", "DRAM", __func__,
+                 packet.address, 
+                 current_cycle,
+                 channel.RQ.size());
+  }
+
   // Find empty slot
   if (auto rq_it = std::find_if_not(std::begin(channel.RQ), std::end(channel.RQ), [](const auto& pkt) { return pkt.has_value(); });
       rq_it != std::end(channel.RQ)) {
@@ -319,6 +327,14 @@ bool MEMORY_CONTROLLER::add_rq(const request_type& packet, champsim::channel* ul
 bool MEMORY_CONTROLLER::add_wq(const request_type& packet)
 {
   auto& channel = channels[dram_get_channel(packet.address)];
+ 
+  // WL
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+        fmt::print("[{}] {} address: {:#x} current cycle: {} wq channel size: {}\n", "DRAM", __func__,
+                   packet.address, 
+                   current_cycle,
+                   channel.WQ.size());
+  }
 
   // search for the empty index
   if (auto wq_it = std::find_if_not(std::begin(channel.WQ), std::end(channel.WQ), [](const auto& pkt) { return pkt.has_value(); });

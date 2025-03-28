@@ -27,7 +27,7 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
 
   if (!RECORD_OR_REPLAY) {
     acc_timestamp tmpp;
-    tmpp.cycle_demanded = cycle - interval_start_cycle;
+    tmpp.cycle_demanded = cycle;
     tmpp.miss_or_hit = hit;
     tmpp.type = type;
     uint64_t set_check = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
@@ -290,12 +290,12 @@ void spp_l3::SPP_ORACLE::file_read() {
     uint64_t non_pf_counter = 0;
 
     for(auto var : oracle_pf) {
-      if (var.type == 3) 
+      if (var.type == 3 || var.type == 1) 
         non_pf_counter++; 
     }
 
     std::cout << "Oracle: pre-processing collects " << oracle_pf.size() << " prefetch targets from file read." << std::endl;
-    std::cout << "Oracle: skipping " << non_pf_counter << " prefetch targets because they are WRITE misses." << std::endl;
+    std::cout << "Oracle: skipping " << non_pf_counter << " prefetch targets because they are WRITE/RFO misses." << std::endl;
     std::cout << "Oracle: issuing " << (oracle_pf.size() - non_pf_counter) << " prefetches." << std::endl;
   }
 }
@@ -437,15 +437,6 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
       way = check_set_pf_avail(ite->addr);
 
       if (way < WAY_NUM) {
-
-        if (ite->type == 3) {
-          std::get<3>(target) = true;
-          std::get<0>(target) = 0;
-
-          if (ORACLE_DEBUG_PRINT) 
-            std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;
-        } 
-
         std::get<1>(target) = ite->cycle_demanded;
         std::get<2>(target) = true;
         cache_state[set * WAY_NUM + way].pending_accesses += (int)(ite->miss_or_hit);
@@ -455,8 +446,18 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
           std::get<0>(target) = ite->addr;
         } 
 
+        if (ite->type == 3 || ite->type == 1) {
+          std::get<3>(target) = true;
+          std::get<0>(target) = 0;
+
+          if (ORACLE_DEBUG_PRINT) 
+            std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;
+        } 
+
         cache_state[set * WAY_NUM + way].addr = ite->addr;
         cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
+        cache_state[set * WAY_NUM + way].timestamp = ite->cycle_demanded;
+        cache_state[set * WAY_NUM + way].type = ite->type;
 
         assert(set_availability[set] >= 0);
         erase = true;
@@ -484,6 +485,23 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
   return target;
 }
 
+uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
+  uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
+  uint64_t latest_cycle = cache_state[set * WAY_NUM].timestamp;
+  uint64_t index = set * WAY_NUM;
+
+  for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
+    if (cache_state[i].timestamp > latest_cycle) {
+      index = i;
+      latest_cycle = cache_state[i].timestamp;
+    }
+  }
+
+  assert(index < ((set + 1) * WAY_NUM));
+
+  return index;
+}
+
 void spp_l3::SPP_ORACLE::kill_simulation() {
 
   // Check if there is vacancy in the cache record.
@@ -502,7 +520,8 @@ void spp_l3::SPP_ORACLE::finish() {
     std::cout << "Hits in internal_PQ " << internal_PQ_hits << std::endl;
     std::cout << "Hits in ready to issue prefetch queue " << cs_q_hits << std::endl;
     std::cout << "Hits in oracle_pf " << oracle_pf_hits << std::endl;
-    std::cout << "Unhandled misses " << unhandled_misses  << std::endl;
+    std::cout << "Unhandled misses replaced " << unhandled_misses_replaced << std::endl;
+    std::cout << "Unhandled misses not found " << unhandled_misses_not_found  << std::endl;
     std::cout << "New misses recorded: " << new_misses << std::endl;
     file_write();
   } 

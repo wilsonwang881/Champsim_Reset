@@ -42,7 +42,8 @@ namespace spp_l3 {
     uint64_t internal_PQ_hits = 0;
     uint64_t cs_q_hits = 0;
     uint64_t oracle_pf_hits = 0;
-    uint64_t unhandled_misses = 0;
+    uint64_t unhandled_misses_replaced = 0;
+    uint64_t unhandled_misses_not_found = 0;
 
     struct acc_timestamp {
       uint64_t cycle_demanded;
@@ -65,6 +66,7 @@ namespace spp_l3 {
       int pending_accesses;
       uint64_t timestamp;
       bool require_eviction;
+      uint64_t type;
     };
 
     blk_state cache_state[SET_NUM * WAY_NUM];
@@ -80,6 +82,7 @@ namespace spp_l3 {
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     bool check_require_eviction(uint64_t addr);
     std::tuple<uint64_t, uint64_t, bool, bool> poll();
+    uint64_t rollback_prefetch(uint64_t addr);
     void kill_simulation();
     void finish();
   };

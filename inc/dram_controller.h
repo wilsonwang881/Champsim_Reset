@@ -23,6 +23,7 @@
 #include <optional>
 #include <string>
 
+#include "champsim.h" // WL
 #include "champsim_constants.h"
 #include "channel.h"
 #include "operable.h"
