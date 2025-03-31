@@ -290,12 +290,12 @@ void spp_l3::SPP_ORACLE::file_read() {
     uint64_t non_pf_counter = 0;
 
     for(auto var : oracle_pf) {
-      if (var.type == 3 || var.type == 1) 
+      if (var.type == 3) // || var.type == 1 
         non_pf_counter++; 
     }
 
     std::cout << "Oracle: pre-processing collects " << oracle_pf.size() << " prefetch targets from file read." << std::endl;
-    std::cout << "Oracle: skipping " << non_pf_counter << " prefetch targets because they are WRITE/RFO misses." << std::endl;
+    std::cout << "Oracle: skipping " << non_pf_counter << " prefetch targets because they are WRITE misses." << std::endl;
     std::cout << "Oracle: issuing " << (oracle_pf.size() - non_pf_counter) << " prefetches." << std::endl;
   }
 }
@@ -446,7 +446,7 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
           std::get<0>(target) = ite->addr;
         } 
 
-        if (ite->type == 3 || ite->type == 1) {
+        if (ite->type == 3) { // || ite->type == 1
           std::get<3>(target) = true;
           std::get<0>(target) = 0;
 

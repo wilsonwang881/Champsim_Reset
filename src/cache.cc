@@ -255,6 +255,12 @@ bool CACHE::try_hit(const tag_lookup_type& handle_pkt)
     return ((entry.address >> shamt) == match) && (entry.asid == asid);
   });
 
+  /*
+  if(handle_pkt.type == access_type::WRITE && NAME.compare(L1D_name) == 0) {
+    return true;
+  }
+  */
+
   const auto hit = (way != set_end);
   const auto useful_prefetch = (hit && way->prefetch && !handle_pkt.prefetch_from_this);
 
@@ -702,14 +708,11 @@ int CACHE::prefetch_line(uint64_t pf_addr, bool fill_this_level, uint32_t prefet
     fwd_pkt.response_requested = (!handle_pkt.prefetch_from_this || !handle_pkt.skip_fill);
 
     bool success;
-    success = lower_level->add_rq(fwd_pkt);
 
-    /*
     if (prefetch_as_load || handle_pkt.type != access_type::PREFETCH)
       success = lower_level->add_rq(fwd_pkt);
     else
       success = lower_level->add_pq(fwd_pkt);
-    */
 
     if (!success) {
       if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {

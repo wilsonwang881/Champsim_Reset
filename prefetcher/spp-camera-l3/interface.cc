@@ -61,7 +61,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
   bool found_in_MSHR = false;
 
-  if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && !(type == 2 && cache_hit) && !cache_hit) {
+  if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && type != 2 && !cache_hit) {
     bool found_in_pending_queue = false;
     auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
                                  [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
@@ -214,12 +214,12 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     }
   }
 
-  if (useful_prefetch && !(type == 2 && cache_hit)) 
+  if (useful_prefetch && type != 2) 
     pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0, type);
-  else if (!(type == 2 && cache_hit)) 
+  else if (type != 2) 
     pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1, type);
 
-  if (type == 3 || type == 1) {
+  if (type == 3) {
     int erased = 1; //pref.rfo_write_addr.erase(base_addr);
 
     if (pref.debug_print) 

@@ -24,8 +24,7 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
     uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(cache->NUM_SET));
     uint64_t way = cache->get_way(addr, set);
 
-    if (!RFO_write) {
-    //if ((mshr_occupancy < cache->get_mshr_size()) { 
+    if (!RFO_write && mshr_occupancy < cache->get_mshr_size()) { 
       if (way == cache->NUM_WAY) {
         bool prefetched = cache->prefetch_line(addr, priority, 0, 0);
 

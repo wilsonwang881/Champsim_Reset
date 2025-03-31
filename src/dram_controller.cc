@@ -41,6 +41,25 @@ MEMORY_CONTROLLER::MEMORY_CONTROLLER(double freq_scale, int io_freq, double t_rp
 {
 }
 
+std::size_t DRAM_CHANNEL::bank_request_index(uint64_t addr) const
+{
+  int shift = champsim::lg2(DRAM_CHANNELS) + LOG2_BLOCK_SIZE;
+  auto op_bank = (addr >> shift) & champsim::bitmask(champsim::lg2(DRAM_BANKS));
+
+  return (bankgroup_request_index(addr) * DRAM_BANKS + op_bank);
+}
+
+std::size_t DRAM_CHANNEL::bankgroup_request_index(uint64_t addr) const
+{
+  int shift = champsim::lg2(DRAM_BANKS) + champsim::lg2(DRAM_COLUMNS) + champsim::lg2(DRAM_CHANNELS) + LOG2_BLOCK_SIZE;
+  auto op_rank = (addr >> shift) & champsim::bitmask(champsim::lg2(DRAM_RANKS));
+
+  shift = champsim::lg2(DRAM_BANKS) + champsim::lg2(DRAM_COLUMNS) + champsim::lg2(DRAM_CHANNELS) + LOG2_BLOCK_SIZE;
+  auto op_bankgroup = (addr>> shift) & champsim::bitmask(champsim::lg2(DRAM_RANKS));
+
+  return (op_rank * DRAM_BANKS + op_bankgroup);
+}
+
 long MEMORY_CONTROLLER::operate()
 {
   long progress{0};
@@ -150,8 +169,24 @@ long MEMORY_CONTROLLER::operate()
     }
 
     // Look for queued packets that have not been scheduled
-    auto next_schedule = [](const auto& lhs, const auto& rhs) {
+    auto next_schedule = [this](const auto& lhs, const auto& rhs) {
+      /*
+       * WL: apply fix from 2024 Champsim release.
+       * WL: allow non-blocking schedule for packets.
       return !(rhs.has_value() && !rhs.value().scheduled) || ((lhs.has_value() && !lhs.value().scheduled) && lhs.value().event_cycle < rhs.value().event_cycle);
+      */
+      if (!(rhs.has_value() && !rhs.value().scheduled)) {
+        return true;
+      }
+      if (!(lhs.has_value() && !lhs.value().scheduled)) {
+        return false;
+      }
+
+      auto lop_idx = this->channels[0].bank_request_index(lhs.value().address);
+      auto rop_idx = this->channels[0].bank_request_index(rhs.value().address);
+      auto rready = !this->channels[0].bank_request[rop_idx].valid;
+      auto lready = !this->channels[0].bank_request[lop_idx].valid;
+      return (rready == lready) ? lhs.value().event_cycle<= rhs.value().event_cycle: lready;
     };
     DRAM_CHANNEL::queue_type::iterator iter_next_schedule;
     if (channel.write_mode)
@@ -319,6 +354,13 @@ bool MEMORY_CONTROLLER::add_rq(const request_type& packet, champsim::channel* ul
       rq_it->value().to_return = {&ul->returned};
 
     return true;
+  }
+
+  if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+      fmt::print("[{}] {} address: {:#x} current cycle: {} rq channel size: {} failed to find empty slot\n", "DRAM", __func__,
+                 packet.address, 
+                 current_cycle,
+                 channel.RQ.size());
   }
 
   return false;
