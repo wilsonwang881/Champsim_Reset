@@ -43,21 +43,15 @@ MEMORY_CONTROLLER::MEMORY_CONTROLLER(double freq_scale, int io_freq, double t_rp
 
 std::size_t DRAM_CHANNEL::bank_request_index(uint64_t addr) const
 {
-  int shift = champsim::lg2(DRAM_CHANNELS) + LOG2_BLOCK_SIZE;
+  int shift = champsim::lg2(DRAM_BANKS) + champsim::lg2(DRAM_COLUMNS) + champsim::lg2(DRAM_CHANNELS) + LOG2_BLOCK_SIZE;
+  auto op_rank =  (addr >> shift) & champsim::bitmask(champsim::lg2(DRAM_RANKS));
+
+  shift = champsim::lg2(DRAM_CHANNELS) + LOG2_BLOCK_SIZE;
   auto op_bank = (addr >> shift) & champsim::bitmask(champsim::lg2(DRAM_BANKS));
 
-  return (bankgroup_request_index(addr) * DRAM_BANKS + op_bank);
-}
+  auto op_idx = op_rank * DRAM_BANKS + op_bank; 
 
-std::size_t DRAM_CHANNEL::bankgroup_request_index(uint64_t addr) const
-{
-  int shift = champsim::lg2(DRAM_BANKS) + champsim::lg2(DRAM_COLUMNS) + champsim::lg2(DRAM_CHANNELS) + LOG2_BLOCK_SIZE;
-  auto op_rank = (addr >> shift) & champsim::bitmask(champsim::lg2(DRAM_RANKS));
-
-  shift = champsim::lg2(DRAM_BANKS) + champsim::lg2(DRAM_COLUMNS) + champsim::lg2(DRAM_CHANNELS) + LOG2_BLOCK_SIZE;
-  auto op_bankgroup = (addr>> shift) & champsim::bitmask(champsim::lg2(DRAM_RANKS));
-
-  return (op_rank * DRAM_BANKS + op_bankgroup);
+  return op_idx;
 }
 
 long MEMORY_CONTROLLER::operate()

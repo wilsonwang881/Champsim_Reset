@@ -71,7 +71,6 @@ struct DRAM_CHANNEL {
 
   // WL
   std::size_t bank_request_index(uint64_t addr) const;
-  std::size_t bankgroup_request_index(uint64_t addr) const;
   // WL
   using request_array_type = std::array<BANK_REQUEST, DRAM_RANKS * DRAM_BANKS>;
   request_array_type bank_request = {};
