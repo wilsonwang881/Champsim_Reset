@@ -150,12 +150,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
               rollback_pf.require_eviction = pref.oracle.cache_state[rollback_cache_state_entry_index].require_eviction;
               rollback_pf.type = pref.oracle.cache_state[rollback_cache_state_entry_index].type;
 
-              // Put the rollback prefetch back to oracle_pf.
-              auto oracle_pf_back_pos = std::find_if(std::begin(pref.oracle.oracle_pf), std::end(pref.oracle.oracle_pf),
-                                 [match = rollback_pf.addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
-                                   return (entry.addr >> shamt) == match; 
-                                 });
-
               // Update cache_state.
               pref.oracle.cache_state[rollback_cache_state_entry_index].addr = base_addr;
               pref.oracle.cache_state[rollback_cache_state_entry_index].pending_accesses = search_oracle_pq->miss_or_hit;
@@ -167,7 +161,12 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
               pref.oracle.oracle_pf.erase(search_oracle_pq); 
 
               // Put back the rollback prefetch.
-              pref.oracle.oracle_pf.push_front(rollback_pf); 
+              // Put the rollback prefetch back to oracle_pf.
+              auto oracle_pf_back_pos = std::find_if(std::begin(pref.oracle.oracle_pf), std::end(pref.oracle.oracle_pf),
+                                 [match = rollback_pf.addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
+                                   return (entry.addr >> shamt) == match; 
+                                 });
+              pref.oracle.oracle_pf.emplace(oracle_pf_back_pos, rollback_pf);
 
               // Update metric
               pref.oracle.unhandled_misses_replaced++;
