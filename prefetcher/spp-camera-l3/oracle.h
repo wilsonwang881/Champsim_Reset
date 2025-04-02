@@ -45,16 +45,18 @@ namespace spp_l3 {
     uint64_t unhandled_misses_replaced = 0;
     uint64_t unhandled_misses_not_found = 0;
 
+#pragma pack(push,1)
     struct acc_timestamp {
       uint64_t cycle_demanded;
-      uint64_t set;
+      uint16_t set;
       uint64_t addr;
-      uint64_t miss_or_hit;
+      uint32_t miss_or_hit;
       bool require_eviction;
-      bool pfed_lower_lvl;
-      uint64_t type;
+      uint8_t type;
       uint64_t reuse_distance;
     };
+#pragma pack(pop)
+
 
     std::vector<acc_timestamp> access;
     uint64_t interval_start_cycle;
@@ -66,7 +68,7 @@ namespace spp_l3 {
       int pending_accesses;
       uint64_t timestamp;
       bool require_eviction;
-      uint64_t type;
+      uint8_t type;
     };
 
     blk_state cache_state[SET_NUM * WAY_NUM];

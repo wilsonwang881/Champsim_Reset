@@ -102,11 +102,12 @@ void spp_l3::SPP_ORACLE::file_write() {
 void spp_l3::SPP_ORACLE::file_read() {
   oracle_pf.clear();
   acc_timestamp tmpp;
-  std::deque<acc_timestamp> readin;
+  std::vector<acc_timestamp> readin;
 
   if (!RECORD_OR_REPLAY) {
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ifstream::in);
-    uint64_t readin_cycle_demanded, readin_addr, readin_miss_or_hit, type;
+    uint64_t readin_cycle_demanded, readin_addr, readin_miss_or_hit;
+    uint8_t type;
 
     while(!rec_file.eof()) {
       rec_file >> readin_cycle_demanded >> readin_addr >> readin_miss_or_hit >> type;
@@ -129,86 +130,97 @@ void spp_l3::SPP_ORACLE::file_read() {
     std::cout << "Oracle: read " << readin.size() << " accesses from file." << std::endl;
 
     if (BELADY_CACHE_REPLACEMENT_POLICY_ACTIVE) {
-      // Separate accesses into different sets.
-      std::array<std::deque<acc_timestamp>, SET_NUM> set_processing;
 
-      for(auto var : readin) 
-        set_processing[var.set].push_back(var);
+      for (int set_number = 0; set_number < SET_NUM; set_number++) {
+        std::cout << "Processing set " << set_number << std::endl;
+        
+        // Separate accesses into different sets.
+        std::array<std::deque<acc_timestamp>, SET_NUM> set_processing;
 
-      // Use the optimal cache replacement policy to work out hit/miss for each access.
-      for(auto &set : set_processing) {
-        std::vector<acc_timestamp> set_container;
+        for(auto var : readin) {
 
-        for (uint64_t i = 0; i < set.size(); i++) {
-          bool found = false;
+          if (var.set == set_number) 
+            set_processing[var.set].push_back(var);
+        } 
 
-          for(auto blk : set_container) {
-            if (blk.addr == set[i].addr) {
-              found = true;
-              break;
-            } 
-          }
+        // Use the optimal cache replacement policy to work out hit/miss for each access.
+        for(auto &set : set_processing) {
+          std::vector<acc_timestamp> set_container;
 
-          // The set has the block.
-          if (found) 
-            set[i].miss_or_hit = 1; 
-          // The set does not have the block.
-          else {
-            // The set has space.
-            if (set_container.size() < WAY_NUM) {
-              // Update the set.
-              set_container.push_back(set[i]);
+          for (uint64_t i = 0; i < set.size(); i++) {
+            bool found = false;
 
-              // Set the new block to be a miss.
-              set[i].miss_or_hit = 0;
-
-              // Safety check.
-              assert(set_container.size() <= WAY_NUM);
+            for(auto blk : set_container) {
+              if (blk.addr == set[i].addr) {
+                found = true;
+                break;
+              } 
             }
-            // The set has no space.
-            else {
-              // Calculate the re-use distance.
-              for(auto &el : set_container) {
-                uint64_t distance = std::numeric_limits<uint64_t>::max();
 
-                for(uint64_t j = i + 1; j < set.size(); j++) {
-                  if (set[j].addr == el.addr) {
-                    distance = j - i;
-                    break; 
-                  }  
+            // The set has the block.
+            if (found) 
+              set[i].miss_or_hit = 1; 
+            // The set does not have the block.
+            else {
+              // The set has space.
+              if (set_container.size() < WAY_NUM) {
+                // Update the set.
+                set_container.push_back(set[i]);
+
+                // Set the new block to be a miss.
+                set[i].miss_or_hit = 0;
+
+                // Safety check.
+                assert(set_container.size() <= WAY_NUM);
+              }
+              // The set has no space.
+              else {
+                // Calculate the re-use distance.
+                for(auto &el : set_container) {
+                  uint64_t distance = std::numeric_limits<uint64_t>::max();
+
+                  for(uint64_t j = i + 1; j < set.size(); j++) {
+                    if (set[j].addr == el.addr) {
+                      distance = j - i;
+                      break; 
+                    }  
+                  }
+
+                  el.reuse_distance = distance;
                 }
 
-                el.reuse_distance = distance;
+                // Evict the block with the longest reuse distance.
+                uint64_t reuse_distance = set_container[0].reuse_distance;
+                uint64_t eviction_candidate = 0;
+
+                for (uint64_t j = 0; j < WAY_NUM; j++) {
+                  if (set_container[j].reuse_distance > reuse_distance) 
+                    eviction_candidate = j; 
+                }
+
+                // Evict the block.
+                set_container.erase(set_container.begin()+eviction_candidate);
+
+                // Set the new block to be a miss.
+                set[i].miss_or_hit = 0;
+
+                // Update the set.
+                set_container.push_back(set[i]);
+
+                // Safety check.
+                assert(set_container.size() <= WAY_NUM);
               }
-
-              // Evict the block with the longest reuse distance.
-              uint64_t reuse_distance = set_container[0].reuse_distance;
-              uint64_t eviction_candidate = 0;
-
-              for (uint64_t j = 0; j < WAY_NUM; j++) {
-                if (set_container[j].reuse_distance > reuse_distance) 
-                  eviction_candidate = j; 
-              }
-
-              // Evict the block.
-              set_container.erase(set_container.begin()+eviction_candidate);
-
-              // Set the new block to be a miss.
-              set[i].miss_or_hit = 0;
-
-              // Update the set.
-              set_container.push_back(set[i]);
-
-              // Safety check.
-              assert(set_container.size() <= WAY_NUM);
             }
           }
         }
-      }
 
-      for(auto &acc : readin) {
-        acc.miss_or_hit = set_processing[acc.set].front().miss_or_hit;
-        set_processing[acc.set].pop_front();
+        for(auto &acc : readin) {
+
+          if (acc.set == set_number) {
+            acc.miss_or_hit = set_processing[acc.set].front().miss_or_hit;
+            set_processing[acc.set].pop_front();
+          }
+        }
       }
     }
 
@@ -236,8 +248,6 @@ void spp_l3::SPP_ORACLE::file_read() {
     }
 
     // Use the hashmap to walk the memory accesses.
-    std::deque<acc_timestamp> oracle_pf_tmpp;
-
     for(uint64_t i = 0; i < readin.size(); i++) {
       uint64_t addr = readin.at(i).addr;
 
@@ -253,7 +263,8 @@ void spp_l3::SPP_ORACLE::file_read() {
         acc_timestamp_tmpp.cycle_demanded = readin.at(i).cycle_demanded;
         acc_timestamp_tmpp.set = readin.at(i).set;
         acc_timestamp_tmpp.type = readin.at(i).type;
-        oracle_pf_tmpp.push_back(acc_timestamp_tmpp);
+        acc_timestamp_tmpp.require_eviction = true;
+        oracle_pf.push_back(acc_timestamp_tmpp);
         search->second.pop_front();
 
         if (search->second.size() == 0)
@@ -263,14 +274,8 @@ void spp_l3::SPP_ORACLE::file_read() {
 
     std::map<uint64_t, std::deque<uint64_t>> eviction_check;
 
-    for(auto var : oracle_pf_tmpp) {
-      oracle_pf.push_back(var);      
-      oracle_pf.back().require_eviction = true;
-      oracle_pf.back().pfed_lower_lvl = false;
-    }
-
     for (int i = oracle_pf.size() - 1; i >= 0; i--) {
-      uint64_t set = oracle_pf[i].set;
+      uint16_t set = oracle_pf[i].set;
       uint64_t addr = oracle_pf[i].addr;
 
       if (auto search = eviction_check.find(set); search != eviction_check.end()) {
