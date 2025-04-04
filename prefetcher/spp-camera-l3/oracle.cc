@@ -125,8 +125,6 @@ void spp_l3::SPP_ORACLE::file_read() {
     }
 
     rec_file.close();
-    rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
-    rec_file.close();
     std::cout << "Oracle: read " << readin.size() << " accesses from file." << std::endl;
 
     if (BELADY_CACHE_REPLACEMENT_POLICY_ACTIVE) {
@@ -302,6 +300,9 @@ void spp_l3::SPP_ORACLE::file_read() {
     std::cout << "Oracle: pre-processing collects " << oracle_pf.size() << " prefetch targets from file read." << std::endl;
     std::cout << "Oracle: skipping " << non_pf_counter << " prefetch targets because they are WRITE misses." << std::endl;
     std::cout << "Oracle: issuing " << (oracle_pf.size() - non_pf_counter) << " prefetches." << std::endl;
+
+    rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
+    rec_file.close();
   }
 }
 
