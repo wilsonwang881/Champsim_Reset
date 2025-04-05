@@ -16,7 +16,6 @@ void spp_l3::SPP_ORACLE::init() {
   }
 
   for(uint64_t i = 0; i < SET_NUM; i++) {
-    set_availability[i];
     set_availability[i] = WAY_NUM;
   }
 
@@ -102,7 +101,7 @@ void spp_l3::SPP_ORACLE::file_write() {
 void spp_l3::SPP_ORACLE::file_read() {
   oracle_pf.clear();
   acc_timestamp tmpp;
-  std::vector<acc_timestamp> readin;
+  std::deque<acc_timestamp> readin;
 
   if (!RECORD_OR_REPLAY) {
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ifstream::in);
@@ -215,59 +214,36 @@ void spp_l3::SPP_ORACLE::file_read() {
         for(auto &acc : readin) {
 
           if (acc.set == set_number) {
-            acc.miss_or_hit = set_processing[acc.set].front().miss_or_hit;
-            set_processing[acc.set].pop_front();
+            acc.miss_or_hit = set_processing[set_number].front().miss_or_hit;
+            set_processing[set_number].pop_front();
           }
         }
       }
     }
 
     // Use the hashmap to gather accesses.
-    std::map<uint64_t, std::deque<uint64_t>> parsing;
+    std::cout << "Parsing memory accesses" << std::endl;
+    std::map<uint64_t, uint32_t> addr_counter_map;
 
-    for (size_t i = 0; i < readin.size(); i++) {
-      uint64_t addr = readin.at(i).addr;
+    for (int i = readin.size() - 1; i >= 0; i--) {
+      acc_timestamp tmpp_readin = readin[i];
 
-      if (readin.at(i).miss_or_hit == 0) {
-        // Found in the hashmap already.
-        if (auto search = parsing.find(addr); search != parsing.end()) 
-          search->second.push_back(1); 
-        else {
-          parsing[addr];
-          parsing[addr].push_back(1);
-        }
-      } 
-      else {
-        if (auto search = parsing.find(addr); search != parsing.end()) 
-          search->second.back() = search->second.back() + 1;
+      if (tmpp_readin.miss_or_hit == 1) {
+        if (auto search = addr_counter_map.find(tmpp_readin.addr); search != addr_counter_map.end()) 
+          addr_counter_map[tmpp_readin.addr]++; 
         else 
-          assert(false);
+          addr_counter_map[tmpp_readin.addr] = 1;
       }
-    }
+      else {
+        if (auto search = addr_counter_map.find(tmpp_readin.addr); search != addr_counter_map.end()) 
+          addr_counter_map[tmpp_readin.addr]++; 
+        else 
+          addr_counter_map[tmpp_readin.addr] = 1;
 
-    // Use the hashmap to walk the memory accesses.
-    for(uint64_t i = 0; i < readin.size(); i++) {
-      uint64_t addr = readin.at(i).addr;
-
-      if (readin.at(i).miss_or_hit == 0) { 
-        auto search = parsing.find(addr);
-        assert(search != parsing.end());
-        assert(search->second.size() != 0);
-
-        uint64_t accesses = search->second.front();
-        acc_timestamp acc_timestamp_tmpp;
-        acc_timestamp_tmpp.addr = addr;
-        acc_timestamp_tmpp.miss_or_hit = accesses;
-        acc_timestamp_tmpp.cycle_demanded = readin.at(i).cycle_demanded;
-        acc_timestamp_tmpp.set = readin.at(i).set;
-        acc_timestamp_tmpp.type = readin.at(i).type;
-        acc_timestamp_tmpp.require_eviction = true;
-        oracle_pf.push_back(acc_timestamp_tmpp);
-        search->second.pop_front();
-
-        if (search->second.size() == 0)
-          parsing.erase(search); 
-      }  
+        tmpp_readin.miss_or_hit = addr_counter_map[tmpp_readin.addr];
+        oracle_pf.push_front(tmpp_readin);
+        addr_counter_map.erase(tmpp_readin.addr);
+      }
     }
 
     std::map<uint64_t, std::deque<uint64_t>> eviction_check;
@@ -293,7 +269,7 @@ void spp_l3::SPP_ORACLE::file_read() {
     uint64_t non_pf_counter = 0;
 
     for(auto var : oracle_pf) {
-      if (var.type == 3) // || var.type == 1 
+      if (var.type == 3) 
         non_pf_counter++; 
     }
 

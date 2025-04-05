@@ -30,6 +30,10 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
 
         if (prefetched) {
           context_switch_issue_queue.pop_front();
+
+          if (context_switch_issue_queue.size() % 100000 == 0) 
+            context_switch_issue_queue.shrink_to_fit();
+
           issued_cs_pf.insert((addr >> 6) << 6);
           total_issued_cs_pf++;
 
@@ -48,6 +52,10 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
     else if (RFO_write) {
       rfo_write_addr.insert(addr);
       context_switch_issue_queue.pop_front();
+
+      if (context_switch_issue_queue.size() % 100000 == 0) 
+        context_switch_issue_queue.shrink_to_fit();
+
 
       if (debug_print) 
         std::cout << "Issue WRITE operation " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << " MSHR usage: " << mshr_occupancy << " queue size " << context_switch_issue_queue.size() << " wq " << wq_occupancy << " rq " << rq_occupancy << std::endl;

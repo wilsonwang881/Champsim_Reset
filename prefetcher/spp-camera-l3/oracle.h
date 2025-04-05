@@ -57,7 +57,6 @@ namespace spp_l3 {
     };
 #pragma pack(pop)
 
-
     std::vector<acc_timestamp> access;
     uint64_t interval_start_cycle;
     uint64_t pf_issued_last_round = 0;

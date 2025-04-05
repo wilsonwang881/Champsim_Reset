@@ -162,10 +162,15 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
               // Put back the rollback prefetch.
               // Put the rollback prefetch back to oracle_pf.
-              auto oracle_pf_back_pos = std::find_if(std::begin(pref.oracle.oracle_pf), std::end(pref.oracle.oracle_pf),
-                                 [match = rollback_pf.addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
-                                   return (entry.addr >> shamt) == match; 
+              auto oracle_pf_back_pos = std::find_if_not(std::begin(pref.oracle.oracle_pf), std::end(pref.oracle.oracle_pf),
+                                 [demanded = rollback_pf.cycle_demanded](const auto& entry) {
+                                   return demanded > entry.cycle_demanded; 
                                  });
+              /*
+    auto pq_place_at = [demanded = std::get<1>(potential_cs_pf)](auto& entry) {return std::get<1>(entry) > demanded;};
+    auto pq_insert_it = std::find_if(context_switch_issue_queue.begin(), context_switch_issue_queue.end(), pq_place_at);
+    */
+
               pref.oracle.oracle_pf.emplace(oracle_pf_back_pos, rollback_pf);
 
               // Update metric
