@@ -166,11 +166,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                                  [demanded = rollback_pf.cycle_demanded](const auto& entry) {
                                    return demanded > entry.cycle_demanded; 
                                  });
-              /*
-    auto pq_place_at = [demanded = std::get<1>(potential_cs_pf)](auto& entry) {return std::get<1>(entry) > demanded;};
-    auto pq_insert_it = std::find_if(context_switch_issue_queue.begin(), context_switch_issue_queue.end(), pq_place_at);
-    */
-
               pref.oracle.oracle_pf.emplace(oracle_pf_back_pos, rollback_pf);
 
               // Update metric
@@ -180,7 +175,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
               found_in_pending_queue = true;
 
               if (pref.debug_print) 
-                std::cout << "Unhandled miss set " << this->get_set_index(base_addr) << " addr " << base_addr << " type " << (unsigned)type << " replaced"<< std::endl;
+                std::cout << "Unhandled miss set " << this->get_set_index(base_addr) << " addr " << base_addr << " type " << (unsigned)type << " replaced with accesses = " << pref.oracle.cache_state[rollback_cache_state_entry_index].pending_accesses << std::endl;
 
               auto rollback_pf_pos = std::find_if(std::begin(pref.context_switch_issue_queue), std::end(pref.context_switch_issue_queue),
                                  [match = pref.oracle.cache_state[rollback_cache_state_entry_index].addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
@@ -190,10 +185,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
               // Try to find and erase the rollback prefetch in the ready to issue prefetch queue.
               if (rollback_pf_pos != pref.context_switch_issue_queue.end()) 
                 pref.context_switch_issue_queue.erase(rollback_pf_pos);
-              else {
-                if (pref.debug_print) 
-                  std::cout << "Unhandled miss set " << this->get_set_index(base_addr) << " addr " << base_addr << " type " << (unsigned)type << " failed to update cache state"<< std::endl;
-              }
             }
           }
           else {
@@ -280,6 +271,10 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   else if (pref.oracle.ORACLE_ACTIVE && type != 2 && type == 3 && cache_hit && !pref.oracle.RECORD_OR_REPLAY) {
     bool evict = pref.oracle.check_require_eviction(base_addr);
     int current_acc = pref.oracle.check_pf_status(base_addr);
+
+    if (pref.debug_print) {
+      std::cout << "set " << set << " addr " << base_addr << " current_acc " << current_acc << std::endl; 
+    }
 
     // Last access to the prefetched block used.
     if (current_acc == 1 && evict) {  

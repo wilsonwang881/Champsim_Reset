@@ -189,9 +189,12 @@ void spp_l3::SPP_ORACLE::file_read() {
                 uint64_t reuse_distance = set_container[0].reuse_distance;
                 uint64_t eviction_candidate = 0;
 
-                for (uint64_t j = 0; j < WAY_NUM; j++) {
-                  if (set_container[j].reuse_distance > reuse_distance) 
+                for (uint64_t j = 1; j < WAY_NUM; j++) {
+
+                  if (set_container[j].reuse_distance > reuse_distance) {
+                    reuse_distance = set_container[j].reuse_distance;
                     eviction_candidate = j; 
+                  }
                 }
 
                 // Evict the block.
@@ -422,6 +425,8 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
       if (way < WAY_NUM) {
         std::get<1>(target) = ite->cycle_demanded;
         std::get<2>(target) = true;
+ 
+        int before_counter = cache_state[set * WAY_NUM + way].pending_accesses;
         cache_state[set * WAY_NUM + way].pending_accesses += (int)(ite->miss_or_hit);
 
         if (cache_state[set * WAY_NUM + way].addr != ite->addr) {
@@ -446,7 +451,7 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
         erase = true;
 
         if (ORACLE_DEBUG_PRINT) 
-          std::cout << "Runahead PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << " type " << ite->type << std::endl;
+          std::cout << "Runahead PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " added accesses " << ite->miss_or_hit << " before accesses " << before_counter << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << " type " << ite->type << std::endl;
 
         break;
       }
@@ -478,6 +483,10 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
       index = i;
       latest_cycle = cache_state[i].timestamp;
     }
+  }
+
+  if (ORACLE_DEBUG_PRINT) {
+    std::cout << "rollback_prefetch addr " << addr << " set " << set << " way " << (index - set * WAY_NUM) << std::endl; 
   }
 
   assert(index < ((set + 1) * WAY_NUM));
