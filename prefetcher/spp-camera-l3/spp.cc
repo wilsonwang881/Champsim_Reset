@@ -23,9 +23,14 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
     auto [addr, cycle, priority, RFO_write] = context_switch_issue_queue.front();
     uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(cache->NUM_SET));
     uint64_t way = cache->get_way(addr, set);
+    auto search_mshr = std::find_if(std::begin(cache->MSHR), std::end(cache->MSHR),
+                       [match = addr >> cache->OFFSET_BITS, shamt = cache->OFFSET_BITS](const auto& entry) {
+                         return (entry.address >> shamt) == match; 
+                       });
+    int remaining_acc = oracle.check_pf_status(addr);
 
-    if (!RFO_write && mshr_occupancy < cache->get_mshr_size()) { 
-      if (way == cache->NUM_WAY) {
+    if (!RFO_write && mshr_occupancy < cache->get_mshr_size() && remaining_acc != -1) { 
+      if (way == cache->NUM_WAY && search_mshr == cache->MSHR.end()) {
         bool prefetched = cache->prefetch_line(addr, priority, 0, 0);
 
         if (prefetched) {

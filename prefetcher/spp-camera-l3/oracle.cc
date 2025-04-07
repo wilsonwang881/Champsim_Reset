@@ -129,26 +129,25 @@ void spp_l3::SPP_ORACLE::file_read() {
     if (BELADY_CACHE_REPLACEMENT_POLICY_ACTIVE) {
 
       for (int set_number = 0; set_number < SET_NUM; set_number++) {
-        std::cout << "Processing set " << set_number << std::endl;
-        
         // Separate accesses into different sets.
-        std::array<std::deque<acc_timestamp>, SET_NUM> set_processing;
+       std::deque<acc_timestamp> set_processing;
 
         for(auto var : readin) {
 
           if (var.set == set_number) 
-            set_processing[var.set].push_back(var);
+            set_processing.push_back(var);
         } 
 
         // Use the optimal cache replacement policy to work out hit/miss for each access.
-        for(auto &set : set_processing) {
+        //for(auto &set : set_processing) 
+        {
           std::vector<acc_timestamp> set_container;
 
-          for (uint64_t i = 0; i < set.size(); i++) {
+          for (uint64_t i = 0; i < set_processing.size(); i++) {
             bool found = false;
 
             for(auto blk : set_container) {
-              if (blk.addr == set[i].addr) {
+              if (blk.addr == set_processing[i].addr) {
                 found = true;
                 break;
               } 
@@ -156,16 +155,16 @@ void spp_l3::SPP_ORACLE::file_read() {
 
             // The set has the block.
             if (found) 
-              set[i].miss_or_hit = 1; 
+              set_processing[i].miss_or_hit = 1; 
             // The set does not have the block.
             else {
               // The set has space.
               if (set_container.size() < WAY_NUM) {
                 // Update the set.
-                set_container.push_back(set[i]);
+                set_container.push_back(set_processing[i]);
 
                 // Set the new block to be a miss.
-                set[i].miss_or_hit = 0;
+                set_processing[i].miss_or_hit = 0;
 
                 // Safety check.
                 assert(set_container.size() <= WAY_NUM);
@@ -176,8 +175,8 @@ void spp_l3::SPP_ORACLE::file_read() {
                 for(auto &el : set_container) {
                   uint64_t distance = std::numeric_limits<uint64_t>::max();
 
-                  for(uint64_t j = i + 1; j < set.size(); j++) {
-                    if (set[j].addr == el.addr) {
+                  for(uint64_t j = i + 1; j < set_processing.size(); j++) {
+                    if (set_processing[j].addr == el.addr) {
                       distance = j - i;
                       break; 
                     }  
@@ -196,13 +195,13 @@ void spp_l3::SPP_ORACLE::file_read() {
                 }
 
                 // Evict the block.
-                set_container.erase(set_container.begin()+eviction_candidate);
+                set_container.erase(set_container.begin() + eviction_candidate);
 
                 // Set the new block to be a miss.
-                set[i].miss_or_hit = 0;
+                set_processing[i].miss_or_hit = 0;
 
                 // Update the set.
-                set_container.push_back(set[i]);
+                set_container.push_back(set_processing[i]);
 
                 // Safety check.
                 assert(set_container.size() <= WAY_NUM);
@@ -214,11 +213,13 @@ void spp_l3::SPP_ORACLE::file_read() {
         for(auto &acc : readin) {
 
           if (acc.set == set_number) {
-            acc.miss_or_hit = set_processing[set_number].front().miss_or_hit;
-            set_processing[set_number].pop_front();
+            acc.miss_or_hit = set_processing.front().miss_or_hit;
+            set_processing.pop_front();
           }
         }
       }
+
+      std::cout << "Done updating hits/misses for each set." << std::endl;
     }
 
     // Use the hashmap to gather accesses.
