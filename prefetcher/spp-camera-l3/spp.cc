@@ -29,8 +29,8 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
                        });
     int remaining_acc = oracle.check_pf_status(addr);
 
-    if (!RFO_write && mshr_occupancy < cache->get_mshr_size() && remaining_acc != -1) { 
-      if (way == cache->NUM_WAY && search_mshr == cache->MSHR.end()) {
+    if (!RFO_write && mshr_occupancy < cache->get_mshr_size()) { 
+      if (way == cache->NUM_WAY && search_mshr == cache->MSHR.end() && remaining_acc != -1) {
         bool prefetched = cache->prefetch_line(addr, priority, 0, 0);
 
         if (prefetched) {
