@@ -172,9 +172,11 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
         // WL
         /*
          std::cout << NAME << " useless pf " << way->address << " evicting_address " << evicting_address << " by address " << ((fill_mshr.address >> 6) << 6) <<
-         " at cycle " << current_cycle << " set " << get_set_index(fill_mshr.address) << " way " << way_idx << std::endl; for (auto i = set_begin; i < set_end;
-         i++) { std::cout <<"way " << i - set_begin << " dirty " << i->dirty << " addr " << (unsigned)i->address << " prefetch " << i->prefetch << " | ";
-         }
+         " at cycle " << current_cycle << " set " << get_set_index(fill_mshr.address) << " way " << way_idx << std::endl;
+         std::cout << "set " << get_set_index(fill_mshr.address) << " ";
+         for (auto i = set_begin; i < set_end; i++) 
+           std::cout <<"way " << i - set_begin << " dirty " << i->dirty << " addr " << (unsigned)i->address << " prefetch " << i->prefetch << " | ";
+
          std::cout << std::endl;
          */
         // impl_replacement_final_stats();

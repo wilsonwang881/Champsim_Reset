@@ -423,20 +423,18 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
       way = check_set_pf_avail(ite->addr);
 
       if (way < WAY_NUM) {
+        std::get<0>(target) = ite->addr;
         std::get<1>(target) = ite->cycle_demanded;
         std::get<2>(target) = true;
  
         int before_counter = cache_state[set * WAY_NUM + way].pending_accesses;
         cache_state[set * WAY_NUM + way].pending_accesses += (int)(ite->miss_or_hit);
 
-        if (cache_state[set * WAY_NUM + way].addr != ite->addr) {
+        if (cache_state[set * WAY_NUM + way].addr != ite->addr) 
           set_availability[set]--;
-          std::get<0>(target) = ite->addr;
-        } 
 
         if (ite->type == 3) { // || ite->type == 1
           std::get<3>(target) = true;
-          std::get<0>(target) = 0;
 
           if (ORACLE_DEBUG_PRINT) 
             std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;

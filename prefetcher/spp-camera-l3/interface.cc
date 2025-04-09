@@ -173,6 +173,22 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                                    return (entry.addr >> shamt) == match;});
               pref.oracle.oracle_pf.emplace(oracle_pf_back_pos, rollback_pf);
 
+              // If the rollback prefetch is in MSHR, push to do not fill.
+              auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
+                                           [match = rollback_pf.addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
+                                             return (entry.address >> shamt) == match; 
+                                           });
+
+              if (search_mshr != this->MSHR.end()) 
+                this->do_not_fill_address.push_back(rollback_pf.addr);
+
+              // If the rollback prefetch is already in cache, set LRU to 0.
+              uint64_t rollback_set = this->get_set_index(rollback_pf.addr);
+              uint64_t rollback_way = this->get_way(rollback_pf.addr, rollback_set);
+
+              if (rollback_way < NUM_WAY) 
+                champsim::operable::lru_states.push_back(std::make_tuple(rollback_set, rollback_way, 0));
+
               // Update metric
               pref.oracle.unhandled_misses_replaced++;
 
