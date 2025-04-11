@@ -364,6 +364,7 @@ int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
 
     if (cache_state[i].addr == addr) {
       cache_state[i].pending_accesses--;
+      cache_state[i].accessed = true;
 
       if (ORACLE_DEBUG_PRINT) 
         std::cout << "Accessed addr = " << addr << " at set " << set << " way " << i - set * WAY_NUM << " remaining accesses " << cache_state[i].pending_accesses << std::endl;
@@ -444,6 +445,7 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
         cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
         cache_state[set * WAY_NUM + way].timestamp = ite->cycle_demanded;
         cache_state[set * WAY_NUM + way].type = ite->type;
+        cache_state[set * WAY_NUM + way].accessed = false;
 
         assert(set_availability[set] >= 0);
         erase = true;
@@ -475,11 +477,31 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
   uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
   uint64_t latest_cycle = cache_state[set * WAY_NUM].timestamp;
   uint64_t index = set * WAY_NUM;
+  bool not_accessed_pf_found = false;
 
   for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
-    if (cache_state[i].timestamp > latest_cycle) {
+    if (!cache_state[i].accessed) {
+      latest_cycle = cache_state[i].timestamp;
+      break;
+    }
+  }
+
+  for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
+    if (!cache_state[i].accessed && cache_state[i].timestamp > latest_cycle) {
+      not_accessed_pf_found = true; 
       index = i;
       latest_cycle = cache_state[i].timestamp;
+    }
+  }
+
+  latest_cycle = cache_state[set * WAY_NUM].timestamp;
+
+  if (!not_accessed_pf_found) { 
+    for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
+        if (cache_state[i].timestamp > latest_cycle) {
+          index = i;
+          latest_cycle = cache_state[i].timestamp;
+        }
     }
   }
 

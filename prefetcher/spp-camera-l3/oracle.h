@@ -68,6 +68,7 @@ namespace spp_l3 {
       uint64_t timestamp;
       bool require_eviction;
       uint8_t type;
+      bool accessed;
     };
 
     blk_state cache_state[SET_NUM * WAY_NUM];
