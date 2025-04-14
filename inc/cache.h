@@ -89,7 +89,7 @@ class CACHE : public champsim::operable
     uint32_t pf_metadata;
     uint32_t cpu;
 
-    uint64_t cycle_demanded = 0;
+    //uint64_t cycle_demanded = 0;
 
     access_type type;
     bool prefetch_from_this;

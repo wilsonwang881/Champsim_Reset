@@ -33,7 +33,7 @@
 
 CACHE::tag_lookup_type::tag_lookup_type(request_type req, bool local_pref, bool skip, uint64_t cycle_demanded_)
     : address(req.address), v_address(req.v_address), data(req.data), ip(req.ip), instr_id(req.instr_id), pf_metadata(req.pf_metadata), cpu(req.cpu),
-      type(req.type), prefetch_from_this(local_pref), skip_fill(skip), cycle_demanded(cycle_demanded_), is_translated(req.is_translated), instr_depend_on_me(req.instr_depend_on_me)
+      type(req.type), prefetch_from_this(local_pref), skip_fill(skip), is_translated(req.is_translated), instr_depend_on_me(req.instr_depend_on_me) // , cycle_demanded(cycle_demanded_)
 {
   // WL: added ASID matching.
   asid[0] = req.asid[0];
