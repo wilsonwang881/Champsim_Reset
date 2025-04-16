@@ -210,6 +210,11 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
                                                  evicting_address, pf_feed); // WL: replaced last metadata_thru with pf_feed.
       */
 
+     /*
+      if(L2C_name.compare(NAME) == 0)
+        std::cout << "Handled fill for MSHR at address: " << pkt_address << " at set " << get_set_index(pkt_address) << std::endl;
+    */
+
       metadata_thru = impl_prefetcher_cache_fill(pkt_address, get_set_index(fill_mshr.address), way_idx, fill_mshr.type == access_type::PREFETCH,
                                                  evicting_address, pf_feed); // WL: replaced last metadata_thru with pf_feed.
 
@@ -224,10 +229,10 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
     // Bypass
     assert(fill_mshr.type != access_type::WRITE);
 
-    metadata_thru =
-        impl_prefetcher_cache_fill(pkt_address, get_set_index(fill_mshr.address), way_idx, fill_mshr.type == access_type::PREFETCH, 0, metadata_thru);
-    impl_update_replacement_state(fill_mshr.cpu, get_set_index(fill_mshr.address), way_idx, fill_mshr.address, fill_mshr.ip, 0,
-                                  champsim::to_underlying(fill_mshr.type), false);
+    //metadata_thru =
+    //    impl_prefetcher_cache_fill(pkt_address, get_set_index(fill_mshr.address), way_idx, fill_mshr.type == access_type::PREFETCH, 0, metadata_thru);
+    //impl_update_replacement_state(fill_mshr.cpu, get_set_index(fill_mshr.address), way_idx, fill_mshr.address, fill_mshr.ip, 0,
+    //                              champsim::to_underlying(fill_mshr.type), false);
   }
 
   if (success) {
