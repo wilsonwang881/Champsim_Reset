@@ -27,12 +27,13 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
                        [match = addr >> cache->OFFSET_BITS, shamt = cache->OFFSET_BITS](const auto& entry) {
                          return (entry.address >> shamt) == match; 
                        });
-    //int remaining_acc = oracle.check_pf_status(addr);
+    int remaining_acc = oracle.check_pf_status(addr);
 
-    if (debug_print) 
+    if (remaining_acc == -1) {
       std::cout << "Trying to issue " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(cache->NUM_SET))) << " at cycle " << cache->current_cycle << " MSHR usage: " << mshr_occupancy << " queue size " << context_switch_issue_queue.size() << " wq " << wq_occupancy << " rq " << rq_occupancy << std::endl;
 
-    //assert(remaining_acc != -1);
+      assert(remaining_acc != -1);
+    }
 
     if (!RFO_write && mshr_occupancy < cache->get_mshr_size()) { 
       if (way == cache->NUM_WAY && search_mshr == cache->MSHR.end()) {
@@ -54,6 +55,8 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
       }
       else {
         context_switch_issue_queue.pop_front();
+        champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
+
         res = 0;
 
         if (debug_print) 
