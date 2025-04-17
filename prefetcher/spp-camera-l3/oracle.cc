@@ -514,6 +514,26 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
   return index;
 }
 
+void spp_l3::SPP_ORACLE::clear_addr(uint64_t addr) {
+  addr = (addr >> 6) << 6;
+
+  uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
+
+  for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
+    if (cache_state[i].addr == addr) {
+      cache_state[i].addr = 0;
+      cache_state[i].pending_accesses = 0;
+      cache_state[i].timestamp = 0;
+      cache_state[i].require_eviction = false;
+      cache_state[i].type = 0;
+      cache_state[i].accessed = false;
+      set_availability[set]++;
+      break;
+    }
+  }
+
+}
+
 void spp_l3::SPP_ORACLE::kill_simulation() {
 
   // Check if there is vacancy in the cache record.

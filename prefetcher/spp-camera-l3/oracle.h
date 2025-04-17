@@ -85,6 +85,7 @@ namespace spp_l3 {
     bool check_require_eviction(uint64_t addr);
     std::tuple<uint64_t, uint64_t, bool, bool> poll();
     uint64_t rollback_prefetch(uint64_t addr);
+    void clear_addr(uint64_t addr);
     void kill_simulation();
     void finish();
   };

@@ -38,7 +38,7 @@ namespace spp_l3 {
     std::set<uint64_t> pending_write_fills;
 
     uint64_t issue(CACHE* cache);
-    bool call_poll();
+    bool call_poll(CACHE* cache);
   };
 } // namespace spp_l3
 

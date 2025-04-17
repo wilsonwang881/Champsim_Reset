@@ -164,6 +164,12 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
       dirty_blk_evicted = success;
     }
 
+    /*
+    if (!NAME.compare(L2C_name)) {
+      std::cout << "L2C handle_fill addr " << fill_mshr.address << " at cycle " << current_cycle << " success ? " << success << std::endl; // WL
+    }
+    */
+
     if (success) {
       auto evicting_address = !way->valid ? 0 : (virtual_prefetch ? way->v_address : way->address) & ~champsim::bitmask(match_offset_bits ? 0 : OFFSET_BITS);
 

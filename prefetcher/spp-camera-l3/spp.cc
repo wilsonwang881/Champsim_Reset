@@ -80,7 +80,7 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
   return res;
 }
 
-bool spp_l3::prefetcher::call_poll() {
+bool spp_l3::prefetcher::call_poll(CACHE* cache) {
   std::tuple<uint64_t, uint64_t, bool, bool> potential_cs_pf = oracle.poll();
       
   // Update the prefetch queue.
@@ -88,6 +88,15 @@ bool spp_l3::prefetcher::call_poll() {
     auto pq_place_at = [demanded = std::get<1>(potential_cs_pf)](auto& entry) {return std::get<1>(entry) > demanded;};
     auto pq_insert_it = std::find_if(context_switch_issue_queue.begin(), context_switch_issue_queue.end(), pq_place_at);
     context_switch_issue_queue.emplace(pq_insert_it,std::get<0>(potential_cs_pf), std::get<1>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<3>(potential_cs_pf));
+
+    auto search_oracle_pq = std::find_if(std::begin(cache->do_not_fill_address), std::end(cache->do_not_fill_address),
+                                  [match = std::get<0>(potential_cs_pf) >> cache->OFFSET_BITS, shamt = cache->OFFSET_BITS](const auto& entry) {
+                                    return (entry >> shamt) == match; 
+                                  });
+
+    if (search_oracle_pq != cache->do_not_fill_address.end()) {
+      cache->do_not_fill_address.erase(search_oracle_pq); 
+    }
 
     return true;
   }
