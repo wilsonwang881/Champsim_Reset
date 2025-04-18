@@ -486,7 +486,7 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
   }
 
   for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
-    if (!cache_state[i].accessed && cache_state[i].timestamp < latest_cycle) {
+    if (!cache_state[i].accessed && cache_state[i].timestamp > latest_cycle) {
       not_accessed_pf_found = true; 
       index = i;
       latest_cycle = cache_state[i].timestamp;
@@ -497,7 +497,7 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
 
   if (!not_accessed_pf_found) { 
     for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
-        if (cache_state[i].timestamp < latest_cycle) {
+        if (cache_state[i].timestamp > latest_cycle) {
           index = i;
           latest_cycle = cache_state[i].timestamp;
         }
