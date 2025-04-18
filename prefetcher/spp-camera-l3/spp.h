@@ -34,11 +34,11 @@ namespace spp_l3 {
     std::set<uint64_t> issued_cs_pf;
     uint64_t issued_cs_pf_hit;
     uint64_t total_issued_cs_pf;
-    std::set<uint64_t> rfo_write_addr;
     std::set<uint64_t> pending_write_fills;
 
     uint64_t issue(CACHE* cache);
     bool call_poll(CACHE* cache);
+    void erase_duplicate_entry_in_ready_queue(CACHE* cache, uint64_t addr);
   };
 } // namespace spp_l3
 

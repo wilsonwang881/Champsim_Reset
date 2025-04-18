@@ -42,15 +42,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     return metadata_in; 
   }
 
-  /*
-  if (!cache_hit) {
-    if (base_addr != pref.last_handled_addr) 
-      pref.last_handled_addr = base_addr; 
-    else 
-      return metadata_in;
-  }
-  */
-
   // Return if a demand misses and cannot merge in MSHR and MSHR is full.
   if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && !cache_hit && type != 3) {
     auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
@@ -65,10 +56,11 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   if (pref.debug_print) 
     std::cout << "Hit/miss " << (unsigned)cache_hit << " set " << this->get_set_index(base_addr) << " addr " << base_addr << " at cycle " << this->current_cycle << " type " << (unsigned)type << " MSHR usage " << this->get_mshr_occupancy() << std::endl;
 
-
   bool found_in_MSHR = false;
+  bool found_in_ready_queue = false;
+  bool found_in_not_ready_queue = false;
 
-  if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && type != 2 && !cache_hit) {
+  if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && !cache_hit) {
     bool found_in_pending_queue = false;
     auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
                                  [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
@@ -80,6 +72,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
         std::cout << "Hit in MSHR set " << this->get_set_index(base_addr) << " addr " << base_addr << " type " << (unsigned)type << std::endl;
 
       found_in_pending_queue = true; 
+      found_in_MSHR = true;
       pref.oracle.MSHR_hits++;
     } 
     else {
@@ -108,6 +101,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
           pref.context_switch_issue_queue.erase(search_pending_pf); 
           found_in_pending_queue = true;
+          found_in_ready_queue = true;
           pref.oracle.cs_q_hits++;
         }
         else {
@@ -137,6 +131,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
               assert(pref.oracle.set_availability[set] >= 0);
               pref.oracle.oracle_pf.erase(search_oracle_pq); 
               found_in_pending_queue = true;
+              found_in_not_ready_queue = true;
               pref.oracle.oracle_pf_hits++;
             }
             else {
@@ -144,18 +139,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
               // Replace entry in cache_state.
               // Move prefetch in the ready queue to oracle_pf.
               // The missed prefetch target now becomes demand miss.
-
-              /*
-              if (search_oracle_pq->miss_or_hit == 1)
-              {
-                this->do_not_fill_address.push_back(search_oracle_pq->addr);
-
-                // Erase the moved ahead prefetch in oracle_pf
-                pref.oracle.oracle_pf.erase(search_oracle_pq);
-              }
-              else
-              */ 
-              {
               // Find the address from cache_state with latest timestamp.
               uint64_t rollback_cache_state_entry_index = pref.oracle.rollback_prefetch(base_addr); 
 
@@ -182,12 +165,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
               // Put back the rollback prefetch.
               // Put the rollback prefetch back to oracle_pf.
               //if (pref.oracle.cache_state[rollback_cache_state_entry_index].pending_accesses > 1 || type == 3) {
-              /*
-                auto oracle_pf_back_pos = std::find_if_not(std::begin(pref.oracle.oracle_pf), std::end(pref.oracle.oracle_pf),
-                                   [demanded = rollback_pf.cycle_demanded](const auto& entry) {
-                                     return demanded > entry.cycle_demanded; 
-                                   });
-                                   */
               auto oracle_pf_back_pos = std::find_if(std::begin(pref.oracle.oracle_pf), std::end(pref.oracle.oracle_pf),
                                  [match = rollback_pf.set](const auto& entry) {
                                    return entry.set == match;});
@@ -195,20 +172,20 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
               //pref.oracle.oracle_pf.push_front(rollback_pf);
               pref.oracle.oracle_pf.emplace(oracle_pf_back_pos, rollback_pf);
               
-                if (pref.debug_print) {
-                  std::cout << "Replaced prefetch in set " << this->get_set_index(rollback_pf.addr) << " addr " << rollback_pf.addr << " with counter " << rollback_pf.miss_or_hit << std::endl;
-
-                }
-              //}
+              if (pref.debug_print) 
+                std::cout << "Replaced prefetch in set " << this->get_set_index(rollback_pf.addr) << " addr " << rollback_pf.addr << " with counter " << rollback_pf.miss_or_hit << std::endl;
 
               // If the rollback prefetch is in MSHR, push to do not fill.
               auto search_mshr_rollback = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
-                                           [match = rollback_pf.addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
-                                             return (entry.address >> shamt) == match; 
-                                           });
+                                          [match = rollback_pf.addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
+                                            return (entry.address >> shamt) == match; 
+                                          });
 
               if (search_mshr_rollback != this->MSHR.end() && (pref.oracle.cache_state[rollback_cache_state_entry_index].pending_accesses > 1 || type == 3)) 
                 this->do_not_fill_address.push_back(rollback_pf.addr);
+
+              if (pref.oracle.cache_state[rollback_cache_state_entry_index].pending_accesses == 1 && pref.oracle.cache_state[rollback_cache_state_entry_index].type != 3) 
+                this->do_not_fill_address.push_back(pref.oracle.cache_state[rollback_cache_state_entry_index].addr);
 
               // If the rollback prefetch is already in cache, set LRU to 0.
               uint64_t rollback_set = this->get_set_index(rollback_pf.addr);
@@ -226,23 +203,19 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
               if (pref.debug_print) 
                 std::cout << "Replaced miss set " << this->get_set_index(base_addr) << " addr " << base_addr << " type " << (unsigned)type << " replaced with accesses = " << pref.oracle.cache_state[rollback_cache_state_entry_index].pending_accesses << " replaced addr " << rollback_pf.addr << std::endl;
 
-              auto rollback_pf_pos = std::find_if(std::begin(pref.context_switch_issue_queue), std::end(pref.context_switch_issue_queue),
-                                 [match = rollback_pf.addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
-                                   return (std::get<0>(entry) >> shamt) == match; 
-                                 });
-
-              // Try to find and erase the rollback prefetch in the ready to issue prefetch queue.
-              if (rollback_pf_pos != pref.context_switch_issue_queue.end()) 
-                pref.context_switch_issue_queue.erase(rollback_pf_pos);
-              }
-              
+              pref.erase_duplicate_entry_in_ready_queue(this, rollback_pf.addr);
             }
           }
           else {
-            pref.oracle.unhandled_misses_not_found++;
-
-            if (pref.context_switch_issue_queue.size() != 0) { // type != 3 && 
-              this->do_not_fill_address.push_back(base_addr);
+            if (pref.context_switch_issue_queue.size() != 0 || pref.oracle.oracle_pf.size() != 0) {
+              if (type != 3) {
+                this->do_not_fill_address.push_back(base_addr);
+                pref.oracle.unhandled_non_write_misses_not_filled++;
+              }
+              else {
+                this->do_not_fill_write_address.push_back(base_addr);
+                pref.oracle.unhandled_write_misses_not_filled++;
+              }
             }
 
             if (pref.debug_print) 
@@ -256,51 +229,32 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       useful_prefetch = true; 
       cache_hit = true;
       pref.oracle.runahead_hits++;
-      found_in_MSHR = true;
 
       if (pref.debug_print) 
         std::cout << "Hit in pending queues ? " << (unsigned)cache_hit << " set " << this->get_set_index(base_addr) << " addr " << base_addr << " at cycle " << this->current_cycle << " type " << (unsigned)type << std::endl;
     }
   }
 
-  if (useful_prefetch && type != 2) 
+  if (useful_prefetch) 
     pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0, type);
-  else if (type != 2) 
+  else
     pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1, type);
-
-  if (type == 3) {
-    int erased = 1; //pref.rfo_write_addr.erase(base_addr);
-
-    if (pref.debug_print) 
-      std::cout << "WRITE operation " << base_addr << " update erased ? " << erased << std::endl; 
-
-    if (erased) {
-      found_in_MSHR = true;
-      cache_hit = true;
-    } 
-  }
 
   uint64_t set = this->get_set_index(base_addr);
   uint64_t way = this->get_way(base_addr, set);
+  bool evict = pref.oracle.check_require_eviction(base_addr);
+  int current_acc = pref.oracle.check_pf_status(base_addr);
 
-  if (pref.oracle.ORACLE_ACTIVE && type != 2 && type != 3 && cache_hit && !pref.oracle.RECORD_OR_REPLAY) {
-    bool evict = pref.oracle.check_require_eviction(base_addr);
+  if (pref.oracle.ORACLE_ACTIVE && type != 3 && cache_hit && !pref.oracle.RECORD_OR_REPLAY) {
     int remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 
     // Last access to the prefetched block used.
-    if ((remaining_acc == 0) && evict) { //   
-      auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
-                                   [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
-                                     return (entry.address >> shamt) == match; 
-                                   });
+    if (remaining_acc == 0) {   
       pref.call_poll(this);
       int updated_remaining_acc = pref.oracle.check_pf_status(base_addr);
 
       if (updated_remaining_acc == -1) {
-        if (search_mshr != this->MSHR.end()) 
-         found_in_MSHR = true;  
-
-        if (found_in_MSHR) {
+        if (found_in_MSHR || found_in_ready_queue || found_in_not_ready_queue) {
           if (pref.debug_print) 
             std::cout << "set " << set << " addr " << base_addr << " pushed to do not fill set" << std::endl; 
 
@@ -311,38 +265,21 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
           if (pref.debug_print) 
             std::cout << "set " << set << " addr " << base_addr << " cleared LRU bits" << std::endl; 
 
-          auto possible_duplicate_pf = std::find_if(std::begin(pref.context_switch_issue_queue), std::end(pref.context_switch_issue_queue),
-                             [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
-                               return (std::get<0>(entry) >> shamt) == match; 
-                             });
+          pref.erase_duplicate_entry_in_ready_queue(this, base_addr);
 
-          if (possible_duplicate_pf != pref.context_switch_issue_queue.end()) 
-            pref.context_switch_issue_queue.erase(possible_duplicate_pf); 
-
-          champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
+          if (evict) 
+            champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
         }
       }
-      else {
-        if (way < NUM_WAY) {
-          champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
-        }
-      }
-    }
-    else if (remaining_acc > 0) {
-      if (way < NUM_WAY) 
+      else if (way < NUM_WAY) 
         champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
     }
+    else if (remaining_acc > 0 && way < NUM_WAY) 
+      champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
   }
-  else if (pref.oracle.ORACLE_ACTIVE && type != 2 && type == 3 && cache_hit && !pref.oracle.RECORD_OR_REPLAY) {
-    bool evict = pref.oracle.check_require_eviction(base_addr);
-    int current_acc = pref.oracle.check_pf_status(base_addr);
-
-    if (pref.debug_print) {
-      std::cout << "set " << set << " addr " << base_addr << " current_acc " << current_acc << std::endl; 
-    }
-
+  else if (pref.oracle.ORACLE_ACTIVE && type == 3 && cache_hit && !pref.oracle.RECORD_OR_REPLAY) {
     // Last access to the prefetched block used.
-    if (current_acc == 1 && evict) { // 
+    if (current_acc == 1) { 
       if (found_in_MSHR && !original_hit) {
         pref.pending_write_fills.insert(base_addr); 
 
@@ -354,21 +291,15 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
         pref.call_poll(this);
         int updated_remaining_acc = pref.oracle.check_pf_status(base_addr);
 
-        if (updated_remaining_acc == -1) {
-          if (way < NUM_WAY && original_hit) {
-            if (pref.debug_print) 
-              std::cout << "set " << set << " addr " << base_addr << " cleared LRU bits" << std::endl; 
+        if (updated_remaining_acc == -1 && way < NUM_WAY) {
+          if (pref.debug_print) 
+            std::cout << "set " << set << " addr " << base_addr << " cleared LRU bits" << std::endl; 
 
-            auto possible_duplicate_pf = std::find_if(std::begin(pref.context_switch_issue_queue), std::end(pref.context_switch_issue_queue),
-                               [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
-                                 return (std::get<0>(entry) >> shamt) == match; 
-                               });
+          pref.erase_duplicate_entry_in_ready_queue(this, base_addr); 
 
-            if (possible_duplicate_pf != pref.context_switch_issue_queue.end()) 
-              pref.context_switch_issue_queue.erase(possible_duplicate_pf); 
-
+          if (evict) {
             champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0)); 
-          } 
+          }
         }
       }
     }
@@ -395,16 +326,14 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   if (pref.debug_print) 
     std::cout << "Filled addr " << addr << " set " << set << " way " << way << " prefetch " << (unsigned)prefetch << " evicted_addr " << evicted_addr << " at cycle " << this->current_cycle << " remaining access " << pref.oracle.check_pf_status(addr) << std::endl;
 
-  /*
-  if (pref.oracle.ORACLE_ACTIVE) {
+  if (pref.oracle.ORACLE_ACTIVE && (pref.context_switch_issue_queue.size() != 0 || pref.oracle.oracle_pf.size() != 0)) {
     int evicted_addr_counter = pref.oracle.check_pf_status(evicted_addr);
 
-    if (evicted_addr_counter != -1) {
-       std::cout << "Error filled addr " << addr << " set " << set << " way " << way << " prefetch " << (unsigned)prefetch << " fill addr counter " << pref.oracle.check_pf_status(addr)<< " evicted_addr " << evicted_addr << " at cycle " << this->current_cycle << " evicted address remaining access " << evicted_addr_counter << std::endl;
-       assert(evicted_addr_counter == -1);
+    if (evicted_addr_counter != -1 && addr != evicted_addr) {
+       //std::cout << "Error filled addr " << addr << " set " << set << " way " << way << " prefetch " << (unsigned)prefetch << " fill addr counter " << pref.oracle.check_pf_status(addr)<< " evicted_addr " << evicted_addr << " at cycle " << this->current_cycle << " evicted address remaining access " << evicted_addr_counter << std::endl;
+       //assert(evicted_addr_counter == -1);
     }
   }
-  */
 
   if (pref.oracle.ORACLE_ACTIVE && pref.oracle.check_pf_status(addr) > 0) {
 
@@ -419,14 +348,7 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
         std::cout << "addr " << addr << " set " << this->get_set_index(addr) << " cleared WRITE " << addr << std::endl;
 
       if (updated_remaining_acc == -1) {
-        auto possible_duplicate_pf = std::find_if(std::begin(pref.context_switch_issue_queue), std::end(pref.context_switch_issue_queue),
-                           [match = addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
-                             return (std::get<0>(entry) >> shamt) == match; 
-                           });
-
-        if (possible_duplicate_pf != pref.context_switch_issue_queue.end()) 
-          pref.context_switch_issue_queue.erase(possible_duplicate_pf); 
-
+        pref.erase_duplicate_entry_in_ready_queue(this, addr);
         champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
       }
     }
@@ -434,14 +356,7 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
       champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
   }
   else {
-    auto possible_duplicate_pf = std::find_if(std::begin(pref.context_switch_issue_queue), std::end(pref.context_switch_issue_queue),
-                       [match = addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
-                         return (std::get<0>(entry) >> shamt) == match; 
-                       });
-
-    if (possible_duplicate_pf != pref.context_switch_issue_queue.end()) 
-      pref.context_switch_issue_queue.erase(possible_duplicate_pf); 
-
+    pref.erase_duplicate_entry_in_ready_queue(this, addr);
     /*
     if (pref.oracle.check_pf_status(addr) == -1 && pref.oracle.check_pf_status(evicted_addr) != -1) {
       pref.context_switch_issue_queue.emplace(pref.context_switch_issue_queue.begin(), evicted_addr, 0, 1, 0);
@@ -451,14 +366,7 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
     if (pref.oracle.check_pf_status(evicted_addr) != -1) {
       pref.oracle.clear_addr(evicted_addr);
       champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
-      possible_duplicate_pf = std::find_if(std::begin(pref.context_switch_issue_queue), std::end(pref.context_switch_issue_queue),
-                       [match = evicted_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
-                         return (std::get<0>(entry) >> shamt) == match; 
-                       });
-
-      if (possible_duplicate_pf != pref.context_switch_issue_queue.end()) 
-        pref.context_switch_issue_queue.erase(possible_duplicate_pf); 
-
+      pref.erase_duplicate_entry_in_ready_queue(this, evicted_addr);
       pref.call_poll(this);
     }
 

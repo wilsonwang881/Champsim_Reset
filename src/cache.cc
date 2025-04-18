@@ -103,12 +103,13 @@ CACHE::BLOCK::BLOCK(mshr_type mshr)
 bool CACHE::handle_fill(const mshr_type& fill_mshr)
 {
   cpu = fill_mshr.cpu;
+
+  // WL
   auto search = std::find(do_not_fill_address.begin(), do_not_fill_address.end(), (fill_mshr.address >> 6) << 6);
 
   if (!L2C_name.compare(NAME) && search != do_not_fill_address.end()) {
         // COLLECT STATS
-    if(search != do_not_fill_address.end())
-      do_not_fill_address.erase(search);
+    do_not_fill_address.erase(search);
     sim_stats.total_miss_latency += current_cycle - (fill_mshr.cycle_enqueued + 1);
 
     response_type response{fill_mshr.address, fill_mshr.v_address, fill_mshr.data,
@@ -119,6 +120,29 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
     
     return true;
   }
+
+  search = std::find(do_not_fill_write_address.begin(), do_not_fill_write_address.end(), (fill_mshr.address >> 6) << 6);
+
+  if (!L2C_name.compare(NAME) && search != do_not_fill_write_address.end()) {
+        // COLLECT STATS
+    do_not_fill_write_address.erase(search);
+    sim_stats.total_miss_latency += current_cycle - (fill_mshr.cycle_enqueued + 1);
+    request_type writeback_packet;
+    writeback_packet.cpu = fill_mshr.cpu;
+    writeback_packet.address = fill_mshr.address;
+    writeback_packet.data = fill_mshr.data;
+    writeback_packet.instr_id = fill_mshr.instr_id;
+    writeback_packet.ip = 0;
+    writeback_packet.asid[0] = fill_mshr.asid[0]; // WL: added ASID to writeback packet
+    writeback_packet.type = access_type::WRITE;
+    writeback_packet.pf_metadata =fill_mshr.pf_metadata;
+    writeback_packet.response_requested = false;
+
+    lower_level->add_wq(writeback_packet);
+
+    return true;
+  }
+  // WL 
 
   // find victim
   auto [set_begin, set_end] = get_set_span(fill_mshr.address);

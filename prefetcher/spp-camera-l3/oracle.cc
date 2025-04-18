@@ -139,76 +139,73 @@ void spp_l3::SPP_ORACLE::file_read() {
         } 
 
         // Use the optimal cache replacement policy to work out hit/miss for each access.
-        //for(auto &set : set_processing) 
-        {
-          std::vector<acc_timestamp> set_container;
+        std::vector<acc_timestamp> set_container;
 
-          for (uint64_t i = 0; i < set_processing.size(); i++) {
-            bool found = false;
+        for (uint64_t i = 0; i < set_processing.size(); i++) {
+          bool found = false;
 
-            for(auto blk : set_container) {
-              if (blk.addr == set_processing[i].addr) {
-                found = true;
-                break;
-              } 
+          for(auto blk : set_container) {
+            if (blk.addr == set_processing[i].addr) {
+              found = true;
+              break;
+            } 
+          }
+
+          // The set has the block.
+          if (found) 
+            set_processing[i].miss_or_hit = 1; 
+          // The set does not have the block.
+          else {
+            // The set has space.
+            if (set_container.size() < WAY_NUM) {
+              // Update the set.
+              set_container.push_back(set_processing[i]);
+
+              // Set the new block to be a miss.
+              set_processing[i].miss_or_hit = 0;
+
+              // Safety check.
+              assert(set_container.size() <= WAY_NUM);
             }
-
-            // The set has the block.
-            if (found) 
-              set_processing[i].miss_or_hit = 1; 
-            // The set does not have the block.
+            // The set has no space.
             else {
-              // The set has space.
-              if (set_container.size() < WAY_NUM) {
-                // Update the set.
-                set_container.push_back(set_processing[i]);
+              // Calculate the re-use distance.
+              for(auto &el : set_container) {
+                uint64_t distance = std::numeric_limits<uint64_t>::max();
 
-                // Set the new block to be a miss.
-                set_processing[i].miss_or_hit = 0;
-
-                // Safety check.
-                assert(set_container.size() <= WAY_NUM);
-              }
-              // The set has no space.
-              else {
-                // Calculate the re-use distance.
-                for(auto &el : set_container) {
-                  uint64_t distance = std::numeric_limits<uint64_t>::max();
-
-                  for(uint64_t j = i + 1; j < set_processing.size(); j++) {
-                    if (set_processing[j].addr == el.addr) {
-                      distance = j - i;
-                      break; 
-                    }  
-                  }
-
-                  el.reuse_distance = distance;
+                for(uint64_t j = i + 1; j < set_processing.size(); j++) {
+                  if (set_processing[j].addr == el.addr) {
+                    distance = j - i;
+                    break; 
+                  }  
                 }
 
-                // Evict the block with the longest reuse distance.
-                uint64_t reuse_distance = set_container[0].reuse_distance;
-                uint64_t eviction_candidate = 0;
-
-                for (uint64_t j = 1; j < WAY_NUM; j++) {
-
-                  if (set_container[j].reuse_distance > reuse_distance) {
-                    reuse_distance = set_container[j].reuse_distance;
-                    eviction_candidate = j; 
-                  }
-                }
-
-                // Evict the block.
-                set_container.erase(set_container.begin() + eviction_candidate);
-
-                // Set the new block to be a miss.
-                set_processing[i].miss_or_hit = 0;
-
-                // Update the set.
-                set_container.push_back(set_processing[i]);
-
-                // Safety check.
-                assert(set_container.size() <= WAY_NUM);
+                el.reuse_distance = distance;
               }
+
+              // Evict the block with the longest reuse distance.
+              uint64_t reuse_distance = set_container[0].reuse_distance;
+              uint64_t eviction_candidate = 0;
+
+              for (uint64_t j = 1; j < WAY_NUM; j++) {
+
+                if (set_container[j].reuse_distance > reuse_distance) {
+                  reuse_distance = set_container[j].reuse_distance;
+                  eviction_candidate = j; 
+                }
+              }
+
+              // Evict the block.
+              set_container.erase(set_container.begin() + eviction_candidate);
+
+              // Set the new block to be a miss.
+              set_processing[i].miss_or_hit = 0;
+
+              // Update the set.
+              set_container.push_back(set_processing[i]);
+
+              // Safety check.
+              assert(set_container.size() <= WAY_NUM);
             }
           }
         }
@@ -434,12 +431,14 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
         if (cache_state[set * WAY_NUM + way].addr != ite->addr) 
           set_availability[set]--;
 
+        /*
         if (ite->type == 3) { // || ite->type == 1
           std::get<3>(target) = true;
 
           if (ORACLE_DEBUG_PRINT) 
             std::cout << "Skipping addr " << ite->addr << " type " << ite->type << std::endl;
         } 
+        */
 
         cache_state[set * WAY_NUM + way].addr = ite->addr;
         cache_state[set * WAY_NUM + way].require_eviction = ite->require_eviction;
@@ -553,7 +552,8 @@ void spp_l3::SPP_ORACLE::finish() {
     std::cout << "Hits in ready to issue prefetch queue " << cs_q_hits << std::endl;
     std::cout << "Hits in oracle_pf " << oracle_pf_hits << std::endl;
     std::cout << "Unhandled misses replaced " << unhandled_misses_replaced << std::endl;
-    std::cout << "Unhandled misses not found " << unhandled_misses_not_found  << std::endl;
+    std::cout << "Unhandled non-write misses not filled " << unhandled_non_write_misses_not_filled << std::endl;
+    std::cout << "Unhandled write misses not filled " << unhandled_write_misses_not_filled << std::endl;
     std::cout << "New misses recorded: " << new_misses << std::endl;
     file_write();
   } 

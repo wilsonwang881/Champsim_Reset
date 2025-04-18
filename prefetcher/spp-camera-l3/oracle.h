@@ -33,7 +33,6 @@ namespace spp_l3 {
     const static int WAY_NUM = 10;
     bool ORACLE_ACTIVE = true;
     bool RECORD_OR_REPLAY = false;
-    bool done;
     uint64_t new_misses = 0;
     uint64_t runahead_hits = 0;
     std::set<uint64_t> heartbeat_printed;
@@ -43,7 +42,8 @@ namespace spp_l3 {
     uint64_t cs_q_hits = 0;
     uint64_t oracle_pf_hits = 0;
     uint64_t unhandled_misses_replaced = 0;
-    uint64_t unhandled_misses_not_found = 0;
+    uint64_t unhandled_non_write_misses_not_filled = 0;
+    uint64_t unhandled_write_misses_not_filled = 0;
 
 #pragma pack(push,1)
     struct acc_timestamp {

@@ -196,6 +196,7 @@ public:
   const unsigned pref_activate_mask = (1 << champsim::to_underlying(access_type::LOAD)) | (1 << champsim::to_underlying(access_type::PREFETCH));
 
   std::deque<uint64_t> do_not_fill_address;
+  std::deque<uint64_t> do_not_fill_write_address;
   using stats_type = cache_stats;
 
   stats_type sim_stats, roi_stats;
