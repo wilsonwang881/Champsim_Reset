@@ -112,9 +112,8 @@ bool spp_l3::prefetcher::call_poll(CACHE* cache) {
                               return (entry >> shamt) == match; 
                             });
 
-    if (search_oracle_pq != cache->do_not_fill_address.end()) {
+    if (search_oracle_pq != cache->do_not_fill_address.end()) 
       cache->do_not_fill_address.erase(search_oracle_pq); 
-    }
 
     return true;
   }
