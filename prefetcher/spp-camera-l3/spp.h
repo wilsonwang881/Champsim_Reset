@@ -28,13 +28,12 @@ namespace spp_l3 {
 
     std::deque<std::tuple<uint64_t, uint64_t, bool, bool>> context_switch_issue_queue; // addr, cycle, pf_to_this_level, RFO/WRITE
     SPP_ORACLE oracle;
-    bool debug_print = true;
+    bool debug_print = false;
     uint64_t last_handled_addr;
     uint64_t cache_cycle;
     std::set<uint64_t> issued_cs_pf;
     uint64_t issued_cs_pf_hit;
     uint64_t total_issued_cs_pf;
-    std::set<uint64_t> pending_write_fills;
 
     uint64_t issue(CACHE* cache);
     bool call_poll(CACHE* cache);
