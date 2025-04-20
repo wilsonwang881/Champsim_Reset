@@ -77,7 +77,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       // Let the MSHR that holds the prefetch for WRITE not fill.
       // Otherwise, the same address for the WRITE miss fills twice.
       if (type == 3) 
-        this->do_not_fill_write_address.push_back(base_addr); 
+        this->do_not_fill_address.push_back(base_addr); 
     } 
     else {
       auto search_pq = std::find_if(std::begin(this->internal_PQ), std::end(this->internal_PQ),
@@ -153,7 +153,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                   std::cout << "set " << set << " addr " << base_addr << " no fill" << std::endl; 
 
                 pref.oracle.oracle_pf.erase(search_oracle_pq);
-                pref.call_poll(this);
+                pref.oracle.unhandled_misses_not_replaced++;
               }
               // If the counter > 1, replace.
               else {

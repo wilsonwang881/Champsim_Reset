@@ -41,6 +41,7 @@ namespace spp_l3 {
     uint64_t internal_PQ_hits = 0;
     uint64_t cs_q_hits = 0;
     uint64_t oracle_pf_hits = 0;
+    uint64_t unhandled_misses_not_replaced = 0;
     uint64_t unhandled_misses_replaced = 0;
     uint64_t unhandled_non_write_misses_not_filled = 0;
     uint64_t unhandled_write_misses_not_filled = 0;

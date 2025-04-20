@@ -124,7 +124,7 @@ void spp_l3::SPP_ORACLE::file_read() {
 
       for (int set_number = 0; set_number < SET_NUM; set_number++) {
         // Separate accesses into different sets.
-       std::deque<acc_timestamp> set_processing;
+        std::deque<acc_timestamp> set_processing;
 
         for(auto var : readin) {
           if (var.set == set_number) 
@@ -203,11 +203,13 @@ void spp_l3::SPP_ORACLE::file_read() {
         }
 
         for(auto &acc : readin) {
-          if (acc.set == set_number) {
+          if (acc.set == set_number && acc.addr == set_processing.front().addr) {
             acc.miss_or_hit = set_processing.front().miss_or_hit;
             set_processing.pop_front();
           }
         }
+
+        assert(set_processing.size() == 0);
       }
 
       std::cout << "Done updating hits/misses for each set." << std::endl;
@@ -475,7 +477,7 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
   }
 
   for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
-    if (!cache_state[i].accessed && cache_state[i].timestamp > latest_cycle) {
+    if (!cache_state[i].accessed && cache_state[i].timestamp >= latest_cycle) {
       not_accessed_pf_found = true; 
       index = i;
       latest_cycle = cache_state[i].timestamp;
@@ -486,10 +488,10 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
 
   if (!not_accessed_pf_found) { 
     for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
-        if (cache_state[i].timestamp > latest_cycle) {
-          index = i;
-          latest_cycle = cache_state[i].timestamp;
-        }
+      if (cache_state[i].timestamp > latest_cycle) {
+        index = i;
+        latest_cycle = cache_state[i].timestamp;
+      }
     }
   }
 
@@ -540,6 +542,7 @@ void spp_l3::SPP_ORACLE::finish() {
     std::cout << "Hits in internal_PQ " << internal_PQ_hits << std::endl;
     std::cout << "Hits in ready to issue prefetch queue " << cs_q_hits << std::endl;
     std::cout << "Hits in oracle_pf " << oracle_pf_hits << std::endl;
+    std::cout << "Unhandled misses not replaced " << unhandled_misses_not_replaced << std::endl;
     std::cout << "Unhandled misses replaced " << unhandled_misses_replaced << std::endl;
     std::cout << "Unhandled non-write misses not filled " << unhandled_non_write_misses_not_filled << std::endl;
     std::cout << "Unhandled write misses not filled " << unhandled_write_misses_not_filled << std::endl;
