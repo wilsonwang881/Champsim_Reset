@@ -267,7 +267,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     // Last access to the prefetched block used.
     if (remaining_acc == 0) {   
       pref.call_poll(this);
-     
       int updated_remaining_acc = pref.oracle.check_pf_status(base_addr);
 
       if (updated_remaining_acc == -1) {
@@ -330,6 +329,9 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
     champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
   else {
     pref.erase_duplicate_entry_in_ready_queue(this, addr);
+    champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
+    pref.call_poll(this);
+
     /*
     if (pref.oracle.check_pf_status(addr) == -1 && pref.oracle.check_pf_status(evicted_addr) != -1) {
       pref.context_switch_issue_queue.emplace(pref.context_switch_issue_queue.begin(), evicted_addr, 0, 1, 0);

@@ -137,9 +137,10 @@ void spp_l3::SPP_ORACLE::file_read() {
         for (uint64_t i = 0; i < set_processing.size(); i++) {
           bool found = false;
 
-          for(auto blk : set_container) {
+          for(auto &blk : set_container) {
             if (blk.addr == set_processing[i].addr) {
               found = true;
+              blk.cycle_demanded = set_processing[i].cycle_demanded;
               break;
             } 
           }
@@ -166,9 +167,9 @@ void spp_l3::SPP_ORACLE::file_read() {
               for(auto &el : set_container) {
                 uint64_t distance = std::numeric_limits<uint64_t>::max();
 
-                for(uint64_t j = i + 1; j < set_processing.size(); j++) {
+                for(uint64_t j = i; j < set_processing.size(); j++) { // + 1
                   if (set_processing[j].addr == el.addr) {
-                    distance = j - i;
+                    distance = set_processing[j].cycle_demanded - el.cycle_demanded;
                     break; 
                   }  
                 }
@@ -180,8 +181,8 @@ void spp_l3::SPP_ORACLE::file_read() {
               uint64_t reuse_distance = set_container[0].reuse_distance;
               uint64_t eviction_candidate = 0;
 
-              for (uint64_t j = 1; j < WAY_NUM; j++) {
-                if (set_container[j].reuse_distance > reuse_distance) {
+              for (uint64_t j = 0; j < WAY_NUM; j++) {
+                if (set_container[j].reuse_distance >= reuse_distance) {
                   reuse_distance = set_container[j].reuse_distance;
                   eviction_candidate = j; 
                 }
@@ -227,6 +228,9 @@ void spp_l3::SPP_ORACLE::file_read() {
           addr_counter_map[tmpp_readin.addr]++; 
         else 
           addr_counter_map[tmpp_readin.addr] = 1;
+
+        tmpp_readin.miss_or_hit = 0;
+        readin[i].miss_or_hit = 0;
       }
       else {
         if (auto search = addr_counter_map.find(tmpp_readin.addr); search != addr_counter_map.end()) 
@@ -235,9 +239,16 @@ void spp_l3::SPP_ORACLE::file_read() {
           addr_counter_map[tmpp_readin.addr] = 1;
 
         tmpp_readin.miss_or_hit = addr_counter_map[tmpp_readin.addr];
-        oracle_pf.push_front(tmpp_readin);
+        readin[i].miss_or_hit = addr_counter_map[tmpp_readin.addr];
+        //oracle_pf.push_front(tmpp_readin);
         addr_counter_map.erase(tmpp_readin.addr);
       }
+    }
+
+    for(auto var : readin) {
+      if (var.miss_or_hit != 0) {
+        oracle_pf.push_back(var); 
+      } 
     }
 
     std::map<uint64_t, std::deque<uint64_t>> eviction_check;

@@ -78,7 +78,6 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
       if (context_switch_issue_queue.size() % 100000 == 0) 
         context_switch_issue_queue.shrink_to_fit();
 
-
       if (debug_print) 
         std::cout << "Issue WRITE operation " << addr << " for set " 
           << ((addr >> 6) & champsim::bitmask(champsim::lg2(cache->NUM_SET))) 
@@ -92,6 +91,9 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
 }
 
 bool spp_l3::prefetcher::call_poll(CACHE* cache) {
+  if (oracle.oracle_pf.size() == 0) 
+    return true; 
+
   std::tuple<uint64_t, uint64_t, bool, bool> potential_cs_pf = oracle.poll();
       
   // Update the prefetch queue.
@@ -100,13 +102,7 @@ bool spp_l3::prefetcher::call_poll(CACHE* cache) {
     uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(cache->NUM_SET));
     uint64_t way = cache->get_way(addr, set);
 
-    if (way < cache->NUM_WAY) 
-      champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
-
-    auto pq_place_at = [demanded = std::get<1>(potential_cs_pf)](auto& entry) {return std::get<1>(entry) > demanded;};
-    auto pq_insert_it = std::find_if(context_switch_issue_queue.begin(), context_switch_issue_queue.end(), pq_place_at);
-    context_switch_issue_queue.emplace(pq_insert_it,std::get<0>(potential_cs_pf), std::get<1>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<3>(potential_cs_pf));
-
+    // Remove the prefetch target from do not fill queue.
     auto search_oracle_pq = std::find_if(std::begin(cache->do_not_fill_address), std::end(cache->do_not_fill_address),
                             [match = std::get<0>(potential_cs_pf) >> cache->OFFSET_BITS, shamt = cache->OFFSET_BITS](const auto& entry) {
                               return (entry >> shamt) == match; 
@@ -114,6 +110,26 @@ bool spp_l3::prefetcher::call_poll(CACHE* cache) {
 
     if (search_oracle_pq != cache->do_not_fill_address.end()) 
       cache->do_not_fill_address.erase(search_oracle_pq); 
+
+    if (way < cache->NUM_WAY) {
+      champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
+      return false;
+    }
+    else {
+      auto possible_duplicate_pf = std::find_if(std::begin(context_switch_issue_queue), std::end(context_switch_issue_queue),
+                                   [match = addr >> cache->OFFSET_BITS, shamt = cache->OFFSET_BITS](const auto& entry) {
+                                     return (std::get<0>(entry) >> shamt) == match; 
+                                   });
+
+      if (possible_duplicate_pf == context_switch_issue_queue.end()) {
+        auto pq_place_at = [demanded = std::get<1>(potential_cs_pf)](auto& entry) {return std::get<1>(entry) > demanded;};
+        auto pq_insert_it = std::find_if(context_switch_issue_queue.begin(), context_switch_issue_queue.end(), pq_place_at);
+        context_switch_issue_queue.emplace(pq_insert_it,std::get<0>(potential_cs_pf), std::get<1>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<3>(potential_cs_pf));
+      }
+      else {
+        return false; 
+      }
+    }
 
     return true;
   }
