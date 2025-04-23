@@ -74,8 +74,8 @@ namespace spp_l3 {
 
     blk_state cache_state[SET_NUM * WAY_NUM];
     std::array<std::set<uint64_t>, SET_NUM> set_kill_counter;
-    std::deque<acc_timestamp> oracle_pf;
-    std::array<std::deque<acc_timestamp>, SET_NUM> NRQ;
+    std::array<std::deque<acc_timestamp>, SET_NUM> oracle_pf;
+    uint64_t oracle_pf_size;
 
     void init();
     void update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch, uint64_t type);

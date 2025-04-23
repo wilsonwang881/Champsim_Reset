@@ -36,7 +36,7 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
       uint64_t way_check = check_set_pf_avail(addr);   
 
       if (way_check == WAY_NUM) {
-        if (oracle_pf.empty() && type != 3) { 
+        if (oracle_pf_size == 0 && type != 3) { 
           set_kill_counter[set_check].insert((addr >> 6) << 6);
           new_misses++;
         }
@@ -50,7 +50,7 @@ void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, 
               cache_state[set_check * WAY_NUM + way_check].addr != ((addr >> 6) << 6)) {
         assert(cache_state[set_check * WAY_NUM + way_check].addr == 0);
 
-        if (oracle_pf.empty() && type != 3) {  
+        if (oracle_pf_size == 0 && type != 3) {  
           set_kill_counter[set_check].insert((addr >> 6) << 6);
           new_misses++;
         }
@@ -93,7 +93,6 @@ void spp_l3::SPP_ORACLE::file_write() {
 }
 
 void spp_l3::SPP_ORACLE::file_read() {
-  oracle_pf.clear();
   acc_timestamp tmpp;
   std::deque<acc_timestamp> readin;
 
@@ -266,10 +265,14 @@ void spp_l3::SPP_ORACLE::file_read() {
 
     for(auto var : readin) {
       if (var.miss_or_hit != 0) {
-        oracle_pf.push_back(var); 
-        //NRQ[var.set].push_back(var);
+        oracle_pf[var.set].push_back(var); 
       } 
     }
+
+    oracle_pf_size = 0;
+
+    for(auto var : oracle_pf) 
+      oracle_pf_size += var.size(); 
 
     /*
     std::cout << "Belady's algorithm's counter" << std::endl;
@@ -281,9 +284,8 @@ void spp_l3::SPP_ORACLE::file_read() {
     }
     */
 
-    /*
-    for(auto &set_pf: NRQ) {
-      if (set_pf.size >= WAY_NUM) {
+    for(auto &set_pf: oracle_pf) {
+      if (set_pf.size() >= WAY_NUM) {
         for (size_t i = set_pf.size() - 1; i > set_pf.size() - 1 - WAY_NUM; i--) {
           set_pf[i].require_eviction = false; 
         } 
@@ -293,37 +295,19 @@ void spp_l3::SPP_ORACLE::file_read() {
           pf.require_eviction = false; 
       }
     }
-    */
-
-    std::map<uint64_t, std::deque<uint64_t>> eviction_check;
-
-    for (int i = oracle_pf.size() - 1; i >= 0; i--) {
-      uint16_t set = oracle_pf[i].set;
-      uint64_t addr = oracle_pf[i].addr;
-
-      if (auto search = eviction_check.find(set); search != eviction_check.end()) {
-        if (eviction_check[set].size() < WAY_NUM) {
-          eviction_check[set].push_back(addr); 
-          oracle_pf[i].require_eviction = false;
-        }
-      }
-      else {
-        eviction_check[set];
-        eviction_check[set].push_back(addr);
-        oracle_pf[i].require_eviction = false;
-      }
-    }
 
     uint64_t non_pf_counter = 0;
 
-    for(auto var : oracle_pf) {
-      if (var.type == 3) 
-        non_pf_counter++; 
+    for(auto set_pf: oracle_pf) {
+      for(auto var : set_pf) {
+        if (var.type == 3) 
+          non_pf_counter++; 
+      }
     }
 
-    std::cout << "Oracle: pre-processing collects " << oracle_pf.size() << " prefetch targets from file read." << std::endl;
+    std::cout << "Oracle: pre-processing collects " << oracle_pf_size << " prefetch targets from file read." << std::endl;
     std::cout << "Oracle: skipping " << non_pf_counter << " prefetch targets because they are WRITE misses." << std::endl;
-    std::cout << "Oracle: issuing " << (oracle_pf.size() - non_pf_counter) << " prefetches." << std::endl;
+    std::cout << "Oracle: issuing " << (oracle_pf_size - non_pf_counter) << " prefetches." << std::endl;
 
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
     rec_file.close();
@@ -450,35 +434,19 @@ bool spp_l3::SPP_ORACLE::check_require_eviction(uint64_t addr) {
 std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> spp_l3::SPP_ORACLE::poll() {
   std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> target_v;
 
-  if (oracle_pf.empty()) 
+  if (oracle_pf_size == 0) 
     return target_v; 
 
-  int available_pf = 0;
-
-  for (int i = 0; i < SET_NUM; i++) 
-    available_pf += set_availability[i];    
-
-  // Find the address to be prefetched.
-  uint64_t way;
-  auto ite = oracle_pf.begin();
-  bool erase = false;
-  uint64_t set; 
-  int i = 0;
-  std::vector<uint64_t> to_be_erased;
-
-  while (ite < oracle_pf.end() && available_pf > 0) {
-    set = ite->set;
-
-    if (set_availability[set] > 0) {
-      way = check_set_pf_avail(ite->addr);
+  for (size_t set = 0; set < SET_NUM; set++) {
+    while (set_availability[set] > 0 && oracle_pf[set].size() > 0) {
+      auto ite = &oracle_pf[set].front();
+      uint64_t way = check_set_pf_avail(ite->addr);
 
       if (way < WAY_NUM) {
-
         std::tuple<uint64_t, uint64_t, bool, bool> target = std::make_tuple(0, 0, 0, 0);
         std::get<0>(target) = ite->addr;
         std::get<1>(target) = ite->cycle_demanded;
         std::get<2>(target) = true;
- 
         int before_counter = cache_state[set * WAY_NUM + way].pending_accesses;
         cache_state[set * WAY_NUM + way].pending_accesses += (int)(ite->miss_or_hit);
 
@@ -499,34 +467,24 @@ std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> spp_l3::SPP_ORACLE::poll
         cache_state[set * WAY_NUM + way].timestamp = ite->cycle_demanded;
         cache_state[set * WAY_NUM + way].type = ite->type;
         cache_state[set * WAY_NUM + way].accessed = false;
-        available_pf--;
-        to_be_erased.push_back(i);
         target_v.push_back(target);
-
+        oracle_pf[set].pop_front();
+        oracle_pf_size--;
         assert(set_availability[set] >= 0);
-        erase = true;
 
         if (ORACLE_DEBUG_PRINT) 
           std::cout << "Runahead PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " added accesses " << ite->miss_or_hit << " before accesses " << before_counter << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << " type " << ite->type << std::endl;
-
-        //break;
       }
-    }
-
-    ite++;
-    i++;
+    } 
   }
 
-  if (erase) { //ite != oracle_pf.end() && 
-    for (int j = to_be_erased.size() - 1; j >= 0; j--) 
-      oracle_pf.erase(oracle_pf.begin() + to_be_erased[j]);
-  }
+  if ((((oracle_pf_size % 10000 == 0) || oracle_pf_size == 0)) && 
+      heartbeat_printed.find(oracle_pf_size) == heartbeat_printed.end()) {
+      std::cout << "Oracle: remaining oracle access = " << oracle_pf_size - pf_issued << std::endl;
+      heartbeat_printed.insert(oracle_pf_size);
 
-  if ((((oracle_pf.size() % 10000 == 0) || oracle_pf.size() == 0)) && 
-      heartbeat_printed.find(oracle_pf.size()) == heartbeat_printed.end()) {
-      std::cout << "Oracle: remaining oracle access = " << oracle_pf.size() - pf_issued << std::endl;
-      oracle_pf.shrink_to_fit();
-      heartbeat_printed.insert(oracle_pf.size());
+      for(auto &set_pf : oracle_pf) 
+        set_pf.shrink_to_fit();
   }
 
   return target_v;
@@ -564,9 +522,8 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
     }
   }
 
-  if (ORACLE_DEBUG_PRINT) {
+  if (ORACLE_DEBUG_PRINT) 
     std::cout << "rollback_prefetch addr " << addr << " set " << set << " way " << (index - set * WAY_NUM) << std::endl; 
-  }
 
   assert(index < ((set + 1) * WAY_NUM));
 
@@ -575,7 +532,6 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
 
 void spp_l3::SPP_ORACLE::clear_addr(uint64_t addr) {
   addr = (addr >> 6) << 6;
-
   uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM)); 
 
   for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
@@ -590,12 +546,9 @@ void spp_l3::SPP_ORACLE::clear_addr(uint64_t addr) {
       break;
     }
   }
-
 }
 
 void spp_l3::SPP_ORACLE::kill_simulation() {
-
-  // Check if there is vacancy in the cache record.
   file_write();
   std::cout << "Updating address and hit/miss record complete in LLC" << std::endl;
   ORACLE_ACTIVE = false;
