@@ -75,6 +75,7 @@ namespace spp_l3 {
     blk_state cache_state[SET_NUM * WAY_NUM];
     std::array<std::set<uint64_t>, SET_NUM> set_kill_counter;
     std::deque<acc_timestamp> oracle_pf;
+    std::array<std::deque<acc_timestamp>, SET_NUM> NRQ;
 
     void init();
     void update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch, uint64_t type);
@@ -84,7 +85,7 @@ namespace spp_l3 {
     int check_pf_status(uint64_t addr);
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     bool check_require_eviction(uint64_t addr);
-    std::tuple<uint64_t, uint64_t, bool, bool> poll();
+    std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> poll();
     uint64_t rollback_prefetch(uint64_t addr);
     void clear_addr(uint64_t addr);
     void kill_simulation();

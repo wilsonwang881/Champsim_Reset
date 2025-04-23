@@ -131,6 +131,15 @@ void spp_l3::SPP_ORACLE::file_read() {
             set_processing.push_back(var);
         } 
 
+        /*
+        if (set_number == 0) {
+          std::cout << "Set 0 accesses before processing " << std::endl;
+          for(auto var : set_processing) {
+            std::cout << (var.addr >> 17) << " " << var.miss_or_hit << std::endl; 
+          } 
+        }
+        */
+
         // Use the optimal cache replacement policy to work out hit/miss for each access.
         std::vector<acc_timestamp> set_container;
 
@@ -165,10 +174,11 @@ void spp_l3::SPP_ORACLE::file_read() {
             else {
               // Calculate the re-use distance.
               for(auto &el : set_container) {
-                uint64_t distance = std::numeric_limits<uint64_t>::max();
+                uint64_t distance = std::numeric_limits<uint64_t>::max(); //1.0; 
 
-                for(uint64_t j = i; j < set_processing.size(); j++) { // + 1
+                for(uint64_t j = i + 1; j < set_processing.size(); j++) { 
                   if (set_processing[j].addr == el.addr) {
+                    // distance = set_processing[j].cycle_demanded; // Optimal cache replacement policy.
                     distance = set_processing[j].cycle_demanded - el.cycle_demanded;
                     break; 
                   }  
@@ -202,6 +212,16 @@ void spp_l3::SPP_ORACLE::file_read() {
             }
           }
         }
+
+        /*
+        if (set_number == 0) {
+          std::cout << "Set 0 accesses after processing " << std::endl;
+          for(auto var : set_processing) {
+            std::cout << (var.addr >> 17) << " " << var.miss_or_hit << std::endl; 
+          } 
+        }
+        */
+
 
         for(auto &acc : readin) {
           if (acc.set == set_number && acc.addr == set_processing.front().addr) {
@@ -240,7 +260,6 @@ void spp_l3::SPP_ORACLE::file_read() {
 
         tmpp_readin.miss_or_hit = addr_counter_map[tmpp_readin.addr];
         readin[i].miss_or_hit = addr_counter_map[tmpp_readin.addr];
-        //oracle_pf.push_front(tmpp_readin);
         addr_counter_map.erase(tmpp_readin.addr);
       }
     }
@@ -248,8 +267,33 @@ void spp_l3::SPP_ORACLE::file_read() {
     for(auto var : readin) {
       if (var.miss_or_hit != 0) {
         oracle_pf.push_back(var); 
+        //NRQ[var.set].push_back(var);
       } 
     }
+
+    /*
+    std::cout << "Belady's algorithm's counter" << std::endl;
+
+    for(auto var : oracle_pf) {
+      if (var.set == 0) {
+        std::cout << (var.addr >> 17) << " " << var.miss_or_hit << std::endl; 
+      } 
+    }
+    */
+
+    /*
+    for(auto &set_pf: NRQ) {
+      if (set_pf.size >= WAY_NUM) {
+        for (size_t i = set_pf.size() - 1; i > set_pf.size() - 1 - WAY_NUM; i--) {
+          set_pf[i].require_eviction = false; 
+        } 
+      }
+      else {
+        for(auto &pf : set_pf) 
+          pf.require_eviction = false; 
+      }
+    }
+    */
 
     std::map<uint64_t, std::deque<uint64_t>> eviction_check;
 
@@ -403,19 +447,26 @@ bool spp_l3::SPP_ORACLE::check_require_eviction(uint64_t addr) {
   return need_eviction;
 }
 
-std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
-  std::tuple<uint64_t, uint64_t, bool, bool> target = std::make_tuple(0, 0, 0, 0);
+std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> spp_l3::SPP_ORACLE::poll() {
+  std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> target_v;
 
   if (oracle_pf.empty()) 
-    return target; 
+    return target_v; 
+
+  int available_pf = 0;
+
+  for (int i = 0; i < SET_NUM; i++) 
+    available_pf += set_availability[i];    
 
   // Find the address to be prefetched.
   uint64_t way;
   auto ite = oracle_pf.begin();
   bool erase = false;
   uint64_t set; 
+  int i = 0;
+  std::vector<uint64_t> to_be_erased;
 
-  while (ite < oracle_pf.end()) {
+  while (ite < oracle_pf.end() && available_pf > 0) {
     set = ite->set;
 
     if (set_availability[set] > 0) {
@@ -423,6 +474,7 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
 
       if (way < WAY_NUM) {
 
+        std::tuple<uint64_t, uint64_t, bool, bool> target = std::make_tuple(0, 0, 0, 0);
         std::get<0>(target) = ite->addr;
         std::get<1>(target) = ite->cycle_demanded;
         std::get<2>(target) = true;
@@ -447,6 +499,9 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
         cache_state[set * WAY_NUM + way].timestamp = ite->cycle_demanded;
         cache_state[set * WAY_NUM + way].type = ite->type;
         cache_state[set * WAY_NUM + way].accessed = false;
+        available_pf--;
+        to_be_erased.push_back(i);
+        target_v.push_back(target);
 
         assert(set_availability[set] >= 0);
         erase = true;
@@ -454,15 +509,18 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
         if (ORACLE_DEBUG_PRINT) 
           std::cout << "Runahead PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " added accesses " << ite->miss_or_hit << " before accesses " << before_counter << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << " type " << ite->type << std::endl;
 
-        break;
+        //break;
       }
     }
 
     ite++;
+    i++;
   }
 
-  if (ite != oracle_pf.end() && erase) 
-    ite = oracle_pf.erase(ite); 
+  if (erase) { //ite != oracle_pf.end() && 
+    for (int j = to_be_erased.size() - 1; j >= 0; j--) 
+      oracle_pf.erase(oracle_pf.begin() + to_be_erased[j]);
+  }
 
   if ((((oracle_pf.size() % 10000 == 0) || oracle_pf.size() == 0)) && 
       heartbeat_printed.find(oracle_pf.size()) == heartbeat_printed.end()) {
@@ -471,7 +529,7 @@ std::tuple<uint64_t, uint64_t, bool, bool> spp_l3::SPP_ORACLE::poll() {
       heartbeat_printed.insert(oracle_pf.size());
   }
 
-  return target;
+  return target_v;
 }
 
 uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {

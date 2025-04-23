@@ -19,16 +19,7 @@ void CACHE::prefetcher_initialize() {
 
   if (pref.oracle.ORACLE_ACTIVE) {
     pref.oracle.init();
-
-    while (true) {
-      if (pref.oracle.ORACLE_ACTIVE && pref.oracle.oracle_pf.size() > 0) {
-        if (!pref.call_poll(this)) 
-          break;
-      }
-      else 
-        break;
-    }
-
+    pref.call_poll(this);
     std::cout << "Oracle: try to prefetch " << pref.context_switch_issue_queue.size() << "/" << (NUM_WAY * NUM_SET) << " blocks at the beginning." << std::endl;
   }
 }

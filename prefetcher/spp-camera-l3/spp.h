@@ -36,7 +36,7 @@ namespace spp_l3 {
     uint64_t total_issued_cs_pf;
 
     uint64_t issue(CACHE* cache);
-    bool call_poll(CACHE* cache);
+    void call_poll(CACHE* cache);
     void erase_duplicate_entry_in_ready_queue(CACHE* cache, uint64_t addr);
   };
 } // namespace spp_l3
