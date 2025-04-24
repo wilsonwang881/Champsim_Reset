@@ -107,7 +107,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
   // WL
   auto search = std::find(do_not_fill_address.begin(), do_not_fill_address.end(), (fill_mshr.address >> 6) << 6);
 
-  if (!L2C_name.compare(NAME) && search != do_not_fill_address.end()) {
+  if (!L2C_name.compare(NAME) && search != do_not_fill_address.end() && fill_mshr.type != access_type::WRITE) {
         // COLLECT STATS
     do_not_fill_address.erase(search);
     sim_stats.total_miss_latency += current_cycle - (fill_mshr.cycle_enqueued + 1);
@@ -123,7 +123,7 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
 
   search = std::find(do_not_fill_write_address.begin(), do_not_fill_write_address.end(), (fill_mshr.address >> 6) << 6);
 
-  if (!L2C_name.compare(NAME) && search != do_not_fill_write_address.end()) {
+  if (!L2C_name.compare(NAME) && search != do_not_fill_write_address.end() && fill_mshr.type == access_type::WRITE) {
         // COLLECT STATS
     do_not_fill_write_address.erase(search);
     sim_stats.total_miss_latency += current_cycle - (fill_mshr.cycle_enqueued + 1);
