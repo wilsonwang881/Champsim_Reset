@@ -120,6 +120,7 @@ void spp_l3::SPP_ORACLE::file_read() {
     std::cout << "Oracle: read " << readin.size() << " accesses from file." << std::endl;
 
     if (BELADY_CACHE_REPLACEMENT_POLICY_ACTIVE) {
+      std::cout << "Belady's cache replacement policy active." << std::endl;
 
       for (int set_number = 0; set_number < SET_NUM; set_number++) {
         // Separate accesses into different sets.
@@ -177,8 +178,8 @@ void spp_l3::SPP_ORACLE::file_read() {
 
                 for(uint64_t j = i + 1; j < set_processing.size(); j++) { 
                   if (set_processing[j].addr == el.addr) {
-                    // distance = set_processing[j].cycle_demanded; // Optimal cache replacement policy.
-                    distance = set_processing[j].cycle_demanded - el.cycle_demanded;
+                    distance = set_processing[j].cycle_demanded; // Optimal cache replacement policy.
+                    // distance = set_processing[j].cycle_demanded - el.cycle_demanded;
                     break; 
                   }  
                 }
@@ -234,6 +235,124 @@ void spp_l3::SPP_ORACLE::file_read() {
 
       std::cout << "Done updating hits/misses for each set." << std::endl;
     }
+    else if (REUSE_DISTANCE_REPLACEMENT_POLICY_ACTIVE) {
+      std::cout << "Reuse distance based cache replacement policy active." << std::endl;
+
+      for (int set_number = 0; set_number < SET_NUM; set_number++) {
+        // Separate accesses into different sets.
+        std::deque<acc_timestamp> set_processing;
+
+        for(auto var : readin) {
+          if (var.set == set_number) 
+            set_processing.push_back(var);
+        } 
+
+        std::map<uint64_t, std::deque<uint64_t>> not_in_cache;
+        std::map<uint64_t, std::deque<uint64_t>> in_cache;
+        std::map<uint64_t, bool> accessed;
+
+        // Gather timestamps for each address.
+        for(auto el : set_processing) {
+          auto search = not_in_cache.find(el.addr); 
+
+          if (search == not_in_cache.end()) 
+            not_in_cache[el.addr];
+
+          not_in_cache[el.addr].push_back(el.cycle_demanded); 
+        }
+
+        // Fill cache.
+        for (size_t i = 0; i < WAY_NUM; i++) {
+          auto it = std::min_element(std::begin(not_in_cache), std::end(not_in_cache),
+                    [](const auto& l, const auto& r) { return l.second.front() < r.second.front(); });
+          in_cache[it->first] = not_in_cache[it->first];
+          accessed[it->first] = false;
+          not_in_cache.erase(it->first);
+        }
+
+        for (uint64_t i = 0; i < set_processing.size(); i++) {
+          acc_timestamp *current_acc = &set_processing[i];
+          uint64_t addr = current_acc->addr;
+
+          // Check if the block is already in cache.
+          auto block_in_cache = in_cache.find(addr);
+
+          // If the block is in cache.
+          if (block_in_cache != in_cache.end()) {
+            // Pop the access timestamp.
+            in_cache[addr].pop_front();
+
+            if (accessed[addr]) 
+              current_acc->miss_or_hit = 1; 
+            else {
+              current_acc->miss_or_hit = 0;
+              accessed[addr] = true;
+            }
+
+            if (in_cache[addr].size() == 0) {
+              in_cache.erase(addr); 
+              accessed.erase(addr);
+            }
+
+            // Replacement.
+            if (not_in_cache.size() > 0) {
+              auto it = std::min_element(std::begin(not_in_cache), std::end(not_in_cache),
+                        [](const auto& l, const auto& r) { return l.second.front() < r.second.front(); });
+
+              // Space available in the set.
+              if (in_cache.size() < WAY_NUM) {
+                in_cache[it->first] = not_in_cache[it->first];
+                not_in_cache.erase(it->first);
+                accessed[it->first] = false;
+              }
+              // No space available.
+              // Need replacement.
+              else {
+                auto it_in_cache = std::min_element(std::begin(in_cache), std::end(in_cache),
+                                   [](const auto& l, const auto& r) { return l.second.front() < r.second.front(); }); 
+                
+                if (it->second.front() < it_in_cache->second.front()) {
+                  not_in_cache[it_in_cache->first] = it_in_cache->second;
+                  in_cache[it->first] = it->second;
+                  in_cache.erase(it_in_cache->first);
+                  not_in_cache.erase(it->first);
+                  accessed.erase(it_in_cache->first);
+                  accessed[it->first] = false;
+                }
+              }
+
+              assert(accessed.size() <= WAY_NUM);
+              assert(in_cache.size() <= WAY_NUM);
+            }
+          }
+          // The block is not in the cache.
+          else 
+            assert(false);
+        }
+
+        /*
+        if (set_number == 0) {
+          std::cout << "Set 0 accesses after processing " << std::endl;
+          for(auto var : set_processing) {
+            std::cout << (var.addr >> 17) << " " << var.miss_or_hit << std::endl; 
+          } 
+        }
+        */
+
+        for(auto &acc : readin) {
+          if (acc.set == set_number && acc.addr == set_processing.front().addr) {
+            acc.miss_or_hit = set_processing.front().miss_or_hit;
+            set_processing.pop_front();
+          }
+        }
+
+        assert(set_processing.size() == 0);
+      }
+
+      std::cout << "Done updating hits/misses for each set." << std::endl;
+    }
+    else 
+      std::cout << "LRU cache replacement policy active." << std::endl;
 
     // Use the hashmap to gather accesses.
     std::cout << "Parsing memory accesses" << std::endl;
@@ -264,9 +383,8 @@ void spp_l3::SPP_ORACLE::file_read() {
     }
 
     for(auto var : readin) {
-      if (var.miss_or_hit != 0) {
+      if (var.miss_or_hit != 0) 
         oracle_pf[var.set].push_back(var); 
-      } 
     }
 
     oracle_pf_size = 0;
@@ -286,9 +404,8 @@ void spp_l3::SPP_ORACLE::file_read() {
 
     for(auto &set_pf: oracle_pf) {
       if (set_pf.size() >= WAY_NUM) {
-        for (size_t i = set_pf.size() - 1; i > set_pf.size() - 1 - WAY_NUM; i--) {
+        for (size_t i = set_pf.size() - 1; i > set_pf.size() - 1 - WAY_NUM; i--) 
           set_pf[i].require_eviction = false; 
-        } 
       }
       else {
         for(auto &pf : set_pf) 
@@ -338,7 +455,6 @@ uint64_t spp_l3::SPP_ORACLE::check_set_pf_avail(uint64_t addr) {
   }
 
   if (!found) {
-
     for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
       if (cache_state[i].addr != 0 && cache_state[i].pending_accesses == 0 && cache_state[i].require_eviction)
         assert(false); 
