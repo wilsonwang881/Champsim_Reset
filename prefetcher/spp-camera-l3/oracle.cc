@@ -256,15 +256,16 @@ void spp_l3::SPP_ORACLE::file_read() {
           auto search = not_in_cache.find(el.addr); 
 
           if (search == not_in_cache.end()) 
-            not_in_cache[el.addr];
+            not_in_cache[el.addr] = std::deque<uint64_t>();
 
           not_in_cache[el.addr].push_back(el.cycle_demanded); 
         }
 
         // Fill cache.
-        for (size_t i = 0; i < WAY_NUM; i++) {
+        for (size_t i = 0; i < std::min((std::size_t)WAY_NUM, not_in_cache.size()); i++) {
           auto it = std::min_element(std::begin(not_in_cache), std::end(not_in_cache),
                     [](const auto& l, const auto& r) { return l.second.front() < r.second.front(); });
+          assert(not_in_cache.size() > 0);
           in_cache[it->first] = not_in_cache[it->first];
           accessed[it->first] = false;
           not_in_cache.erase(it->first);
@@ -302,24 +303,26 @@ void spp_l3::SPP_ORACLE::file_read() {
               // Space available in the set.
               if (in_cache.size() < WAY_NUM) {
                 in_cache[it->first] = not_in_cache[it->first];
-                not_in_cache.erase(it->first);
                 accessed[it->first] = false;
+                not_in_cache.erase(it->first);
               }
               // No space available.
               // Need replacement.
-              else {
+              else if (in_cache.size() >= WAY_NUM) {
                 auto it_in_cache = std::min_element(std::begin(in_cache), std::end(in_cache),
                                    [](const auto& l, const auto& r) { return l.second.front() < r.second.front(); }); 
                 
                 if (it->second.front() < it_in_cache->second.front()) {
                   not_in_cache[it_in_cache->first] = it_in_cache->second;
                   in_cache[it->first] = it->second;
-                  in_cache.erase(it_in_cache->first);
-                  not_in_cache.erase(it->first);
                   accessed.erase(it_in_cache->first);
+                  in_cache.erase(it_in_cache->first);
                   accessed[it->first] = false;
+                  not_in_cache.erase(it->first);
                 }
               }
+              else 
+                assert(false);
 
               assert(accessed.size() <= WAY_NUM);
               assert(in_cache.size() <= WAY_NUM);
