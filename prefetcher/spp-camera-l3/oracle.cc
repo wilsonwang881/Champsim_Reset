@@ -94,12 +94,22 @@ void spp_l3::SPP_ORACLE::file_write() {
 
 void spp_l3::SPP_ORACLE::file_read() {
   acc_timestamp tmpp;
-  std::deque<acc_timestamp> readin;
+  std::cout << "Parsing memory accesses" << std::endl;
 
-  if (!RECORD_OR_REPLAY) {
+  if (BELADY_CACHE_REPLACEMENT_POLICY_ACTIVE) 
+    std::cout << "Belady's cache replacement policy active." << std::endl;
+  else if (REUSE_DISTANCE_REPLACEMENT_POLICY_ACTIVE) 
+    std::cout << "Reuse distance based cache replacement policy active." << std::endl;
+  else 
+    std::cout << "LRU cache replacement policy active." << std::endl;
+
+  for (int set_partition = 0; set_partition < MEMORY_USAGE_REDUCTION_FACTOR && !RECORD_OR_REPLAY; set_partition++) {
+    int set_number_begin = SET_NUM / MEMORY_USAGE_REDUCTION_FACTOR * set_partition;
+    int set_number_end = SET_NUM / MEMORY_USAGE_REDUCTION_FACTOR * (set_partition + 1);
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ifstream::in);
     uint64_t readin_cycle_demanded, readin_addr, readin_miss_or_hit;
     uint8_t type;
+    std::deque<acc_timestamp> readin;
 
     while(!rec_file.eof()) {
       rec_file >> readin_cycle_demanded >> readin_addr >> readin_miss_or_hit >> type;
@@ -113,16 +123,15 @@ void spp_l3::SPP_ORACLE::file_read() {
       if (readin_addr == 0)
         break; 
 
-      readin.push_back(tmpp);
+      if (tmpp.set >= set_number_begin && tmpp.set < set_number_end) 
+        readin.push_back(tmpp);
     }
 
     rec_file.close();
-    std::cout << "Oracle: read " << readin.size() << " accesses from file." << std::endl;
+    std::cout << "Oracle: read " << readin.size() << " accesses from file for set " << set_number_begin << " to set " << (set_number_end - 1) << std::endl;
 
     if (BELADY_CACHE_REPLACEMENT_POLICY_ACTIVE) {
-      std::cout << "Belady's cache replacement policy active." << std::endl;
-
-      for (int set_number = 0; set_number < SET_NUM; set_number++) {
+      for (int set_number = set_number_begin; set_number < set_number_end; set_number++) {
         // Separate accesses into different sets.
         std::deque<acc_timestamp> set_processing;
 
@@ -222,7 +231,6 @@ void spp_l3::SPP_ORACLE::file_read() {
         }
         */
 
-
         for(auto &acc : readin) {
           if (acc.set == set_number && acc.addr == set_processing.front().addr) {
             acc.miss_or_hit = set_processing.front().miss_or_hit;
@@ -232,13 +240,9 @@ void spp_l3::SPP_ORACLE::file_read() {
 
         assert(set_processing.size() == 0);
       }
-
-      std::cout << "Done updating hits/misses for each set." << std::endl;
     }
     else if (REUSE_DISTANCE_REPLACEMENT_POLICY_ACTIVE) {
-      std::cout << "Reuse distance based cache replacement policy active." << std::endl;
-
-      for (int set_number = 0; set_number < SET_NUM; set_number++) {
+      for (int set_number = set_number_begin; set_number < set_number_end; set_number++) {
         // Separate accesses into different sets.
         std::deque<acc_timestamp> set_processing;
 
@@ -351,14 +355,9 @@ void spp_l3::SPP_ORACLE::file_read() {
 
         assert(set_processing.size() == 0);
       }
-
-      std::cout << "Done updating hits/misses for each set." << std::endl;
     }
-    else 
-      std::cout << "LRU cache replacement policy active." << std::endl;
 
     // Use the hashmap to gather accesses.
-    std::cout << "Parsing memory accesses" << std::endl;
     std::map<uint64_t, uint32_t> addr_counter_map;
 
     for (int i = readin.size() - 1; i >= 0; i--) {
@@ -390,20 +389,14 @@ void spp_l3::SPP_ORACLE::file_read() {
         oracle_pf[var.set].push_back(var); 
     }
 
+    std::cout << "Done updating hits/misses for set " << set_number_begin << " to set " << (set_number_end - 1) << std::endl;
+  }
+
+  if (!RECORD_OR_REPLAY) {
     oracle_pf_size = 0;
 
     for(auto var : oracle_pf) 
       oracle_pf_size += var.size(); 
-
-    /*
-    std::cout << "Belady's algorithm's counter" << std::endl;
-
-    for(auto var : oracle_pf) {
-      if (var.set == 0) {
-        std::cout << (var.addr >> 17) << " " << var.miss_or_hit << std::endl; 
-      } 
-    }
-    */
 
     for(auto &set_pf: oracle_pf) {
       if (set_pf.size() >= WAY_NUM) {
@@ -428,7 +421,6 @@ void spp_l3::SPP_ORACLE::file_read() {
     std::cout << "Oracle: pre-processing collects " << oracle_pf_size << " prefetch targets from file read." << std::endl;
     std::cout << "Oracle: skipping " << non_pf_counter << " prefetch targets because they are WRITE misses." << std::endl;
     std::cout << "Oracle: issuing " << (oracle_pf_size - non_pf_counter) << " prefetches." << std::endl;
-
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
     rec_file.close();
   }
