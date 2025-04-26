@@ -150,7 +150,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                 pref.oracle.unhandled_misses_not_replaced++;
               }
               // If the counter > 1, replace.
-              else {
+              else if (pref.oracle.ROLLBACK_ENABLED){
                 // Find the target to replace.
                 uint64_t rollback_cache_state_index = pref.oracle.rollback_prefetch(base_addr); 
 
@@ -211,6 +211,15 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
                 if (pref.debug_print) 
                   std::cout << "Replaced miss set " << this->get_set_index(base_addr) << " addr " << base_addr << " type " << (unsigned)type << " replaced with accesses = " << pref.oracle.cache_state[rollback_cache_state_index].pending_accesses << " replaced addr " << rollback_pf.addr << std::endl;
+              }
+              else {
+                assert(!pref.oracle.ROLLBACK_ENABLED);
+                search_oracle_pq->miss_or_hit--;
+
+                if (type == 3) 
+                   this->do_not_fill_write_address.push_back(base_addr);
+                else 
+                   this->do_not_fill_address.push_back(base_addr);
               }
             }
           }

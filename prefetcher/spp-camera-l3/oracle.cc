@@ -18,6 +18,8 @@ void spp_l3::SPP_ORACLE::init() {
      cache_state[j].require_eviction = true;
     }
   }
+  
+  std::cout << "Oracle: rollback " << (ROLLBACK_ENABLED ? "enabled." : "disabled.") << std::endl;
 
   file_read();
 }
@@ -140,15 +142,6 @@ void spp_l3::SPP_ORACLE::file_read() {
             set_processing.push_back(var);
         } 
 
-        /*
-        if (set_number == 0) {
-          std::cout << "Set 0 accesses before processing " << std::endl;
-          for(auto var : set_processing) {
-            std::cout << (var.addr >> 17) << " " << var.miss_or_hit << std::endl; 
-          } 
-        }
-        */
-
         // Use the optimal cache replacement policy to work out hit/miss for each access.
         std::vector<acc_timestamp> set_container;
 
@@ -222,15 +215,6 @@ void spp_l3::SPP_ORACLE::file_read() {
           }
         }
 
-        /*
-        if (set_number == 0) {
-          std::cout << "Set 0 accesses after processing " << std::endl;
-          for(auto var : set_processing) {
-            std::cout << (var.addr >> 17) << " " << var.miss_or_hit << std::endl; 
-          } 
-        }
-        */
-
         for(auto &acc : readin) {
           if (acc.set == set_number && acc.addr == set_processing.front().addr) {
             acc.miss_or_hit = set_processing.front().miss_or_hit;
@@ -266,7 +250,7 @@ void spp_l3::SPP_ORACLE::file_read() {
         }
 
         // Fill cache.
-        for (size_t i = 0; i < std::min((std::size_t)WAY_NUM, not_in_cache.size()); i++) {
+        for (size_t i = 0; i < fill_limit; i++) {
           auto it = std::min_element(std::begin(not_in_cache), std::end(not_in_cache),
                     [](const auto& l, const auto& r) { return l.second.front() < r.second.front(); });
           assert(not_in_cache.size() > 0);
@@ -312,7 +296,7 @@ void spp_l3::SPP_ORACLE::file_read() {
               }
               // No space available.
               // Need replacement.
-              else if (in_cache.size() >= WAY_NUM) {
+              else if (in_cache.size() == WAY_NUM) {
                 auto it_in_cache = std::min_element(std::begin(in_cache), std::end(in_cache),
                                    [](const auto& l, const auto& r) { return l.second.front() < r.second.front(); }); 
                 
@@ -325,8 +309,16 @@ void spp_l3::SPP_ORACLE::file_read() {
                   not_in_cache.erase(it->first);
                 }
               }
-              else 
+              else {
+                for(auto var : in_cache) {
+                  std::cout << "Set: " << set_number << " addr " << var.first << " :";
+                  for(auto cycle: var.second) {
+                    std::cout << " " << cycle; 
+                  } 
+                  std::cout << std::endl;
+                }
                 assert(false);
+              }
 
               assert(accessed.size() <= WAY_NUM);
               assert(in_cache.size() <= WAY_NUM);
@@ -336,15 +328,6 @@ void spp_l3::SPP_ORACLE::file_read() {
           else 
             assert(false);
         }
-
-        /*
-        if (set_number == 0) {
-          std::cout << "Set 0 accesses after processing " << std::endl;
-          for(auto var : set_processing) {
-            std::cout << (var.addr >> 17) << " " << var.miss_or_hit << std::endl; 
-          } 
-        }
-        */
 
         for(auto &acc : readin) {
           if (acc.set == set_number && acc.addr == set_processing.front().addr) {

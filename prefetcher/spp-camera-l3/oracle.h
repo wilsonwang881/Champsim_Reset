@@ -30,7 +30,7 @@ namespace spp_l3 {
     std::fstream rec_file;
 
     public:
-
+    constexpr static bool ROLLBACK_ENABLED = true;
     const static int SET_NUM = 2048;
     const static int WAY_NUM = 10;
     bool ORACLE_ACTIVE = true;
