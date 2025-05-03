@@ -27,6 +27,11 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
                        [match = addr >> cache->OFFSET_BITS, shamt = cache->OFFSET_BITS](const auto& entry) {
                          return (entry.address >> shamt) == match; 
                        });
+    auto search_inflight_writes = std::find_if(std::begin(cache->inflight_writes), std::end(cache->inflight_writes),
+                       [match = addr >> cache->OFFSET_BITS, shamt = cache->OFFSET_BITS](const auto& entry) {
+                         return (entry.address >> shamt) == match; 
+                       });
+
     int remaining_acc = oracle.check_pf_status(addr);
 
     if (remaining_acc == -1) {
@@ -37,10 +42,12 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
         << " rq " << rq_occupancy << std::endl;
 
       assert(remaining_acc != -1);
+      context_switch_issue_queue.pop_front();
+      return 0;
     }
 
     if (!RFO_write && mshr_occupancy < cache->get_mshr_size()) { 
-      if (way == cache->NUM_WAY && search_mshr == cache->MSHR.end()) {
+      if (way == cache->NUM_WAY && search_mshr == cache->MSHR.end() && search_inflight_writes == cache->inflight_writes.end()) {
         res = addr;
         bool prefetched = cache->prefetch_line(addr, priority, 0, 0);
 
@@ -94,7 +101,7 @@ void spp_l3::prefetcher::call_poll(CACHE* cache) {
   if (oracle.oracle_pf.size() == 0) 
     return; 
 
-  std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> potential_cs_v = oracle.poll();
+  std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> potential_cs_v = oracle.poll(cache);
       
   for(auto potential_cs_pf : potential_cs_v) {
     // Update the prefetch queue.
@@ -121,7 +128,13 @@ void spp_l3::prefetcher::call_poll(CACHE* cache) {
                                        return (std::get<0>(entry) >> shamt) == match; 
                                      });
 
-        if (possible_duplicate_pf == context_switch_issue_queue.end()) {
+        auto possible_duplicate_mshr = std::find_if(std::begin(cache->MSHR), std::end(cache->MSHR),
+                                     [match = addr >> cache->OFFSET_BITS, shamt = cache->OFFSET_BITS](const auto& entry) {
+                                       return (entry.address >> shamt) == match; 
+                                     });
+
+        if (possible_duplicate_pf == context_switch_issue_queue.end() 
+            && possible_duplicate_mshr == cache->MSHR.end()) {
           auto pq_place_at = [demanded = std::get<1>(potential_cs_pf)](auto& entry) {return std::get<1>(entry) > demanded;};
           auto pq_insert_it = std::find_if(context_switch_issue_queue.begin(), context_switch_issue_queue.end(), pq_place_at);
           context_switch_issue_queue.emplace(pq_insert_it,std::get<0>(potential_cs_pf), std::get<1>(potential_cs_pf), std::get<2>(potential_cs_pf), std::get<3>(potential_cs_pf));

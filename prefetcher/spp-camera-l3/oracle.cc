@@ -249,6 +249,8 @@ void spp_l3::SPP_ORACLE::file_read() {
           not_in_cache[el.addr].push_back(el.cycle_demanded); 
         }
 
+        size_t fill_limit = std::min((std::size_t)WAY_NUM, not_in_cache.size());
+
         // Fill cache.
         for (size_t i = 0; i < fill_limit; i++) {
           auto it = std::min_element(std::begin(not_in_cache), std::end(not_in_cache),
@@ -479,11 +481,14 @@ int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
 
   // Find the "way" to update pf/block status.
   size_t i;
+  int same_addr_counter = 0;
+  int res = -1;
 
   for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
 
     if (cache_state[i].addr == addr) {
       cache_state[i].pending_accesses--;
+      res = cache_state[i].pending_accesses;
       cache_state[i].accessed = true;
 
       if (ORACLE_DEBUG_PRINT) 
@@ -498,15 +503,15 @@ int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
         assert(set_availability[set] <= WAY_NUM);
       }
 
-      break;  
+      same_addr_counter++;
+
+      //break;  
     } 
   }
 
-  if ((i - set * WAY_NUM) < WAY_NUM)
-    return cache_state[i].pending_accesses;
-  else {
-    return -1;
-  }
+  assert(same_addr_counter <= 1);
+
+  return res;
 }
 
 bool spp_l3::SPP_ORACLE::check_require_eviction(uint64_t addr) {
@@ -525,7 +530,7 @@ bool spp_l3::SPP_ORACLE::check_require_eviction(uint64_t addr) {
   return need_eviction;
 }
 
-std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> spp_l3::SPP_ORACLE::poll() {
+std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> spp_l3::SPP_ORACLE::poll(CACHE* cache) {
   std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> target_v;
 
   if (oracle_pf_size == 0) 
@@ -542,7 +547,6 @@ std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> spp_l3::SPP_ORACLE::poll
         std::get<1>(target) = ite->cycle_demanded;
         std::get<2>(target) = true;
         int before_counter = cache_state[set * WAY_NUM + way].pending_accesses;
-        cache_state[set * WAY_NUM + way].pending_accesses += (int)(ite->miss_or_hit);
 
         if (cache_state[set * WAY_NUM + way].addr != ite->addr) 
           set_availability[set]--;
@@ -561,7 +565,11 @@ std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> spp_l3::SPP_ORACLE::poll
         cache_state[set * WAY_NUM + way].timestamp = ite->cycle_demanded;
         cache_state[set * WAY_NUM + way].type = ite->type;
         cache_state[set * WAY_NUM + way].accessed = false;
+
+        //if (cache_state[set * WAY_NUM + way].pending_accesses == 0) 
         target_v.push_back(target);
+
+        cache_state[set * WAY_NUM + way].pending_accesses += (int)(ite->miss_or_hit);
         oracle_pf[set].pop_front();
         oracle_pf_size--;
         assert(set_availability[set] >= 0);
@@ -574,7 +582,7 @@ std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> spp_l3::SPP_ORACLE::poll
 
   if ((((oracle_pf_size % 10000 == 0) || oracle_pf_size == 0)) && 
       heartbeat_printed.find(oracle_pf_size) == heartbeat_printed.end()) {
-      std::cout << "Oracle: remaining oracle access = " << oracle_pf_size - pf_issued << std::endl;
+      std::cout << "Oracle: remaining oracle access = " << oracle_pf_size - pf_issued << " useless: " << cache->sim_stats.pf_useless << std::endl;
       heartbeat_printed.insert(oracle_pf_size);
 
       for(auto &set_pf : oracle_pf) 
@@ -655,6 +663,7 @@ void spp_l3::SPP_ORACLE::finish() {
     rec_file.close();
     std::cout << "Hits in runahead prefetch list: " << runahead_hits << std::endl;
     std::cout << "Hits in MSHR " << MSHR_hits << std::endl;
+    std::cout << "Hits in inflight_writes" << inflight_write_hits << std::endl;
     std::cout << "Hits in internal_PQ " << internal_PQ_hits << std::endl;
     std::cout << "Hits in ready to issue prefetch queue " << cs_q_hits << std::endl;
     std::cout << "Hits in oracle_pf " << oracle_pf_hits << std::endl;

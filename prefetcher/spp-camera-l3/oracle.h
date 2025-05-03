@@ -17,12 +17,13 @@
 #include <algorithm>
 #include "champsim.h"
 #include "champsim_constants.h"
+#include "cache.h"
 
 namespace spp_l3 {
 
   class SPP_ORACLE {
     constexpr static uint64_t ACCESS_LEN = 100000;
-    constexpr static bool ORACLE_DEBUG_PRINT = false;
+    constexpr static bool ORACLE_DEBUG_PRINT = true;
     constexpr static bool BELADY_CACHE_REPLACEMENT_POLICY_ACTIVE = false;
     constexpr static bool REUSE_DISTANCE_REPLACEMENT_POLICY_ACTIVE = true;
     constexpr static int MEMORY_USAGE_REDUCTION_FACTOR = 8;
@@ -40,6 +41,7 @@ namespace spp_l3 {
     std::set<uint64_t> heartbeat_printed;
     std::map<int, int> set_availability;
     uint64_t MSHR_hits = 0;
+    uint64_t inflight_write_hits = 0;
     uint64_t internal_PQ_hits = 0;
     uint64_t cs_q_hits = 0;
     uint64_t oracle_pf_hits = 0;
@@ -87,7 +89,7 @@ namespace spp_l3 {
     int check_pf_status(uint64_t addr);
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     bool check_require_eviction(uint64_t addr);
-    std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> poll();
+    std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> poll(CACHE* cache);
     uint64_t rollback_prefetch(uint64_t addr);
     void clear_addr(uint64_t addr);
     void kill_simulation();

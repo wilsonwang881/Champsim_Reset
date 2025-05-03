@@ -105,48 +105,48 @@ bool CACHE::handle_fill(const mshr_type& fill_mshr)
   cpu = fill_mshr.cpu;
 
   // WL
-  auto search = std::find(do_not_fill_address.begin(), do_not_fill_address.end(), (fill_mshr.address >> 6) << 6);
+  if (!L2C_name.compare(NAME)) {
+    auto search = std::find(do_not_fill_address.begin(), do_not_fill_address.end(), (fill_mshr.address >> 6) << 6);
 
-  if (!L2C_name.compare(NAME) && search != do_not_fill_address.end() && fill_mshr.type != access_type::WRITE) {
-        // COLLECT STATS
-    do_not_fill_address.erase(search);
-    sim_stats.total_miss_latency += current_cycle - (fill_mshr.cycle_enqueued + 1);
-
-    response_type response{fill_mshr.address, fill_mshr.v_address, fill_mshr.data,
-                           0,     fill_mshr.asid[0],   fill_mshr.instr_depend_on_me}; // WL: added ASID
-    //std::cout << "Do not fill address " << ((fill_mshr.address >> 6) << 6) << std::endl;
-    for (auto ret : fill_mshr.to_return)
-      ret->push_back(response);
-    
-    return true;
+    if (search != do_not_fill_address.end() && fill_mshr.type != access_type::WRITE) {
+      do_not_fill_address.erase(search);
+      sim_stats.total_miss_latency += current_cycle - (fill_mshr.cycle_enqueued + 1);
+      response_type response{fill_mshr.address, fill_mshr.v_address, fill_mshr.data,
+                             0,     fill_mshr.asid[0],   fill_mshr.instr_depend_on_me}; // WL: added ASID
+      for (auto ret : fill_mshr.to_return)
+        ret->push_back(response);
+      
+      return true;
+    }
   }
 
-  search = std::find(do_not_fill_write_address.begin(), do_not_fill_write_address.end(), (fill_mshr.address >> 6) << 6);
+  if (!L2C_name.compare(NAME)) {
 
-  if (!L2C_name.compare(NAME) && search != do_not_fill_write_address.end() && fill_mshr.type == access_type::WRITE) {
-        // COLLECT STATS
-    do_not_fill_write_address.erase(search);
-    sim_stats.total_miss_latency += current_cycle - (fill_mshr.cycle_enqueued + 1);
-    request_type writeback_packet;
-    writeback_packet.cpu = fill_mshr.cpu;
-    writeback_packet.address = fill_mshr.address;
-    writeback_packet.data = fill_mshr.data;
-    writeback_packet.instr_id = fill_mshr.instr_id;
-    writeback_packet.ip = 0;
-    writeback_packet.asid[0] = fill_mshr.asid[0]; // WL: added ASID to writeback packet
-    writeback_packet.type = access_type::WRITE;
-    writeback_packet.pf_metadata =fill_mshr.pf_metadata;
-    writeback_packet.response_requested = false;
+    auto search = std::find(do_not_fill_write_address.begin(), do_not_fill_write_address.end(), (fill_mshr.address >> 6) << 6);
 
-    lower_level->add_wq(writeback_packet);
+    if (search != do_not_fill_write_address.end() && fill_mshr.type == access_type::WRITE) {
+      do_not_fill_write_address.erase(search);
+      sim_stats.total_miss_latency += current_cycle - (fill_mshr.cycle_enqueued + 1);
+      request_type writeback_packet;
+      writeback_packet.cpu = fill_mshr.cpu;
+      writeback_packet.address = fill_mshr.address;
+      writeback_packet.data = fill_mshr.data;
+      writeback_packet.instr_id = fill_mshr.instr_id;
+      writeback_packet.ip = 0;
+      writeback_packet.asid[0] = fill_mshr.asid[0]; // WL: added ASID to writeback packet
+      writeback_packet.type = access_type::WRITE;
+      writeback_packet.pf_metadata = fill_mshr.pf_metadata;
+      writeback_packet.response_requested = false;
+      lower_level->add_wq(writeback_packet);
 
-    return true;
+      return true;
+    }
   }
   // WL 
 
   // find victim
   auto [set_begin, set_end] = get_set_span(fill_mshr.address);
-  auto way = std::find_if_not(set_begin, set_end, [](auto x) { return x.valid; });
+  auto way = std::find_if(set_begin, set_end, [addr = fill_mshr.address](auto x) { return !x.valid || (x.address >> LOG2_BLOCK_SIZE == addr >> LOG2_BLOCK_SIZE); });
   if (way == set_end)
     way = std::next(set_begin, impl_find_victim(fill_mshr.cpu, fill_mshr.instr_id, get_set_index(fill_mshr.address), &*set_begin, fill_mshr.ip,
                                                 fill_mshr.address, champsim::to_underlying(fill_mshr.type)));
