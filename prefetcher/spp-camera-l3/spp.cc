@@ -111,13 +111,11 @@ void spp_l3::prefetcher::call_poll(CACHE* cache) {
       uint64_t way = cache->get_way(addr, set);
 
       // Remove the prefetch target from do not fill queue.
-      auto search_oracle_pq = std::find_if(std::begin(cache->do_not_fill_address), std::end(cache->do_not_fill_address),
-                              [match = std::get<0>(potential_cs_pf) >> cache->OFFSET_BITS, shamt = cache->OFFSET_BITS](const auto& entry) {
-                                return (entry >> shamt) == match; 
-                              });
-
-      if (search_oracle_pq != cache->do_not_fill_address.end()) 
-        cache->do_not_fill_address.erase(search_oracle_pq); 
+      update_do_not_fill_queue(cache->do_not_fill_address, 
+                               std::get<0>(potential_cs_pf), 
+                               true,
+                               cache,
+                               "do not fill address in runahead");
 
       if (way < cache->NUM_WAY) {
         champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
@@ -152,5 +150,30 @@ void spp_l3::prefetcher::erase_duplicate_entry_in_ready_queue(CACHE* cache, uint
 
   if (possible_duplicate_pf != context_switch_issue_queue.end()) 
     context_switch_issue_queue.erase(possible_duplicate_pf); 
+}
+
+void spp_l3::prefetcher::update_do_not_fill_queue(std::deque<uint64_t> &dq, uint64_t addr, bool erase, CACHE* cache, std::string q_name){
+  uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(cache->NUM_SET));
+  auto search_res = std::find_if(dq.begin(), dq.end(), 
+                    [match = addr >> (cache->OFFSET_BITS), shamt = cache->OFFSET_BITS]
+                    (const auto& entry) {
+                      return (entry >> shamt) == match; 
+                    });
+
+  if (erase) {
+    if (search_res != dq.end())
+      dq.erase(search_res);
+
+    if (debug_print) 
+      std::cout << "Addr " << addr << " in set " << set << " erased from " << q_name << std::endl; 
+  }
+  else {
+    if (search_res == dq.end()) {
+      dq.push_back(addr); 
+
+      if (debug_print) 
+        std::cout << "Addr " << addr << " in set " << set << " pushed to " << q_name << std::endl; 
+    }
+  }
 }
 

@@ -139,14 +139,11 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
             if (search_oracle_pq->miss_or_hit == 1) {
               // Do not fill the missed address. 
-              if (type != 3) 
-                this->do_not_fill_address.push_back(base_addr);
-              else 
-                this->do_not_fill_write_address.push_back(base_addr);
-
-              if (pref.debug_print) 
-                std::cout << "set " << set << " addr " << base_addr << " no fill" << std::endl; 
-
+              pref.update_do_not_fill_queue(type == 3 ? this->do_not_fill_write_address : this->do_not_fill_address,
+                                            base_addr, 
+                                            false,
+                                            this,
+                                            type == 3 ? "do_not_fill_write_address" : "do_not_fill_address");
               pref.oracle.oracle_pf[set].erase(search_oracle_pq);
               pref.oracle.oracle_pf_size--;
               pref.oracle.unhandled_misses_not_replaced++;
@@ -212,13 +209,12 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                                               return (entry.address >> shamt) == match; 
                                             });
 
-                if (search_mshr_rollback != this->MSHR.end()) {
-                  this->do_not_fill_address.push_back(rollback_pf.addr);
-
-                  if (pref.debug_print) {
-                    std::cout << "Rollback prefetch in set " << this->get_set_index(rollback_pf.addr) << " addr " << rollback_pf.addr << " pushed to do not fill in mshr" << std::endl;
-                  }
-                }
+                if (search_mshr_rollback != this->MSHR.end()) 
+                  pref.update_do_not_fill_queue(this->do_not_fill_address, 
+                                                rollback_pf.addr, 
+                                                false, 
+                                                this, 
+                                                " do_not_fill_address rollbacl_pf in MSHR");
 
                 // If the rollback prefetch is in inflight_writes, push to do not fill.
                 auto search_writes_rollback = std::find_if(std::begin(this->inflight_writes), std::end(this->inflight_writes),
@@ -227,7 +223,11 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                                             });
 
                 if (search_writes_rollback != this->inflight_writes.end()) 
-                  this->do_not_fill_write_address.push_back(rollback_pf.addr);
+                  pref.update_do_not_fill_queue(this->do_not_fill_write_address,
+                                                rollback_pf.addr, 
+                                                false, 
+                                                this, 
+                                                "do_not_fill_write_address rollbacl_pf in inflight_writes");
 
                 // If the rollback prefetch is already in cache, set LRU to 0.
                 uint64_t rollback_set = this->get_set_index(rollback_pf.addr);
@@ -246,23 +246,26 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                 assert(!pref.oracle.ROLLBACK_ENABLED);
                 search_oracle_pq->miss_or_hit--;
 
-                if (type == 3) 
-                   this->do_not_fill_write_address.push_back(base_addr);
-                else 
-                   this->do_not_fill_address.push_back(base_addr);
+                pref.update_do_not_fill_queue(type == 3 ? this->do_not_fill_write_address : this->do_not_fill_address,
+                                              base_addr, 
+                                              false,
+                                              this,
+                                              type == 3 ? "do_not_fill_write_address" : "do_not_fill_address");
               }
             }
           }
           else {
             if (pref.context_switch_issue_queue.size() != 0 || pref.oracle.oracle_pf_size != 0) {
-              if (type != 3) {
-                this->do_not_fill_address.push_back(base_addr);
+              pref.update_do_not_fill_queue(type == 3 ? this->do_not_fill_write_address : this->do_not_fill_address,
+                                            base_addr, 
+                                            false,
+                                            this,
+                                            type == 3 ? "do_not_fill_write_address" : "do_not_fill_address");
+
+              if (type != 3) 
                 pref.oracle.unhandled_non_write_misses_not_filled++;
-              }
-              else {
-                this->do_not_fill_write_address.push_back(base_addr);
+              else 
                 pref.oracle.unhandled_write_misses_not_filled++;
-              }
             }
 
             if (pref.debug_print) 
@@ -327,7 +330,11 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                                   });
 
       if (search_mshr_rollback != this->MSHR.end()) {
-        this->do_not_fill_address.push_back(rollback_pf.addr);
+        pref.update_do_not_fill_queue(this->do_not_fill_address,
+                                      rollback_pf.addr, 
+                                      false,
+                                      this,
+                                      "do_not_fill_address");
 
         if (pref.debug_print) {
           std::cout << "Rollback prefetch in set " << this->get_set_index(rollback_pf.addr) << " addr " << rollback_pf.addr << " pushed to do not fill in mshr" << std::endl;
@@ -341,7 +348,11 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                                   });
 
       if (search_writes_rollback != this->inflight_writes.end()) 
-        this->do_not_fill_write_address.push_back(rollback_pf.addr);
+        pref.update_do_not_fill_queue(this->do_not_fill_write_address,
+                                      rollback_pf.addr, 
+                                      false,
+                                      this,
+                                      "do_not_fill_write_address");
 
       // If the rollback prefetch is already in cache, set LRU to 0.
       uint64_t rollback_set = this->get_set_index(rollback_pf.addr);
@@ -389,21 +400,27 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
         if (found_in_MSHR || found_in_ready_queue || found_in_not_ready_queue || found_in_inflight_writes) {
           
           if (std::find(this->do_not_fill_address.begin(), this->do_not_fill_address.end(), base_addr) == this->do_not_fill_address.end() && type != 3) {
-            this->do_not_fill_address.push_back(base_addr);
+            pref.update_do_not_fill_queue(this->do_not_fill_address,
+                                          base_addr, 
+                                          false,
+                                          this,
+                                          "do_not_fill_address");
 
-            if (std::find(this->do_not_fill_write_address.begin(), this->do_not_fill_write_address.end(), base_addr) == this->do_not_fill_write_address.end()) {
-              if (found_in_inflight_writes)  {
-                this->do_not_fill_write_address.push_back(base_addr); 
-                std::cout << "Pushed to do not fill write address addr " << base_addr << " set " << set << std::endl;
-              }
+            if (found_in_inflight_writes)  {
+              pref.update_do_not_fill_queue(this->do_not_fill_write_address,
+                                            base_addr, 
+                                            false,
+                                            this,
+                                            "do_not_fill_write_address");
             }
           }
 
-          if (std::find(this->do_not_fill_write_address.begin(), this->do_not_fill_write_address.end(), base_addr) == this->do_not_fill_write_address.end() && type == 3) 
-            this->do_not_fill_write_address.push_back(base_addr);
-
-          if (pref.debug_print) 
-            std::cout << "set " << set << " addr " << base_addr << " pushed to do not fill set" << std::endl; 
+          if (type == 3) 
+            pref.update_do_not_fill_queue(this->do_not_fill_write_address,
+                                          base_addr, 
+                                          false,
+                                          this,
+                                          "do_not_fill_write_address");
         } 
 
         if (way < NUM_WAY) {
@@ -417,25 +434,18 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
         }
       }
       else {
-        if (auto search = std::find(this->do_not_fill_address.begin(), this->do_not_fill_address.end(), base_addr); 
-            search != this->do_not_fill_address.end() 
-            && type != 3) {
-
-          this->do_not_fill_address.erase(search);
-        if (pref.debug_print) 
-          std::cout << "set " << set << " addr " << base_addr << " removed from do not fill set" << std::endl; 
-
-        }
-
-        if (auto search = std::find(this->do_not_fill_write_address.begin(), this->do_not_fill_write_address.end(), base_addr);
-            search != this->do_not_fill_write_address.end() 
-            && type == 3) {
-
-          this->do_not_fill_write_address.erase(search);
-        if (pref.debug_print) 
-          std::cout << "set " << set << " addr " << base_addr << " removed from do not fill write set" << std::endl; 
-
-        }
+        if (type != 3) 
+          pref.update_do_not_fill_queue(this->do_not_fill_address,
+                                        base_addr, 
+                                        true,
+                                        this,
+                                        "do_not_fill_address");
+        else 
+          pref.update_do_not_fill_queue(this->do_not_fill_write_address,
+                                        base_addr, 
+                                        true,
+                                        this,
+                                        "do_not_fill_write_address");
       }
       /*
       else if (way < NUM_WAY) 
@@ -467,10 +477,11 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
         std::cout << "addr " << base_addr << " set " << this->get_set_index(base_addr) << " pushed to do_not_fill_address" << std::endl; 
     }
     else {
-      this->do_not_fill_write_address.push_back(base_addr);
-
-      if (pref.debug_print) 
-        std::cout << "addr " << base_addr << " set " << this->get_set_index(base_addr) << " pushed to do_not_fill_write_address" << std::endl; 
+      pref.update_do_not_fill_queue(this->do_not_fill_write_address,
+                                    base_addr, 
+                                    false,
+                                    this,
+                                    "do_not_fill_write_address");
     }
   }
 
@@ -484,12 +495,12 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
         std::cout << "type != 3 addr " << base_addr << " set " << this->get_set_index(base_addr) << " pushed to do_not_fill_address" << std::endl; 
     }
     else {
-      this->do_not_fill_write_address.push_back(base_addr);
-
-      if (pref.debug_print) 
-        std::cout << "type != 3 addr " << base_addr << " set " << this->get_set_index(base_addr) << " pushed to do_not_fill_write_address" << std::endl; 
+      pref.update_do_not_fill_queue(this->do_not_fill_write_address,
+                                    base_addr, 
+                                    false,
+                                    this,
+                                    "do_not_fill_write_address");
     }
-   
   }
 
   return metadata_in;
