@@ -180,8 +180,7 @@ void spp_l3::SPP_ORACLE::file_read() {
 
                 for(uint64_t j = i + 1; j < set_processing.size(); j++) { 
                   if (set_processing[j].addr == el.addr) {
-                    distance = set_processing[j].cycle_demanded; // Optimal cache replacement policy.
-                    // distance = set_processing[j].cycle_demanded - el.cycle_demanded;
+                    distance = set_processing[j].cycle_demanded; 
                     break; 
                   }  
                 }
@@ -283,6 +282,15 @@ void spp_l3::SPP_ORACLE::file_read() {
             if (in_cache[addr].size() == 0) {
               in_cache.erase(addr); 
               accessed.erase(addr);
+
+              // Fill the gap.
+              if (not_in_cache.size() > 0) {
+                auto it_gap = std::min_element(std::begin(not_in_cache), std::end(not_in_cache),
+                              [](const auto& l, const auto& r) { return l.second.front() < r.second.front(); });
+                in_cache[it_gap->first] = not_in_cache[it_gap->first];
+                accessed[it_gap->first] = false;
+                not_in_cache.erase(it_gap->first);
+              }
             }
 
             // Replacement.
@@ -574,19 +582,19 @@ std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> spp_l3::SPP_ORACLE::poll
         oracle_pf_size--;
         assert(set_availability[set] >= 0);
 
+        if ((((oracle_pf_size % 10000 == 0) || oracle_pf_size == 0)) && 
+            heartbeat_printed.find(oracle_pf_size) == heartbeat_printed.end()) {
+            std::cout << "Oracle: remaining oracle access = " << oracle_pf_size - pf_issued << " useless: " << cache->sim_stats.pf_useless << std::endl;
+            heartbeat_printed.insert(oracle_pf_size);
+
+            for(auto &set_pf : oracle_pf) 
+              set_pf.shrink_to_fit();
+        }
+
         if (ORACLE_DEBUG_PRINT) 
           std::cout << "Runahead PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " added accesses " << ite->miss_or_hit << " before accesses " << before_counter << " require_eviction " << cache_state[set * WAY_NUM + way].require_eviction << " type " << ite->type << std::endl;
       }
     } 
-  }
-
-  if ((((oracle_pf_size % 10000 == 0) || oracle_pf_size == 0)) && 
-      heartbeat_printed.find(oracle_pf_size) == heartbeat_printed.end()) {
-      std::cout << "Oracle: remaining oracle access = " << oracle_pf_size - pf_issued << " useless: " << cache->sim_stats.pf_useless << std::endl;
-      heartbeat_printed.insert(oracle_pf_size);
-
-      for(auto &set_pf : oracle_pf) 
-        set_pf.shrink_to_fit();
   }
 
   return target_v;

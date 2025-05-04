@@ -161,11 +161,12 @@ void spp_l3::prefetcher::update_do_not_fill_queue(std::deque<uint64_t> &dq, uint
                     });
 
   if (erase) {
-    if (search_res != dq.end())
+    if (search_res != dq.end()) {
       dq.erase(search_res);
 
-    if (debug_print) 
-      std::cout << "Addr " << addr << " in set " << set << " erased from " << q_name << std::endl; 
+      if (debug_print) 
+        std::cout << "Addr " << addr << " in set " << set << " erased from " << q_name << std::endl; 
+    }
   }
   else {
     if (search_res == dq.end()) {

@@ -195,7 +195,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                 pref.oracle.oracle_pf[set].erase(search_oracle_pq); 
 
                 // Put back the rollback prefetch to not ready queue.
-                pref.oracle.oracle_pf[set].push_front(rollback_pf);
+                pref.oracle.oracle_pf[set].push_back(rollback_pf);
 
                 // Erase the rollback prefetch in the ready queue if it is in that queue.
                 pref.erase_duplicate_entry_in_ready_queue(this, rollback_pf.addr);
@@ -336,9 +336,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                                       this,
                                       "do_not_fill_address");
 
-        if (pref.debug_print) {
+        if (pref.debug_print) 
           std::cout << "Rollback prefetch in set " << this->get_set_index(rollback_pf.addr) << " addr " << rollback_pf.addr << " pushed to do not fill in mshr" << std::endl;
-        }
       }
 
       // If the rollback prefetch is in inflight_writes, push to do not fill.
@@ -429,24 +428,16 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
           pref.erase_duplicate_entry_in_ready_queue(this, base_addr);
 
-          if (evict) 
+          //if (evict) 
             champsim::operable::lru_states.push_back(std::make_tuple(set, way, 0));
         }
       }
-      else {
-        if (type != 3) 
-          pref.update_do_not_fill_queue(this->do_not_fill_address,
-                                        base_addr, 
-                                        true,
-                                        this,
-                                        "do_not_fill_address");
-        else 
-          pref.update_do_not_fill_queue(this->do_not_fill_write_address,
-                                        base_addr, 
-                                        true,
-                                        this,
-                                        "do_not_fill_write_address");
-      }
+      else 
+        pref.update_do_not_fill_queue(type == 3 ? this->do_not_fill_write_address : this->do_not_fill_address,
+                                      base_addr, 
+                                      true,
+                                      this,
+                                      type == 3 ? "do_not_fill_write_address" : "do_not_fill_address");
       /*
       else if (way < NUM_WAY) 
         champsim::operable::lru_states.push_back(std::make_tuple(set, way, 1));
@@ -517,7 +508,7 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
     int filled_addr_counter = pref.oracle.check_pf_status(addr);
     int evicted_addr_counter = pref.oracle.check_pf_status(evicted_addr);
 
-    if (filled_addr_counter < 0 && addr != evicted_addr) {
+    if (filled_addr_counter < 0 && addr != evicted_addr && evicted_addr_counter > 0) {
        std::cout << "Error filled addr " << addr << " set " << set << " way " << way << " prefetch " << (unsigned)prefetch << " fill addr counter " << filled_addr_counter << " evicted_addr " << evicted_addr << " at cycle " << this->current_cycle << " evicted address remaining access " << evicted_addr_counter << std::endl;
        assert(filled_addr_counter > 0);
     }
