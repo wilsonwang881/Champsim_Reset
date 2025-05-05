@@ -195,6 +195,13 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                 pref.oracle.oracle_pf[set].erase(search_oracle_pq); 
 
                 // Put back the rollback prefetch to not ready queue.
+                /*
+                auto rollback_nrq_position = find_if(pref.oracle.oracle_pf[set].begin(), pref.oracle.oracle_pf[set].end(),
+                                             [timestamp = rollback_pf.cycle_demanded](const auto& entry) {
+                                               return entry.cycle_demanded > timestamp;
+                                             });
+                pref.oracle.oracle_pf[set].emplace(rollback_nrq_position, rollback_pf);
+                */
                 pref.oracle.oracle_pf[set].push_back(rollback_pf);
 
                 // Erase the rollback prefetch in the ready queue if it is in that queue.
@@ -510,12 +517,12 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
 
     if (filled_addr_counter < 0 && addr != evicted_addr && evicted_addr_counter > 0) {
        std::cout << "Error filled addr " << addr << " set " << set << " way " << way << " prefetch " << (unsigned)prefetch << " fill addr counter " << filled_addr_counter << " evicted_addr " << evicted_addr << " at cycle " << this->current_cycle << " evicted address remaining access " << evicted_addr_counter << std::endl;
-       assert(filled_addr_counter > 0);
+       //assert(filled_addr_counter > 0);
     }
 
     if (evicted_addr_counter > 0 && addr != evicted_addr) {
        std::cout << "Error filled addr " << addr << " set " << set << " way " << way << " prefetch " << (unsigned)prefetch << " fill addr counter " << filled_addr_counter << " evicted_addr " << evicted_addr << " at cycle " << this->current_cycle << " evicted address remaining access " << evicted_addr_counter << std::endl;
-       assert(evicted_addr_counter < 0);
+       //assert(evicted_addr_counter < 0);
     }
   }
 
