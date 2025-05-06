@@ -234,8 +234,8 @@ void spp_l3::SPP_ORACLE::file_read() {
             set_processing.push_back(var);
         } 
 
-        std::map<uint64_t, std::deque<uint64_t>> not_in_cache;
-        std::map<uint64_t, std::deque<uint64_t>> in_cache;
+        std::map<uint64_t, std::deque<uint64_t>*> not_in_cache;
+        std::map<uint64_t, std::deque<uint64_t>*> in_cache;
         std::map<uint64_t, bool> accessed;
 
         // Gather timestamps for each address.
@@ -243,9 +243,9 @@ void spp_l3::SPP_ORACLE::file_read() {
           auto search = not_in_cache.find(el.addr); 
 
           if (search == not_in_cache.end()) 
-            not_in_cache[el.addr] = std::deque<uint64_t>();
+            not_in_cache[el.addr] = new std::deque<uint64_t>();
 
-          not_in_cache[el.addr].push_back(el.cycle_demanded); 
+          not_in_cache[el.addr]->push_back(el.cycle_demanded); 
         }
 
         size_t fill_limit = std::min((std::size_t)WAY_NUM, not_in_cache.size());
@@ -253,7 +253,7 @@ void spp_l3::SPP_ORACLE::file_read() {
         // Fill cache.
         for (size_t i = 0; i < fill_limit; i++) {
           auto it = std::min_element(std::begin(not_in_cache), std::end(not_in_cache),
-                    [](const auto& l, const auto& r) { return l.second.front() < r.second.front(); });
+                    [](const auto& l, const auto& r) { return l.second->front() < r.second->front(); });
           assert(not_in_cache.size() > 0);
           in_cache[it->first] = not_in_cache[it->first];
           accessed[it->first] = false;
@@ -270,7 +270,7 @@ void spp_l3::SPP_ORACLE::file_read() {
           // If the block is in cache.
           if (block_in_cache != in_cache.end()) {
             // Pop the access timestamp.
-            in_cache[addr].pop_front();
+            in_cache[addr]->pop_front();
 
             if (accessed[addr]) 
               current_acc->miss_or_hit = 1; 
@@ -279,14 +279,16 @@ void spp_l3::SPP_ORACLE::file_read() {
               accessed[addr] = true;
             }
 
-            if (in_cache[addr].size() == 0) {
+            if (in_cache[addr]->size() == 0) {
+              delete in_cache[addr];
+              in_cache[addr] = nullptr;
               in_cache.erase(addr); 
               accessed.erase(addr);
 
               // Fill the gap.
               if (not_in_cache.size() > 0) {
                 auto it_gap = std::min_element(std::begin(not_in_cache), std::end(not_in_cache),
-                              [](const auto& l, const auto& r) { return l.second.front() < r.second.front(); });
+                              [](const auto& l, const auto& r) { return l.second->front() < r.second->front(); });
                 in_cache[it_gap->first] = not_in_cache[it_gap->first];
                 accessed[it_gap->first] = false;
                 not_in_cache.erase(it_gap->first);
@@ -296,7 +298,7 @@ void spp_l3::SPP_ORACLE::file_read() {
             // Replacement.
             if (not_in_cache.size() > 0) {
               auto it = std::min_element(std::begin(not_in_cache), std::end(not_in_cache),
-                        [](const auto& l, const auto& r) { return l.second.front() < r.second.front(); });
+                        [](const auto& l, const auto& r) { return l.second->front() < r.second->front(); });
 
               // Space available in the set.
               if (in_cache.size() < WAY_NUM) {
@@ -308,9 +310,9 @@ void spp_l3::SPP_ORACLE::file_read() {
               // Need replacement.
               else if (in_cache.size() == WAY_NUM) {
                 auto it_in_cache = std::min_element(std::begin(in_cache), std::end(in_cache),
-                                   [](const auto& l, const auto& r) { return l.second.front() < r.second.front(); }); 
+                                   [](const auto& l, const auto& r) { return l.second->front() < r.second->front(); }); 
                 
-                if (it->second.front() < it_in_cache->second.front()) {
+                if (it->second->front() < it_in_cache->second->front()) {
                   not_in_cache[it_in_cache->first] = it_in_cache->second;
                   in_cache[it->first] = it->second;
                   accessed.erase(it_in_cache->first);
@@ -319,16 +321,8 @@ void spp_l3::SPP_ORACLE::file_read() {
                   not_in_cache.erase(it->first);
                 }
               }
-              else {
-                for(auto var : in_cache) {
-                  std::cout << "Set: " << set_number << " addr " << var.first << " :";
-                  for(auto cycle: var.second) {
-                    std::cout << " " << cycle; 
-                  } 
-                  std::cout << std::endl;
-                }
+              else 
                 assert(false);
-              }
 
               assert(accessed.size() <= WAY_NUM);
               assert(in_cache.size() <= WAY_NUM);

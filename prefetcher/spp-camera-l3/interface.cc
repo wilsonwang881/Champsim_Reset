@@ -195,14 +195,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                 pref.oracle.oracle_pf[set].erase(search_oracle_pq); 
 
                 // Put back the rollback prefetch to not ready queue.
-                /*
-                auto rollback_nrq_position = find_if(pref.oracle.oracle_pf[set].begin(), pref.oracle.oracle_pf[set].end(),
-                                             [timestamp = rollback_pf.cycle_demanded](const auto& entry) {
-                                               return entry.cycle_demanded > timestamp;
-                                             });
-                pref.oracle.oracle_pf[set].emplace(rollback_nrq_position, rollback_pf);
-                */
-                pref.oracle.oracle_pf[set].push_back(rollback_pf);
+                //pref.oracle.oracle_pf[set].push_back(rollback_pf);
 
                 // Erase the rollback prefetch in the ready queue if it is in that queue.
                 pref.erase_duplicate_entry_in_ready_queue(this, rollback_pf.addr);
@@ -389,7 +382,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1, type);
 
   uint64_t way = this->get_way(base_addr, set);
-  bool evict = pref.oracle.check_require_eviction(base_addr);
+  //bool evict = pref.oracle.check_require_eviction(base_addr);
 
   if (not_found_hit) 
     cache_hit = false; 
