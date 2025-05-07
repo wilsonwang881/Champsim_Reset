@@ -234,6 +234,8 @@ void spp_l3::SPP_ORACLE::file_read() {
             set_processing.push_back(var);
         } 
 
+        //std::cout << "Processing set " << set_number << " size " << set_processing.size() << std::endl;
+
         std::map<uint64_t, std::deque<uint64_t>*> not_in_cache;
         std::map<uint64_t, std::deque<uint64_t>*> in_cache;
         std::map<uint64_t, bool> accessed;
@@ -297,8 +299,22 @@ void spp_l3::SPP_ORACLE::file_read() {
 
             // Replacement.
             if (not_in_cache.size() > 0) {
+
+              uint64_t min_addr = 0;
+
+              for (size_t k = i + 1; k < set_processing.size(); k++) {
+                if (in_cache.find(set_processing[k].addr) == in_cache.end()) {
+                  min_addr = set_processing[k].addr;
+                  break;
+                }   
+              }
+
+              auto it = not_in_cache.find(min_addr);
+
+              /*
               auto it = std::min_element(std::begin(not_in_cache), std::end(not_in_cache),
                         [](const auto& l, const auto& r) { return l.second->front() < r.second->front(); });
+                        */
 
               // Space available in the set.
               if (in_cache.size() < WAY_NUM) {
@@ -307,7 +323,7 @@ void spp_l3::SPP_ORACLE::file_read() {
                 not_in_cache.erase(it->first);
               }
               // No space available.
-              // Need replacement.
+              // May need replacement.
               else if (in_cache.size() == WAY_NUM) {
                 auto it_in_cache = std::min_element(std::begin(in_cache), std::end(in_cache),
                                    [](const auto& l, const auto& r) { return l.second->front() < r.second->front(); }); 
