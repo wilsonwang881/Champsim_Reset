@@ -56,7 +56,6 @@ namespace spp_l3 {
       uint16_t set;
       uint64_t addr;
       uint32_t miss_or_hit;
-      bool require_eviction;
       uint8_t type;
       uint64_t reuse_distance;
     };
@@ -71,14 +70,13 @@ namespace spp_l3 {
       uint64_t addr;
       int pending_accesses;
       uint64_t timestamp;
-      bool require_eviction;
       uint8_t type;
       bool accessed;
     };
 
     blk_state cache_state[SET_NUM * WAY_NUM];
-    std::array<std::set<uint64_t>, SET_NUM> set_kill_counter;
     std::array<std::deque<acc_timestamp>, SET_NUM> oracle_pf;
+    std::array<std::deque<acc_timestamp>, SET_NUM> bkp_pf;
     uint64_t oracle_pf_size;
 
     void init();
@@ -88,10 +86,8 @@ namespace spp_l3 {
     uint64_t check_set_pf_avail(uint64_t addr);
     int check_pf_status(uint64_t addr);
     int update_pf_avail(uint64_t addr, uint64_t cycle);
-    bool check_require_eviction(uint64_t addr);
     std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> poll(CACHE* cache);
     uint64_t rollback_prefetch(uint64_t addr);
-    void kill_simulation();
     void finish();
   };
 }

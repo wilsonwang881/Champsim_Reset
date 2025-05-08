@@ -157,7 +157,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 
               pref.oracle.cache_state[set * NUM_WAY + way].pending_accesses += (int)(search_oracle_pq->miss_or_hit);
               pref.oracle.cache_state[set * NUM_WAY + way].addr = search_oracle_pq->addr;
-              pref.oracle.cache_state[set * NUM_WAY + way].require_eviction = search_oracle_pq->require_eviction;
               pref.oracle.cache_state[set * NUM_WAY + way].timestamp = search_oracle_pq->cycle_demanded;
               pref.oracle.cache_state[set * NUM_WAY + way].type = search_oracle_pq->type;
               assert(pref.oracle.set_availability[set] >= 0);
@@ -180,14 +179,12 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                 rollback_pf.set = set;
                 rollback_pf.addr = pref.oracle.cache_state[rollback_cache_state_index].addr;
                 rollback_pf.miss_or_hit = pref.oracle.cache_state[rollback_cache_state_index].pending_accesses;
-                rollback_pf.require_eviction = pref.oracle.cache_state[rollback_cache_state_index].require_eviction;
                 rollback_pf.type = pref.oracle.cache_state[rollback_cache_state_index].type;
 
                 // Update cache_state.
                 pref.oracle.cache_state[rollback_cache_state_index].addr = base_addr;
                 pref.oracle.cache_state[rollback_cache_state_index].pending_accesses = search_oracle_pq->miss_or_hit;
                 pref.oracle.cache_state[rollback_cache_state_index].timestamp = search_oracle_pq->cycle_demanded;
-                pref.oracle.cache_state[rollback_cache_state_index].require_eviction = search_oracle_pq->require_eviction;
                 pref.oracle.cache_state[rollback_cache_state_index].type = search_oracle_pq->type;
                 pref.oracle.cache_state[rollback_cache_state_index].accessed = false;
 
@@ -300,14 +297,12 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       rollback_pf.set = set;
       rollback_pf.addr = pref.oracle.cache_state[rollback_cache_state_index].addr;
       rollback_pf.miss_or_hit = pref.oracle.cache_state[rollback_cache_state_index].pending_accesses;
-      rollback_pf.require_eviction = pref.oracle.cache_state[rollback_cache_state_index].require_eviction;
       rollback_pf.type = pref.oracle.cache_state[rollback_cache_state_index].type;
 
       // Update cache_state.
       pref.oracle.cache_state[rollback_cache_state_index].addr = base_addr;
       pref.oracle.cache_state[rollback_cache_state_index].pending_accesses = search_oracle_pq->miss_or_hit;
       pref.oracle.cache_state[rollback_cache_state_index].timestamp = search_oracle_pq->cycle_demanded;
-      pref.oracle.cache_state[rollback_cache_state_index].require_eviction = search_oracle_pq->require_eviction;
       pref.oracle.cache_state[rollback_cache_state_index].type = search_oracle_pq->type;
       pref.oracle.cache_state[rollback_cache_state_index].accessed = false;
 
@@ -382,7 +377,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1, type);
 
   uint64_t way = this->get_way(base_addr, set);
-  //bool evict = pref.oracle.check_require_eviction(base_addr);
 
   if (not_found_hit) 
     cache_hit = false; 
