@@ -19,7 +19,6 @@ void spp_l3::SPP_ORACLE::init() {
   }
   
   std::cout << "Oracle: rollback " << (ROLLBACK_ENABLED ? "enabled." : "disabled.") << std::endl;
-
   file_read();
 }
 
@@ -220,8 +219,6 @@ void spp_l3::SPP_ORACLE::file_read() {
             set_processing.push_back(var);
         } 
 
-        //std::cout << "Processing set " << set_number << " size " << set_processing.size() << std::endl;
-
         std::map<uint64_t, std::deque<uint64_t>*> not_in_cache;
         std::map<uint64_t, std::deque<uint64_t>*> in_cache;
         std::map<uint64_t, bool> accessed;
@@ -297,11 +294,6 @@ void spp_l3::SPP_ORACLE::file_read() {
 
               auto it = not_in_cache.find(min_addr);
 
-              /*
-              auto it = std::min_element(std::begin(not_in_cache), std::end(not_in_cache),
-                        [](const auto& l, const auto& r) { return l.second->front() < r.second->front(); });
-                        */
-
               // Space available in the set.
               if (in_cache.size() < WAY_NUM) {
                 in_cache[it->first] = not_in_cache[it->first];
@@ -323,14 +315,6 @@ void spp_l3::SPP_ORACLE::file_read() {
                   in_cache.erase(max_in_cache->first);
                   accessed[it->first] = false;
                   not_in_cache.erase(it->first);
-                  /*
-                  not_in_cache[it_in_cache->first] = it_in_cache->second;
-                  in_cache[it->first] = it->second;
-                  accessed.erase(it_in_cache->first);
-                  in_cache.erase(it_in_cache->first);
-                  accessed[it->first] = false;
-                  not_in_cache.erase(it->first);
-                  */
                 }
               }
               else 
