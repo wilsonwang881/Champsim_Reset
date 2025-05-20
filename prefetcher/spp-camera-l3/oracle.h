@@ -57,7 +57,7 @@ namespace spp_l3 {
       uint64_t addr;
       uint32_t miss_or_hit;
       uint8_t type;
-      uint64_t reuse_distance;
+      uint64_t reuse_dist_lst_timestmp;
     };
 #pragma pack(pop)
 
@@ -72,6 +72,7 @@ namespace spp_l3 {
       uint64_t timestamp;
       uint8_t type;
       bool accessed;
+      uint64_t last_access_timestamp;
     };
 
     blk_state cache_state[SET_NUM * WAY_NUM];
@@ -80,7 +81,7 @@ namespace spp_l3 {
     uint64_t oracle_pf_size;
 
     void init();
-    void update_demand(uint64_t cycle, uint64_t addr, bool hit, bool prefetch, uint64_t type);
+    void update_demand(uint64_t cycle, uint64_t addr, bool hit, uint64_t type);
     void file_write();
     void file_read();
     uint64_t check_set_pf_avail(uint64_t addr);
@@ -88,6 +89,7 @@ namespace spp_l3 {
     int update_pf_avail(uint64_t addr, uint64_t cycle);
     std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> poll(CACHE* cache);
     uint64_t rollback_prefetch(uint64_t addr);
+    uint64_t calc_set(uint64_t addr);
     void finish();
   };
 }

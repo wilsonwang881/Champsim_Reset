@@ -39,6 +39,7 @@ namespace spp_l3 {
     void call_poll(CACHE* cache);
     void erase_duplicate_entry_in_ready_queue(CACHE* cache, uint64_t addr);
     void update_do_not_fill_queue(std::deque<uint64_t> &dq, uint64_t addr, bool erase, CACHE* cache, std::string q_name);
+    void evict_stale_blocks(CACHE* cache, uint64_t addr);
   };
 } // namespace spp_l3
 

@@ -178,3 +178,50 @@ void spp_l3::prefetcher::update_do_not_fill_queue(std::deque<uint64_t> &dq, uint
   }
 }
 
+void spp_l3::prefetcher::evict_stale_blocks(CACHE* cache, uint64_t addr) {
+  // Check the set to kick out blocks
+  // that are not accessed for more than 2000 cycles.
+  uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(cache->NUM_SET));
+
+  for (size_t i = set * cache->NUM_WAY; i < (set + 1) * cache->NUM_WAY; i++) {
+    // Check if the block has not been accessed for a long time.
+    uint64_t stale_way = cache->NUM_WAY;
+
+    if (oracle.cache_state[i].addr != 0 && oracle.cache_state[i].pending_accesses == 1) 
+      stale_way = cache->get_way(oracle.cache_state[i].addr, set);
+
+    if (oracle.cache_state[i].addr != 0 &&
+        stale_way < cache->NUM_WAY &&
+       (oracle.cache_state[i].last_access_timestamp + 8000) < cache->current_cycle) {
+
+      //std::cout << "addr " << oracle.cache_state[i].addr << " should be evicted: " << oracle.cache_state[i].last_access_timestamp << "->" << cache->current_cycle << std::endl;
+
+      // Set LRU bits to 0 if already filled in cache.
+      champsim::operable::lru_states.push_back(std::make_tuple(set, stale_way, 0));
+
+      if (debug_print) {
+        std::cout << "set " << set << " addr " << oracle.cache_state[i].addr << " cleared at cycle " << cache->current_cycle << " set_availability " << oracle.set_availability[set] << std::endl; 
+      }
+
+      // Clear the record.
+      SPP_ORACLE::acc_timestamp rollback_pf;
+      rollback_pf.cycle_demanded = oracle.cache_state[i].timestamp;
+      rollback_pf.set = set;
+      rollback_pf.addr = oracle.cache_state[i].addr;
+      rollback_pf.miss_or_hit = oracle.cache_state[i].pending_accesses;
+      rollback_pf.type = oracle.cache_state[i].type;
+      rollback_pf.reuse_dist_lst_timestmp = oracle.cache_state[i].last_access_timestamp;
+      oracle.bkp_pf[set].push_back(rollback_pf);
+
+      oracle.cache_state[i].addr = 0;
+      oracle.cache_state[i].pending_accesses = 0;
+      oracle.cache_state[i].timestamp = 0;
+      oracle.cache_state[i].type = 0;
+      oracle.cache_state[i].accessed = false;
+      oracle.cache_state[i].last_access_timestamp = 0;
+      oracle.set_availability[set]++;
+
+      assert(oracle.set_availability[set] <= (int)cache->NUM_WAY);
+    } 
+  }
+}

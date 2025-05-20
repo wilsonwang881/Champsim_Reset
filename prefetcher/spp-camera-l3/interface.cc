@@ -158,6 +158,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
               pref.oracle.cache_state[set * NUM_WAY + way].addr = search_bkp_q->addr;
               pref.oracle.cache_state[set * NUM_WAY + way].timestamp = search_bkp_q->cycle_demanded;
               pref.oracle.cache_state[set * NUM_WAY + way].type = search_bkp_q->type;
+              pref.oracle.cache_state[set * NUM_WAY + way].last_access_timestamp = search_bkp_q->reuse_dist_lst_timestmp;
+              pref.oracle.cache_state[set * NUM_WAY + way].accessed = false;
               assert(pref.oracle.set_availability[set] >= 0);
               pref.oracle.bkp_pf[set].erase(search_bkp_q); 
             }
@@ -177,6 +179,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                 rollback_pf.addr = pref.oracle.cache_state[rollback_cache_state_index].addr;
                 rollback_pf.miss_or_hit = pref.oracle.cache_state[rollback_cache_state_index].pending_accesses;
                 rollback_pf.type = pref.oracle.cache_state[rollback_cache_state_index].type;
+                rollback_pf.reuse_dist_lst_timestmp = pref.oracle.cache_state[rollback_cache_state_index].last_access_timestamp;
 
                 // Update cache_state.
                 pref.oracle.cache_state[rollback_cache_state_index].addr = base_addr;
@@ -184,6 +187,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                 pref.oracle.cache_state[rollback_cache_state_index].timestamp = search_bkp_q->cycle_demanded;
                 pref.oracle.cache_state[rollback_cache_state_index].type = search_bkp_q->type;
                 pref.oracle.cache_state[rollback_cache_state_index].accessed = false;
+                pref.oracle.cache_state[rollback_cache_state_index].last_access_timestamp = search_bkp_q->reuse_dist_lst_timestmp;
 
                 // Erase the moved ahead prefetch in not ready queue. 
                 pref.oracle.bkp_pf[set].erase(search_bkp_q); 
@@ -287,6 +291,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                 pref.oracle.cache_state[set * NUM_WAY + way].addr = search_oracle_pq->addr;
                 pref.oracle.cache_state[set * NUM_WAY + way].timestamp = search_oracle_pq->cycle_demanded;
                 pref.oracle.cache_state[set * NUM_WAY + way].type = search_oracle_pq->type;
+                pref.oracle.cache_state[set * NUM_WAY + way].last_access_timestamp = search_oracle_pq->reuse_dist_lst_timestmp;
+                pref.oracle.cache_state[set * NUM_WAY + way].accessed = false;
                 assert(pref.oracle.set_availability[set] >= 0);
                 pref.oracle.oracle_pf[set].erase(search_oracle_pq); 
                 pref.oracle.oracle_pf_size--;
@@ -308,6 +314,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                   rollback_pf.addr = pref.oracle.cache_state[rollback_cache_state_index].addr;
                   rollback_pf.miss_or_hit = pref.oracle.cache_state[rollback_cache_state_index].pending_accesses;
                   rollback_pf.type = pref.oracle.cache_state[rollback_cache_state_index].type;
+                  rollback_pf.reuse_dist_lst_timestmp = pref.oracle.cache_state[rollback_cache_state_index].last_access_timestamp;
 
                   // Update cache_state.
                   pref.oracle.cache_state[rollback_cache_state_index].addr = base_addr;
@@ -315,6 +322,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                   pref.oracle.cache_state[rollback_cache_state_index].timestamp = search_oracle_pq->cycle_demanded;
                   pref.oracle.cache_state[rollback_cache_state_index].type = search_oracle_pq->type;
                   pref.oracle.cache_state[rollback_cache_state_index].accessed = false;
+                  pref.oracle.cache_state[rollback_cache_state_index].last_access_timestamp = search_oracle_pq->reuse_dist_lst_timestmp;
 
                   // Erase the moved ahead prefetch in not ready queue. 
                   pref.oracle.oracle_pf[set].erase(search_oracle_pq); 
@@ -428,6 +436,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       rollback_pf.addr = pref.oracle.cache_state[rollback_cache_state_index].addr;
       rollback_pf.miss_or_hit = pref.oracle.cache_state[rollback_cache_state_index].pending_accesses;
       rollback_pf.type = pref.oracle.cache_state[rollback_cache_state_index].type;
+      rollback_pf.reuse_dist_lst_timestmp = pref.oracle.cache_state[rollback_cache_state_index].last_access_timestamp;
 
       // Update cache_state.
       pref.oracle.cache_state[rollback_cache_state_index].addr = base_addr;
@@ -435,6 +444,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       pref.oracle.cache_state[rollback_cache_state_index].timestamp = search_oracle_pq->cycle_demanded;
       pref.oracle.cache_state[rollback_cache_state_index].type = search_oracle_pq->type;
       pref.oracle.cache_state[rollback_cache_state_index].accessed = false;
+      pref.oracle.cache_state[rollback_cache_state_index].last_access_timestamp = search_oracle_pq->reuse_dist_lst_timestmp;
 
       // Erase the moved ahead prefetch in not ready queue. 
       pref.oracle.oracle_pf[set].erase(search_oracle_pq); 
@@ -501,10 +511,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     }
   }
 
-  if (useful_prefetch) 
-    pref.oracle.update_demand(this->current_cycle, base_addr, 0, 0, type);
-  else
-    pref.oracle.update_demand(this->current_cycle, base_addr, cache_hit, 1, type);
+  pref.oracle.update_demand(this->current_cycle, base_addr, useful_prefetch ? 0 : cache_hit, type);
+  //pref.evict_stale_blocks(this, base_addr);
 
   uint64_t way = this->get_way(base_addr, set);
 
