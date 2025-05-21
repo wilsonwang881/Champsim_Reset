@@ -187,12 +187,12 @@ void spp_l3::prefetcher::evict_stale_blocks(CACHE* cache, uint64_t addr) {
     // Check if the block has not been accessed for a long time.
     uint64_t stale_way = cache->NUM_WAY;
 
-    if (oracle.cache_state[i].addr != 0 && oracle.cache_state[i].pending_accesses == 1) 
+    if (oracle.cache_state[i].addr != 0 && oracle.cache_state[i].pending_accesses <= 1) 
       stale_way = cache->get_way(oracle.cache_state[i].addr, set);
 
     if (oracle.cache_state[i].addr != 0 &&
         stale_way < cache->NUM_WAY &&
-       (oracle.cache_state[i].last_access_timestamp + 8000) < cache->current_cycle) {
+       (oracle.cache_state[i].last_access_timestamp + 2000) < cache->current_cycle) {
 
       //std::cout << "addr " << oracle.cache_state[i].addr << " should be evicted: " << oracle.cache_state[i].last_access_timestamp << "->" << cache->current_cycle << std::endl;
 
