@@ -609,7 +609,7 @@ std::pair<uint64_t, uint64_t> spp_l3::SPP_ORACLE::check_addr_timestamp(uint64_t 
 
   assert(found);
 
-  return std::make_pair(i, cache_state[i].timestamp); 
+  return std::make_pair(i, cache_state[i].last_access_timestamp); 
 }
 
 void spp_l3::SPP_ORACLE::finish() {

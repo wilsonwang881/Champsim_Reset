@@ -22,6 +22,43 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
     auto wq_occupancy = cache->get_wq_occupancy().back();
     auto [addr, cycle, priority, RFO_write] = context_switch_issue_queue.front();
     uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(cache->NUM_SET));
+    std::pair<uint64_t, uint64_t> check_stale = check_issue_time(addr);
+
+    /*
+    if ((std::get<1>(check_stale) + 5000) < cache->current_cycle) {
+      uint64_t replace_index = std::get<0>(check_stale);
+      SPP_ORACLE::acc_timestamp rollback_pf;
+      rollback_pf.cycle_demanded = oracle.cache_state[replace_index].timestamp;
+      rollback_pf.set = set;
+      rollback_pf.addr = oracle.cache_state[replace_index].addr;
+      rollback_pf.miss_or_hit = oracle.cache_state[replace_index].pending_accesses;
+      rollback_pf.type = oracle.cache_state[replace_index].type;
+      rollback_pf.reuse_dist_lst_timestmp = oracle.cache_state[replace_index].last_access_timestamp;
+
+      // Update cache_state.
+      oracle.cache_state[replace_index].addr = 0;
+      oracle.cache_state[replace_index].pending_accesses = 0;
+      oracle.cache_state[replace_index].timestamp = 0;
+      oracle.cache_state[replace_index].type = 0;
+      oracle.cache_state[replace_index].accessed = false;
+      oracle.cache_state[replace_index].last_access_timestamp = 0;
+
+      // Put back the rollback prefetch to not ready queue.
+      if (oracle.cache_state[replace_index].addr != 0) 
+        oracle.bkp_pf[set].push_back(rollback_pf);
+
+      // Increase set_availability.
+      oracle.set_availability[set]++;
+      //std::cout << "addr " << addr << " set " << set << " availability " << oracle.set_availability[set] << " time " << std::get<1>(check_stale) << "->" << cache->current_cycle << std::endl;
+      assert(oracle.set_availability[set] <= cache->NUM_WAY);
+
+      // Pop the prefetch target from the ready queue.
+      context_switch_issue_queue.pop_front();
+
+      return 0; 
+    }
+    */
+
     uint64_t way = cache->get_way(addr, set);
     auto search_mshr = std::find_if(std::begin(cache->MSHR), std::end(cache->MSHR),
                        [match = addr >> cache->OFFSET_BITS, shamt = cache->OFFSET_BITS](const auto& entry) {
@@ -46,41 +83,6 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
       return 0;
     }
 
-    /*
-    std::pair<uint64_t, uint64_t> check_stale = check_issue_time(addr);
-
-    if ((std::get<1>(check_stale) + 200) < cache->current_cycle) {
-      uint64_t replace_index = std::get<0>(check_stale);
-      SPP_ORACLE::acc_timestamp rollback_pf;
-      rollback_pf.cycle_demanded = oracle.cache_state[replace_index].timestamp;
-      rollback_pf.set = set;
-      rollback_pf.addr = oracle.cache_state[replace_index].addr;
-      rollback_pf.miss_or_hit = oracle.cache_state[replace_index].pending_accesses;
-      rollback_pf.type = oracle.cache_state[replace_index].type;
-      rollback_pf.reuse_dist_lst_timestmp = oracle.cache_state[replace_index].last_access_timestamp;
-
-      // Update cache_state.
-      oracle.cache_state[replace_index].addr = 0;
-      oracle.cache_state[replace_index].pending_accesses = 0;
-      oracle.cache_state[replace_index].timestamp = 0;
-      oracle.cache_state[replace_index].type = 0;
-      oracle.cache_state[replace_index].accessed = false;
-      oracle.cache_state[replace_index].last_access_timestamp = 0;
-
-      // Put back the rollback prefetch to not ready queue.
-      oracle.bkp_pf[set].push_back(rollback_pf);
-
-      // Increase set_availability.
-      oracle.set_availability[set]++;
-      std::cout << "addr " << addr << " set " << set << " availability " << oracle.set_availability[set] << " time " << std::get<1>(check_stale) << "->" << cache->current_cycle << std::endl;
-      assert(oracle.set_availability[set] <= cache->NUM_WAY);
-
-      // Pop the prefetch target from the ready queue.
-      context_switch_issue_queue.pop_front();
-
-      return 0; 
-    }
-    */
 
     if (!RFO_write && mshr_occupancy < cache->get_mshr_size())  { 
       if (way == cache->NUM_WAY && search_mshr == cache->MSHR.end() && search_inflight_writes == cache->inflight_writes.end()) {
@@ -228,7 +230,7 @@ void spp_l3::prefetcher::evict_stale_blocks(CACHE* cache, uint64_t addr) {
 
     if (oracle.cache_state[i].addr != 0 &&
         stale_way < cache->NUM_WAY &&
-       (oracle.cache_state[i].last_access_timestamp + 2000) < cache->current_cycle) {
+       (oracle.cache_state[i].last_access_timestamp + 1000) < cache->current_cycle) {
 
       //std::cout << "addr " << oracle.cache_state[i].addr << " should be evicted: " << oracle.cache_state[i].last_access_timestamp << "->" << cache->current_cycle << std::endl;
 
@@ -247,7 +249,9 @@ void spp_l3::prefetcher::evict_stale_blocks(CACHE* cache, uint64_t addr) {
       rollback_pf.miss_or_hit = oracle.cache_state[i].pending_accesses;
       rollback_pf.type = oracle.cache_state[i].type;
       rollback_pf.reuse_dist_lst_timestmp = oracle.cache_state[i].last_access_timestamp;
-      oracle.bkp_pf[set].push_back(rollback_pf);
+
+      if (rollback_pf.addr != 0) 
+        oracle.bkp_pf[set].push_back(rollback_pf);
 
       oracle.cache_state[i].addr = 0;
       oracle.cache_state[i].pending_accesses = 0;
