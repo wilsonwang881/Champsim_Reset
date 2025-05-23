@@ -90,6 +90,7 @@ namespace spp_l3 {
     std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> poll(CACHE* cache);
     uint64_t rollback_prefetch(uint64_t addr);
     uint64_t calc_set(uint64_t addr);
+    std::pair<uint64_t, uint64_t> check_addr_timestamp(uint64_t addr);
     void finish();
   };
 }

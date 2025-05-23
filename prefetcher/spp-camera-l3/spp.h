@@ -40,6 +40,10 @@ namespace spp_l3 {
     void erase_duplicate_entry_in_ready_queue(CACHE* cache, uint64_t addr);
     void update_do_not_fill_queue(std::deque<uint64_t> &dq, uint64_t addr, bool erase, CACHE* cache, std::string q_name);
     void evict_stale_blocks(CACHE* cache, uint64_t addr);
+    std::pair<uint64_t, uint64_t> check_issue_time(uint64_t addr);
+    spp_l3::SPP_ORACLE::acc_timestamp rollback(uint64_t addr, std::deque<SPP_ORACLE::acc_timestamp>::iterator search, CACHE* cache);
+    void update_MSHR_inflight_write_rollback(CACHE* cache, SPP_ORACLE::acc_timestamp rollback_pf);
+    void place_rollback(CACHE* cache, std::deque<SPP_ORACLE::acc_timestamp>::iterator search, uint64_t set, uint64_t way);
   };
 } // namespace spp_l3
 

@@ -539,6 +539,10 @@ std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> spp_l3::SPP_ORACLE::poll
         if (ORACLE_DEBUG_PRINT) 
           std::cout << "Runahead PF: addr = " << cache_state[set * WAY_NUM + way].addr << " set " << set << " way " << way << " accesses = " << cache_state[set * WAY_NUM + way].pending_accesses << " added accesses " << ite->miss_or_hit << " before accesses " << before_counter << " type " << ite->type << " cycle " << cache_state[set * WAY_NUM + way].timestamp << std::endl;
       }
+      else {
+        std::cout << "set " << set << " way " << way << " set_availability " << set_availability[set] << std::endl;
+        assert(false);
+      }
     } 
   }
 
@@ -589,6 +593,23 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
 
 uint64_t spp_l3::SPP_ORACLE::calc_set(uint64_t addr) {
   return (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
+}
+
+std::pair<uint64_t, uint64_t> spp_l3::SPP_ORACLE::check_addr_timestamp(uint64_t addr) {
+  uint64_t set = calc_set(addr);
+  bool found = false;
+  size_t i;
+
+  for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
+    if (cache_state[i].addr == addr) {
+      found = true;
+      break;
+    }
+  }
+
+  assert(found);
+
+  return std::make_pair(i, cache_state[i].timestamp); 
 }
 
 void spp_l3::SPP_ORACLE::finish() {
