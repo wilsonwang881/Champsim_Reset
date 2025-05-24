@@ -232,6 +232,8 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                   pref.oracle.bkp_pf[set].push_back(rollback_pf);
                   //pref.oracle.oracle_pf[set].push_back(rollback_pf);
 
+                  pref.oracle.oracle_pf_size--;
+
                   // If the rollback prefetch is in MSHR, push to do not fill.
                   pref.update_MSHR_inflight_write_rollback(this, rollback_pf);
 
@@ -335,20 +337,19 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
       if (updated_remaining_acc == -1) {
         if (found_in_MSHR || found_in_ready_queue || found_in_not_ready_queue || found_in_inflight_writes) {
           
-          if (type != 3) {
+          if (std::find(this->do_not_fill_address.begin(), this->do_not_fill_address.end(), base_addr) == this->do_not_fill_address.end() && type != 3) {
             pref.update_do_not_fill_queue(this->do_not_fill_address,
                                           base_addr, 
                                           false,
                                           this,
                                           "do_not_fill_address");
 
-            if (found_in_inflight_writes)  {
+            if (found_in_inflight_writes) 
               pref.update_do_not_fill_queue(this->do_not_fill_write_address,
                                             base_addr, 
                                             false,
                                             this,
                                             "do_not_fill_write_address");
-            }
           }
 
           if (type == 3) 

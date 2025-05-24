@@ -22,9 +22,10 @@ uint64_t spp_l3::prefetcher::issue(CACHE* cache) {
     auto wq_occupancy = cache->get_wq_occupancy().back();
     auto [addr, cycle, priority, RFO_write] = context_switch_issue_queue.front();
     uint64_t set = (addr >> 6) & champsim::bitmask(champsim::lg2(cache->NUM_SET));
-    std::pair<uint64_t, uint64_t> check_stale = check_issue_time(addr);
 
     /*
+    std::pair<uint64_t, uint64_t> check_stale = check_issue_time(addr);
+
     if ((std::get<1>(check_stale) + 5000) < cache->current_cycle) {
       uint64_t replace_index = std::get<0>(check_stale);
       SPP_ORACLE::acc_timestamp rollback_pf;

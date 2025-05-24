@@ -505,7 +505,7 @@ std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> spp_l3::SPP_ORACLE::poll
           set_availability[set]--;
 
         /*
-        if (ite->type == 3) { // || ite->type == 1
+        if (ite->type == 3) { 
           std::get<3>(target) = true;
 
           if (ORACLE_DEBUG_PRINT) 
@@ -574,14 +574,14 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
 
   // Use the timestamp for LRU replacement.
   // Evict block that has not been accessed for long time.
-  //if (!not_accessed_pf_found) { 
+  if (!not_accessed_pf_found) { 
     for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
       if (cache_state[i].last_access_timestamp < latest_cycle) {
         index = i;
         latest_cycle = cache_state[i].last_access_timestamp;
       }
     }
-  //}
+  }
 
   if (ORACLE_DEBUG_PRINT) 
     std::cout << "rollback_prefetch addr " << addr << " set " << set << " way " << (index - set * WAY_NUM) << std::endl; 
@@ -629,6 +629,12 @@ void spp_l3::SPP_ORACLE::finish() {
     std::cout << "New misses recorded: " << new_misses << std::endl;
     std::cout << "Remaining oracle access = " << oracle_pf_size << std::endl;
     file_write();
+    
+    uint64_t remaining = 0;
+    for(size_t i = 0; i < SET_NUM; i++) 
+      remaining += oracle_pf[i].size();
+
+    std::cout << "Remaining oracle_pf = " << remaining << std::endl;
   } 
   else {
     std::cout << "Last round write" << std::endl;
