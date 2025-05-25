@@ -288,7 +288,7 @@ spp_l3::SPP_ORACLE::acc_timestamp spp_l3::prefetcher::rollback(uint64_t addr, st
   oracle.cache_state[rollback_cache_state_index].pending_accesses = search->miss_or_hit;
   oracle.cache_state[rollback_cache_state_index].timestamp = search->cycle_demanded;
   oracle.cache_state[rollback_cache_state_index].type = search->type;
-  oracle.cache_state[rollback_cache_state_index].accessed = false;
+  oracle.cache_state[rollback_cache_state_index].accessed = true;
   oracle.cache_state[rollback_cache_state_index].last_access_timestamp = search->reuse_dist_lst_timestmp - search->cycle_demanded + cache->current_cycle;
 
   if (debug_print) 
@@ -352,7 +352,7 @@ void spp_l3::prefetcher::place_rollback(CACHE* cache, std::deque<SPP_ORACLE::acc
   oracle.cache_state[i].timestamp = search->cycle_demanded;
   oracle.cache_state[i].type = search->type;
   oracle.cache_state[i].last_access_timestamp = search->reuse_dist_lst_timestmp - search->cycle_demanded + cache->current_cycle;
-  oracle.cache_state[i].accessed = false;
+  oracle.cache_state[i].accessed = true;
   assert(oracle.set_availability[set] >= 0);
 }
 
