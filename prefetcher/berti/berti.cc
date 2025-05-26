@@ -1046,7 +1046,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip,
 
     float mshr_load = get_mshr_occupancy_ratio() * 100;
 
-    bool fill_this_level = (i.rpl == BERTI_L1) && (mshr_load < MSHR_LIMIT);
+    bool fill_this_level = false; //(i.rpl == BERTI_L1) && (mshr_load < MSHR_LIMIT); // WL
 
     if (i.rpl == BERTI_L1 && mshr_load >= MSHR_LIMIT) pf_to_l2_bc_mshr++; 
     if (fill_this_level) pf_to_l1++;

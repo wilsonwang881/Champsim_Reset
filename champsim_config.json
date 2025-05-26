@@ -66,8 +66,8 @@
         "max_fill": 2,
         "prefetch_as_load": false,
         "virtual_prefetch": true,
-        "prefetch_activate": "LOAD,WRITE, PREFETCH",
-        "prefetcher": "no"
+        "prefetch_activate": "LOAD,PREFETCH",
+        "prefetcher": "berti"
     },
 
     "L2C": {
@@ -83,7 +83,7 @@
         "prefetch_as_load": false,
         "virtual_prefetch": false,
         "prefetch_activate": "LOAD,WRITE,TRANSLATION,RFO,PREFETCH",
-        "prefetcher": "spp-camera-l3"
+        "prefetcher": "no"
     },
 
     "ITLB": {
