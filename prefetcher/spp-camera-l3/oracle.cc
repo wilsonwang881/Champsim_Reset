@@ -1,13 +1,6 @@
 #include "oracle.h"
 
 void spp_l3::SPP_ORACLE::init() {
-
-  // Clear the access file if in recording mode.
-  if (RECORD_OR_REPLAY) {
-    rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
-    rec_file.close();
-  }
-
   for (size_t i = 0; i < SET_NUM; i++) {
     set_availability[i] = WAY_NUM;
    
@@ -23,22 +16,18 @@ void spp_l3::SPP_ORACLE::init() {
 }
 
 void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, uint64_t type) {
+  acc_timestamp tmpp;
+  tmpp.cycle_demanded = cycle;
+  tmpp.miss_or_hit = hit;
+  tmpp.type = type;
+  tmpp.addr = (addr >> 6) << 6;
+  access.push_back(tmpp); 
 
-  if (!RECORD_OR_REPLAY) {
-    acc_timestamp tmpp;
-    tmpp.cycle_demanded = cycle;
-    tmpp.miss_or_hit = hit;
-    tmpp.type = type;
-    tmpp.addr = (addr >> 6) << 6;
-    access.push_back(tmpp); 
-
-    if (access.size() >= ACCESS_LEN) 
-      file_write();
-  }
+  if (access.size() >= ACCESS_LEN) 
+    file_write();
 }
 
 void spp_l3::SPP_ORACLE::file_write() {
-
   if (access.size() > 0) {
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::app);
 
@@ -64,7 +53,7 @@ void spp_l3::SPP_ORACLE::file_read() {
 
   uint64_t total_mem_acc = 0;
 
-  for (int set_partition = 0; set_partition < MEMORY_USAGE_REDUCTION_FACTOR && !RECORD_OR_REPLAY; set_partition++) {
+  for (int set_partition = 0; set_partition < MEMORY_USAGE_REDUCTION_FACTOR; set_partition++) {
     int set_number_begin = SET_NUM / MEMORY_USAGE_REDUCTION_FACTOR * set_partition;
     int set_number_end = SET_NUM / MEMORY_USAGE_REDUCTION_FACTOR * (set_partition + 1);
     rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ifstream::in);
@@ -358,28 +347,26 @@ void spp_l3::SPP_ORACLE::file_read() {
     std::cout << "Done updating hits/misses for set " << set_number_begin << " to set " << (set_number_end - 1) << std::endl;
   }
 
-  if (!RECORD_OR_REPLAY) {
-    oracle_pf_size = 0;
+  oracle_pf_size = 0;
 
-    for(auto var : oracle_pf) 
-      oracle_pf_size += var.size(); 
+  for(auto var : oracle_pf) 
+    oracle_pf_size += var.size(); 
 
-    uint64_t non_pf_counter = 0;
+  uint64_t non_pf_counter = 0;
 
-    for(auto set_pf: oracle_pf) {
-      for(auto var : set_pf) {
-        if (var.type == 3) 
-          non_pf_counter++; 
-      }
+  for(auto set_pf: oracle_pf) {
+    for(auto var : set_pf) {
+      if (var.type == 3) 
+        non_pf_counter++; 
     }
-
-    std::cout << "Oracle: read " << total_mem_acc << " memory accesses." << std::endl;
-    std::cout << "Oracle: pre-processing collects " << oracle_pf_size << " prefetch targets." << std::endl;
-    std::cout << "Oracle: skipping " << non_pf_counter << " prefetch targets because they are WRITE misses." << std::endl;
-    std::cout << "Oracle: issuing " << (oracle_pf_size - non_pf_counter) << " prefetches." << std::endl;
-    rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
-    rec_file.close();
   }
+
+  std::cout << "Oracle: read " << total_mem_acc << " memory accesses." << std::endl;
+  std::cout << "Oracle: pre-processing collects " << oracle_pf_size << " prefetch targets." << std::endl;
+  std::cout << "Oracle: skipping " << non_pf_counter << " prefetch targets because they are WRITE misses." << std::endl;
+  std::cout << "Oracle: issuing " << (oracle_pf_size - non_pf_counter) << " prefetches." << std::endl;
+  rec_file.open(L2C_PHY_ACC_FILE_NAME, std::ofstream::out | std::ofstream::trunc);
+  rec_file.close();
 }
 
 uint64_t spp_l3::SPP_ORACLE::check_set_pf_avail(uint64_t addr) {
@@ -444,9 +431,6 @@ int spp_l3::SPP_ORACLE::check_pf_status(uint64_t addr) {
 }
 
 int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
-  if (RECORD_OR_REPLAY)
-    return 1; 
-
   addr = (addr >> 6) << 6;
   uint64_t set = calc_set(addr); 
 
@@ -563,7 +547,7 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
   }
 
   for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
-    if (!cache_state[i].accessed && cache_state[i].last_access_timestamp >= latest_cycle) {
+    if (!cache_state[i].accessed && cache_state[i].last_access_timestamp <= latest_cycle) {
       not_accessed_pf_found = true; 
       index = i;
       latest_cycle = cache_state[i].last_access_timestamp;
@@ -571,17 +555,25 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
   }
 
   latest_cycle = cache_state[set * WAY_NUM].last_access_timestamp;
+  int min_counter = cache_state[set * WAY_NUM].pending_accesses;
 
   // Use the timestamp for LRU replacement.
   // Evict block that has not been accessed for long time.
-  if (!not_accessed_pf_found) { 
+  //if (!not_accessed_pf_found) { 
     for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
-      if (cache_state[i].last_access_timestamp < latest_cycle) {
+      if (cache_state[i].pending_accesses < min_counter) {
         index = i;
+        min_counter = cache_state[i].pending_accesses;
         latest_cycle = cache_state[i].last_access_timestamp;
       }
+
+      if (cache_state[i].pending_accesses <= min_counter && cache_state[i].last_access_timestamp < latest_cycle) {
+        index = i;
+        latest_cycle = cache_state[i].last_access_timestamp;
+        min_counter = cache_state[i].pending_accesses;
+      }
     }
-  }
+  //}
 
   if (ORACLE_DEBUG_PRINT) 
     std::cout << "rollback_prefetch addr " << addr << " set " << set << " way " << (index - set * WAY_NUM) << std::endl; 
@@ -595,49 +587,25 @@ uint64_t spp_l3::SPP_ORACLE::calc_set(uint64_t addr) {
   return (addr >> 6) & champsim::bitmask(champsim::lg2(SET_NUM));
 }
 
-std::pair<uint64_t, uint64_t> spp_l3::SPP_ORACLE::check_addr_timestamp(uint64_t addr) {
-  uint64_t set = calc_set(addr);
-  bool found = false;
-  size_t i;
-
-  for (i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
-    if (cache_state[i].addr == addr) {
-      found = true;
-      break;
-    }
-  }
-
-  assert(found);
-
-  return std::make_pair(i, cache_state[i].last_access_timestamp); 
-}
-
 void spp_l3::SPP_ORACLE::finish() {
+  rec_file.close();
+  std::cout << "Hits in runahead prefetch list: " << runahead_hits << std::endl;
+  std::cout << "Hits in MSHR " << MSHR_hits << std::endl;
+  std::cout << "Hits in inflight_writes " << inflight_write_hits << std::endl;
+  std::cout << "Hits in internal_PQ " << internal_PQ_hits << std::endl;
+  std::cout << "Hits in ready to issue prefetch queue " << cs_q_hits << std::endl;
+  std::cout << "Hits in oracle_pf " << oracle_pf_hits << std::endl;
+  std::cout << "Unhandled misses not replaced " << unhandled_misses_not_replaced << std::endl;
+  std::cout << "Unhandled misses replaced " << unhandled_misses_replaced << std::endl;
+  std::cout << "Unhandled non-write misses not filled " << unhandled_non_write_misses_not_filled << std::endl;
+  std::cout << "Unhandled write misses not filled " << unhandled_write_misses_not_filled << std::endl;
+  std::cout << "New misses recorded: " << new_misses << std::endl;
+  std::cout << "Remaining oracle access = " << oracle_pf_size << std::endl;
+  file_write();
+  
+  uint64_t remaining = 0;
+  for(size_t i = 0; i < SET_NUM; i++) 
+    remaining += oracle_pf[i].size();
 
-  if (!RECORD_OR_REPLAY) {
-    rec_file.close();
-    std::cout << "Hits in runahead prefetch list: " << runahead_hits << std::endl;
-    std::cout << "Hits in MSHR " << MSHR_hits << std::endl;
-    std::cout << "Hits in inflight_writes " << inflight_write_hits << std::endl;
-    std::cout << "Hits in internal_PQ " << internal_PQ_hits << std::endl;
-    std::cout << "Hits in ready to issue prefetch queue " << cs_q_hits << std::endl;
-    std::cout << "Hits in oracle_pf " << oracle_pf_hits << std::endl;
-    std::cout << "Unhandled misses not replaced " << unhandled_misses_not_replaced << std::endl;
-    std::cout << "Unhandled misses replaced " << unhandled_misses_replaced << std::endl;
-    std::cout << "Unhandled non-write misses not filled " << unhandled_non_write_misses_not_filled << std::endl;
-    std::cout << "Unhandled write misses not filled " << unhandled_write_misses_not_filled << std::endl;
-    std::cout << "New misses recorded: " << new_misses << std::endl;
-    std::cout << "Remaining oracle access = " << oracle_pf_size << std::endl;
-    file_write();
-    
-    uint64_t remaining = 0;
-    for(size_t i = 0; i < SET_NUM; i++) 
-      remaining += oracle_pf[i].size();
-
-    std::cout << "Remaining oracle_pf = " << remaining << std::endl;
-  } 
-  else {
-    std::cout << "Last round write" << std::endl;
-    file_write();
-  }
+  std::cout << "Remaining oracle_pf = " << remaining << std::endl;
 }

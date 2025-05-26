@@ -35,7 +35,6 @@ namespace spp_l3 {
     const static int SET_NUM = 2048;
     const static int WAY_NUM = 10;
     bool ORACLE_ACTIVE = true;
-    bool RECORD_OR_REPLAY = false;
     uint64_t new_misses = 0;
     uint64_t runahead_hits = 0;
     std::set<uint64_t> heartbeat_printed;

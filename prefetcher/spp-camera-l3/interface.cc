@@ -33,7 +33,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     return metadata_in; 
 
   // Return if a demand misses and cannot merge in MSHR and MSHR is full.
-  if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && !cache_hit && type != 3) {
+  if (pref.oracle.ORACLE_ACTIVE && !cache_hit && type != 3) {
     auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
                        [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS]
                        (const auto& entry) {
@@ -57,7 +57,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   bool found_in_not_ready_queue = false;
   bool not_found_hit = false;
 
-  if (pref.oracle.ORACLE_ACTIVE && !pref.oracle.RECORD_OR_REPLAY && !cache_hit) {
+  if (pref.oracle.ORACLE_ACTIVE && !cache_hit) {
     bool found_in_pending_queue = false;
     auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
                        [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS]
@@ -187,7 +187,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                                     [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS](const auto& entry) {
                                       return (entry.addr >> shamt) == match; 
                                     });
-            //pref.evict_stale_blocks(this, base_addr);
 
             if (search_oracle_pq != pref.oracle.oracle_pf[set].end()) {
               uint64_t way = pref.oracle.check_set_pf_avail(search_oracle_pq->addr);
@@ -326,7 +325,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   if (not_found_hit) 
     cache_hit = false; 
 
-  if (pref.oracle.ORACLE_ACTIVE && cache_hit && !pref.oracle.RECORD_OR_REPLAY) {
+  if (pref.oracle.ORACLE_ACTIVE && cache_hit) {
     int remaining_acc = pref.oracle.update_pf_avail(base_addr, current_cycle - pref.oracle.interval_start_cycle);
 
     // Last access to the prefetched block used.
