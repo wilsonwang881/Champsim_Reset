@@ -18,6 +18,7 @@ void spp_l3::SPP_ORACLE::init() {
 void spp_l3::SPP_ORACLE::update_demand(uint64_t cycle, uint64_t addr, bool hit, uint64_t type) {
   acc_timestamp tmpp;
   tmpp.cycle_demanded = cycle;
+  tmpp.set = 0;
   tmpp.miss_or_hit = hit;
   tmpp.type = type;
   tmpp.addr = (addr >> 6) << 6;
@@ -574,7 +575,29 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
       }
     }
   //}
+  
+/*
+  latest_cycle = (cache_state[set * WAY_NUM].last_access_timestamp - cache_state[set * WAY_NUM].timestamp) / cache_state[set * WAY_NUM].pending_accesses + cache_state[set * WAY_NUM].timestamp;
+  int min_counter = cache_state[set * WAY_NUM].pending_accesses;
 
+  // Use the timestamp for LRU replacement.
+  // Evict block that has not been accessed for long time.
+  for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
+    uint64_t tmpp_cycle = (cache_state[i].last_access_timestamp - cache_state[i].timestamp) / cache_state[i].pending_accesses + cache_state[i].timestamp;
+
+    if (cache_state[i].pending_accesses < min_counter) {
+      index = i;
+      latest_cycle = tmpp_cycle;
+      min_counter = cache_state[i].pending_accesses;
+    }
+
+    if (cache_state[i].pending_accesses <= min_counter && tmpp_cycle > latest_cycle) { 
+      index = i;
+      latest_cycle = tmpp_cycle; 
+      min_counter = cache_state[i].pending_accesses;
+    }
+  }
+*/
   if (ORACLE_DEBUG_PRINT) 
     std::cout << "rollback_prefetch addr " << addr << " set " << set << " way " << (index - set * WAY_NUM) << std::endl; 
 
