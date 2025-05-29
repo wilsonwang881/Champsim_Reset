@@ -184,15 +184,6 @@ spp_l3::SPP_ORACLE::acc_timestamp spp_l3::prefetcher::rollback(uint64_t addr, st
   uint64_t rollback_cache_state_index = oracle.rollback_prefetch(addr); 
   assert(search->miss_or_hit > 1);
 
-  if (oracle.cache_state[rollback_cache_state_index].pending_accesses > search->miss_or_hit) {
-    //std::cout << "Inside cache state " << oracle.cache_state[rollback_cache_state_index].pending_accesses << " > " << search->miss_or_hit << " <-search result" << std::endl; 
-    search->miss_or_hit--;
-    SPP_ORACLE::acc_timestamp rollback_pf;
-    rollback_pf.addr = 0;
-
-    return rollback_pf;
-  }
-
   SPP_ORACLE::acc_timestamp rollback_pf;
   rollback_pf.cycle_demanded = oracle.cache_state[rollback_cache_state_index].timestamp;
   rollback_pf.set = oracle.calc_set(addr);

@@ -158,26 +158,18 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                 // Generate a rollback prefetch.
                 spp_l3::SPP_ORACLE::acc_timestamp rollback_pf = pref.rollback(base_addr, search_bkp_q, this);
 
-                if (rollback_pf.addr == 0) 
-                  pref.update_do_not_fill_queue(type == 3 ? this->do_not_fill_write_address : this->do_not_fill_address,
-                              base_addr, 
-                              false,
-                              this,
-                              type == 3 ? "do_not_fill_write_address" : "do_not_fill_address");
-                else {
-                  // Erase the moved ahead prefetch in not ready queue. 
-                  pref.oracle.bkp_pf[set].erase(search_bkp_q); 
+                // Erase the moved ahead prefetch in not ready queue. 
+                pref.oracle.bkp_pf[set].erase(search_bkp_q); 
 
-                  // Put back the rollback prefetch to not ready queue.
-                  pref.oracle.bkp_pf[set].push_back(rollback_pf);
-                  //pref.oracle.oracle_pf[set].push_back(rollback_pf);
+                // Put back the rollback prefetch to not ready queue.
+                pref.oracle.bkp_pf[set].push_back(rollback_pf);
+                //pref.oracle.oracle_pf[set].push_back(rollback_pf);
 
-                  // If the rollback prefetch is in MSHR, push to do not fill.
-                  pref.update_MSHR_inflight_write_rollback(this, rollback_pf);
+                // If the rollback prefetch is in MSHR, push to do not fill.
+                pref.update_MSHR_inflight_write_rollback(this, rollback_pf);
 
-                  if (pref.debug_print) 
-                    std::cout << "2 miss in set " << pref.oracle.calc_set(base_addr) << " addr " << base_addr << " type " << (unsigned)type << " caused a rollback." << std::endl;
-                }
+                if (pref.debug_print) 
+                  std::cout << "2 miss in set " << pref.oracle.calc_set(base_addr) << " addr " << base_addr << " type " << (unsigned)type << " caused a rollback." << std::endl;
               }
               else {
                 assert(!pref.oracle.ROLLBACK_ENABLED);
@@ -232,28 +224,20 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                   // Generate a rollback prefetch.
                   spp_l3::SPP_ORACLE::acc_timestamp rollback_pf = pref.rollback(base_addr, search_oracle_pq, this);
 
-                  if (rollback_pf.addr == 0) 
-                    pref.update_do_not_fill_queue(type == 3 ? this->do_not_fill_write_address : this->do_not_fill_address,
-                                                  base_addr, 
-                                                  false,
-                                                  this,
-                                                  type == 3 ? "do_not_fill_write_address" : "do_not_fill_address");
-                  else {
-                    // Erase the moved ahead prefetch in not ready queue. 
-                    pref.oracle.oracle_pf[set].erase(search_oracle_pq); 
+                  // Erase the moved ahead prefetch in not ready queue. 
+                  pref.oracle.oracle_pf[set].erase(search_oracle_pq); 
 
-                    // Put back the rollback prefetch to not ready queue.
-                    pref.oracle.bkp_pf[set].push_back(rollback_pf);
-                    //pref.oracle.oracle_pf[set].push_back(rollback_pf);
+                  // Put back the rollback prefetch to not ready queue.
+                  pref.oracle.bkp_pf[set].push_back(rollback_pf);
+                  //pref.oracle.oracle_pf[set].push_back(rollback_pf);
 
-                    pref.oracle.oracle_pf_size--;
+                  pref.oracle.oracle_pf_size--;
 
-                    // If the rollback prefetch is in MSHR, push to do not fill.
-                    pref.update_MSHR_inflight_write_rollback(this, rollback_pf);
+                  // If the rollback prefetch is in MSHR, push to do not fill.
+                  pref.update_MSHR_inflight_write_rollback(this, rollback_pf);
 
-                    if (pref.debug_print) 
-                      std::cout << "1 miss in set " << pref.oracle.calc_set(base_addr) << " addr " << base_addr << " type " << (unsigned)type << " caused a rollback." << std::endl;
-                  }
+                  if (pref.debug_print) 
+                    std::cout << "1 miss in set " << pref.oracle.calc_set(base_addr) << " addr " << base_addr << " type " << (unsigned)type << " caused a rollback." << std::endl;
                 }
                 else {
                   assert(!pref.oracle.ROLLBACK_ENABLED);
@@ -304,43 +288,33 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                             });
 
     if (search_oracle_pq != pref.oracle.oracle_pf[set].end()) {
-      uint64_t way = pref.oracle.check_set_pf_avail(search_oracle_pq->addr);
-
       if (search_oracle_pq->miss_or_hit == 1) {
         pref.oracle.oracle_pf[set].erase(search_oracle_pq);
         pref.oracle.oracle_pf_size--;
         pref.oracle.unhandled_misses_not_replaced++;
       }
-      else if(way < NUM_WAY && search_oracle_pq->miss_or_hit > 1) {
-        pref.place_rollback(this, search_oracle_pq, set, way);
-        pref.oracle.oracle_pf[set].erase(search_oracle_pq); 
-        pref.oracle.oracle_pf_size--;
-        pref.oracle.oracle_pf_hits++;
-      }
       else {
         // Generate a rollback prefetch.
         spp_l3::SPP_ORACLE::acc_timestamp rollback_pf = pref.rollback(base_addr, search_oracle_pq, this);
 
-        if (rollback_pf.addr != 0) {
-          // Erase the moved ahead prefetch in not ready queue. 
-          pref.oracle.oracle_pf[set].erase(search_oracle_pq); 
+        // Erase the moved ahead prefetch in not ready queue. 
+        pref.oracle.oracle_pf[set].erase(search_oracle_pq); 
 
-          // Put back the rollback prefetch to not ready queue.
-          if (rollback_pf.addr != 0) 
-            pref.oracle.oracle_pf[set].push_front(rollback_pf);
-          else {
-            pref.oracle.set_availability[set]--;
-            assert(pref.oracle.set_availability[set] >= 0);
-          }
-
-          // If the rollback prefetch is in MSHR, push to do not fill.
-          pref.update_MSHR_inflight_write_rollback(this, rollback_pf);
-
-          if (pref.debug_print) 
-            std::cout << "2 miss in set " << pref.oracle.calc_set(base_addr) << " addr " << base_addr << " type " << (unsigned)type << " caused a rollback." << std::endl;
-
-          assert(pref.oracle.check_pf_status(base_addr) > 0);
+        // Put back the rollback prefetch to not ready queue.
+        if (rollback_pf.addr != 0) 
+          pref.oracle.oracle_pf[set].push_front(rollback_pf);
+        else {
+          pref.oracle.set_availability[set]--;
+          assert(pref.oracle.set_availability[set] >= 0);
         }
+
+        // If the rollback prefetch is in MSHR, push to do not fill.
+        pref.update_MSHR_inflight_write_rollback(this, rollback_pf);
+
+        if (pref.debug_print) 
+          std::cout << "2 miss in set " << pref.oracle.calc_set(base_addr) << " addr " << base_addr << " type " << (unsigned)type << " caused a rollback." << std::endl;
+
+        assert(pref.oracle.check_pf_status(base_addr) > 0);
       }
     }
     else {
