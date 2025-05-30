@@ -8,6 +8,7 @@ void spp_l3::SPP_ORACLE::init() {
      cache_state[j].addr = 0;
      cache_state[j].pending_accesses = 0;
      cache_state[j].timestamp = 0;
+     cache_state[i].t = {};
     }
   }
   
@@ -309,16 +310,21 @@ void spp_l3::SPP_ORACLE::file_read() {
     // Use the hashmap to gather accesses.
     std::map<uint64_t, uint32_t> addr_counter_map;
     std::map<uint64_t, uint64_t> addr_timestamp_map;
+    std::map<uint64_t, std::deque<uint64_t>> addr_t_map;
 
     for (int i = readin.size() - 1; i >= 0; i--) {
       acc_timestamp tmpp_readin = readin[i];
 
       if (tmpp_readin.miss_or_hit == 1) {
-        if (auto search = addr_counter_map.find(tmpp_readin.addr); search != addr_counter_map.end()) 
-          addr_counter_map[tmpp_readin.addr]++; 
+        if (auto search = addr_counter_map.find(tmpp_readin.addr); search != addr_counter_map.end()) {
+          addr_counter_map[tmpp_readin.addr]++;
+          addr_t_map[tmpp_readin.addr].push_front(tmpp_readin.cycle_demanded);
+        }
         else {
           addr_counter_map[tmpp_readin.addr] = 1;
           addr_timestamp_map[tmpp_readin.addr] = tmpp_readin.cycle_demanded;
+          addr_t_map[tmpp_readin.addr] = {};
+          addr_t_map[tmpp_readin.addr].push_front(tmpp_readin.cycle_demanded);
         }
 
         tmpp_readin.miss_or_hit = 0;
@@ -330,19 +336,25 @@ void spp_l3::SPP_ORACLE::file_read() {
         else {
           addr_counter_map[tmpp_readin.addr] = 1;
           addr_timestamp_map[tmpp_readin.addr] = readin[i].cycle_demanded;
+          addr_t_map[tmpp_readin.addr] = {};
         }
 
+        addr_t_map[tmpp_readin.addr].push_front(tmpp_readin.cycle_demanded);
         tmpp_readin.miss_or_hit = addr_counter_map[tmpp_readin.addr];
         readin[i].miss_or_hit = addr_counter_map[tmpp_readin.addr];
         readin[i].reuse_dist_lst_timestmp = addr_timestamp_map[tmpp_readin.addr];
+        readin[i].t = addr_t_map[tmpp_readin.addr];
         addr_counter_map.erase(tmpp_readin.addr);
         addr_timestamp_map.erase(tmpp_readin.addr);
+        addr_t_map.erase(tmpp_readin.addr);
       }
     }
 
     for(auto var : readin) {
-      if (var.miss_or_hit != 0) 
+      if (var.miss_or_hit != 0) {
+        assert(var.t.size() == (size_t)var.miss_or_hit);
         oracle_pf[var.set].push_back(var); 
+      }
     }
 
     std::cout << "Done updating hits/misses for set " << set_number_begin << " to set " << (set_number_end - 1) << std::endl;
@@ -451,6 +463,8 @@ int spp_l3::SPP_ORACLE::update_pf_avail(uint64_t addr, uint64_t cycle) {
         std::cout << "Accessed addr = " << addr << " at set " << set << " way " << i - set * WAY_NUM << " remaining accesses " << cache_state[i].pending_accesses << std::endl;
 
       cache_state[i].timestamp = cycle; 
+      cache_state[i].t.pop_front();
+      assert(cache_state[i].t.size() == (size_t)cache_state[i].pending_accesses);
 
       if (cache_state[i].pending_accesses == 0) {
         cache_state[i].addr = 0; 
@@ -503,6 +517,7 @@ std::vector<std::tuple<uint64_t, uint64_t, bool, bool>> spp_l3::SPP_ORACLE::poll
         cache_state[set * WAY_NUM + way].type = ite->type;
         cache_state[set * WAY_NUM + way].accessed = false;
         cache_state[set * WAY_NUM + way].last_access_timestamp = ite->reuse_dist_lst_timestmp;
+        cache_state[set * WAY_NUM + way].t = ite->t;
 
         //if (cache_state[set * WAY_NUM + way].pending_accesses == 0) 
         target_v.push_back(target);
@@ -555,6 +570,7 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
     }
   }
 
+  /*
   latest_cycle = cache_state[set * WAY_NUM].last_access_timestamp;
   int min_counter = cache_state[set * WAY_NUM].pending_accesses;
 
@@ -575,29 +591,20 @@ uint64_t spp_l3::SPP_ORACLE::rollback_prefetch(uint64_t addr) {
       }
     }
   //}
+  //
+  */
   
-/*
-  latest_cycle = (cache_state[set * WAY_NUM].last_access_timestamp - cache_state[set * WAY_NUM].timestamp) / cache_state[set * WAY_NUM].pending_accesses + cache_state[set * WAY_NUM].timestamp;
-  int min_counter = cache_state[set * WAY_NUM].pending_accesses;
+  latest_cycle = cache_state[set * WAY_NUM].t.front();
 
   // Use the timestamp for LRU replacement.
   // Evict block that has not been accessed for long time.
   for (uint64_t i = set * WAY_NUM; i < (set + 1) * WAY_NUM; i++) {
-    uint64_t tmpp_cycle = (cache_state[i].last_access_timestamp - cache_state[i].timestamp) / cache_state[i].pending_accesses + cache_state[i].timestamp;
-
-    if (cache_state[i].pending_accesses < min_counter) {
+    if (cache_state[i].t.front() < latest_cycle) {
       index = i;
-      latest_cycle = tmpp_cycle;
-      min_counter = cache_state[i].pending_accesses;
-    }
-
-    if (cache_state[i].pending_accesses <= min_counter && tmpp_cycle > latest_cycle) { 
-      index = i;
-      latest_cycle = tmpp_cycle; 
-      min_counter = cache_state[i].pending_accesses;
+      latest_cycle = cache_state[i].t.front();
     }
   }
-*/
+
   if (ORACLE_DEBUG_PRINT) 
     std::cout << "rollback_prefetch addr " << addr << " set " << set << " way " << (index - set * WAY_NUM) << std::endl; 
 

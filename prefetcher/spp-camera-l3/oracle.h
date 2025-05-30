@@ -57,6 +57,7 @@ namespace spp_l3 {
       uint32_t miss_or_hit;
       uint8_t type;
       uint64_t reuse_dist_lst_timestmp;
+      std::deque<uint64_t> t;
     };
 #pragma pack(pop)
 
@@ -72,6 +73,7 @@ namespace spp_l3 {
       uint8_t type;
       bool accessed;
       uint64_t last_access_timestamp;
+      std::deque<uint64_t> t;
     };
 
     blk_state cache_state[SET_NUM * WAY_NUM];
