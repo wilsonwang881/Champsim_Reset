@@ -161,8 +161,15 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                 // Erase the moved ahead prefetch in not ready queue. 
                 pref.oracle.bkp_pf[set].erase(search_bkp_q); 
 
-                // Put back the rollback prefetch to not ready queue.
-                pref.oracle.bkp_pf[set].push_front(rollback_pf);
+                bool check_issued_addr = pref.check_issued(this, rollback_pf.addr);
+
+                if (check_issued_addr) 
+                  // Put back the rollback prefetch to not ready queue.
+                  pref.oracle.bkp_pf[set].push_back(rollback_pf);
+                else {
+                  pref.oracle.oracle_pf[set].push_front(rollback_pf);
+                  pref.oracle.oracle_pf_size++;
+                }
 
                 // If the rollback prefetch is in MSHR, push to do not fill.
                 pref.update_MSHR_inflight_write_rollback(this, rollback_pf);
@@ -226,8 +233,15 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
                   // Erase the moved ahead prefetch in not ready queue. 
                   pref.oracle.oracle_pf[set].erase(search_oracle_pq); 
 
-                  // Put back the rollback prefetch to not ready queue.
-                  pref.oracle.bkp_pf[set].push_front(rollback_pf);
+                  bool check_issued_addr = pref.check_issued(this, rollback_pf.addr);
+
+                  if (check_issued_addr) 
+                    // Put back the rollback prefetch to not ready queue.
+                    pref.oracle.bkp_pf[set].push_back(rollback_pf);
+                  else {
+                    pref.oracle.oracle_pf[set].push_front(rollback_pf);
+                    pref.oracle.oracle_pf_size++;
+                  }
 
                   pref.oracle.oracle_pf_size--;
 
@@ -314,8 +328,15 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
           // Erase the moved ahead prefetch in not ready queue. 
           pref.oracle.bkp_pf[set].erase(search_bkp_q); 
 
-          // Put back the rollback prefetch to not ready queue.
-          pref.oracle.oracle_pf[set].push_front(rollback_pf);
+          bool check_issued_addr = pref.check_issued(this, rollback_pf.addr);
+
+          if (check_issued_addr) 
+            // Put back the rollback prefetch to not ready queue.
+            pref.oracle.bkp_pf[set].push_back(rollback_pf);
+          else {
+            pref.oracle.oracle_pf[set].push_front(rollback_pf); 
+            pref.oracle.oracle_pf_size++;
+          }
 
           // If the rollback prefetch is in MSHR, push to do not fill.
           pref.update_MSHR_inflight_write_rollback(this, rollback_pf);
@@ -353,13 +374,32 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
           // Erase the moved ahead prefetch in not ready queue. 
           pref.oracle.oracle_pf[set].erase(search_oracle_pq); 
 
+          bool check_issued_addr = pref.check_issued(this, rollback_pf.addr);
+
+          if (rollback_pf.addr != 0) {
+            if (check_issued_addr) 
+              pref.oracle.bkp_pf[set].push_back(rollback_pf); 
+            else {
+              pref.oracle.oracle_pf[set].push_front(rollback_pf);
+              pref.oracle.oracle_pf_size++;
+            }
+          }
+          else {
+            pref.oracle.set_availability[set]--;
+            assert(pref.oracle.set_availability[set] >= 0);
+          }
+
           // Put back the rollback prefetch to not ready queue.
+          /*
           if (rollback_pf.addr != 0) 
             pref.oracle.oracle_pf[set].push_front(rollback_pf);
           else {
             pref.oracle.set_availability[set]--;
             assert(pref.oracle.set_availability[set] >= 0);
           }
+          */
+
+          pref.oracle.oracle_pf_size--;
 
           // If the rollback prefetch is in MSHR, push to do not fill.
           pref.update_MSHR_inflight_write_rollback(this, rollback_pf);

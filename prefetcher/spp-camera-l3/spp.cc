@@ -265,3 +265,14 @@ void spp_l3::prefetcher::place_rollback(CACHE* cache, std::deque<SPP_ORACLE::acc
   assert(oracle.set_availability[set] >= 0);
 }
 
+bool spp_l3::prefetcher::check_issued(CACHE* cache, uint64_t addr) {
+  uint64_t check_cache = cache->get_way(addr, oracle.calc_set(addr));
+  auto search_mshr = std::find_if(std::begin(cache->MSHR), std::end(cache->MSHR),
+                     [match = addr >> cache->OFFSET_BITS, shamt = cache->OFFSET_BITS]
+                     (const auto& entry) {
+                       return (entry.address >> shamt) == match; 
+                     });
+
+  return (check_cache < cache->NUM_WAY) || (search_mshr != cache->MSHR.end());
+}
+
