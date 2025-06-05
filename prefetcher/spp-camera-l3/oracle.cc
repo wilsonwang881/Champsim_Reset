@@ -210,8 +210,8 @@ void spp_l3::SPP_ORACLE::file_read() {
         }
 
         for (uint64_t i = 0; i < set_processing.size(); i++) {
-          acc_timestamp *current_acc = &set_processing[i];
-          uint64_t addr = current_acc->addr;
+          acc_timestamp current_acc = set_processing[i];
+          uint64_t addr = current_acc.addr;
 
           // Check if the block is already in cache.
           auto block_in_cache = in_cache.find(addr);
@@ -222,9 +222,9 @@ void spp_l3::SPP_ORACLE::file_read() {
             in_cache[addr]->pop_front();
 
             if (accessed[addr]) 
-              current_acc->miss_or_hit = 1; 
+              current_acc.miss_or_hit = 1; 
             else {
-              current_acc->miss_or_hit = 0;
+              current_acc.miss_or_hit = 0;
               accessed[addr] = true;
             }
 
@@ -246,7 +246,6 @@ void spp_l3::SPP_ORACLE::file_read() {
 
             // Replacement.
             if (not_in_cache.size() > 0) {
-
               uint64_t min_addr = 0;
 
               for (size_t k = i + 1; k < set_processing.size(); k++) {
