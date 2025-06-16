@@ -16,29 +16,27 @@ namespace spp
     constexpr static std::size_t BITMAP_SIZE = 64;
     constexpr static std::size_t FILTER_SIZE = 1024;
     constexpr static std::size_t COUNTER_SIZE = 2048;
+    constexpr static std::size_t DELTA_SIZE = 6;
+    constexpr static std::size_t C_DELTA_MAX = 6;
     constexpr static bool PAGE_BITMAP_DEBUG_PRINT = false;
-    constexpr static int COUNT_MAX=3;
-    //HL
-    constexpr static std::size_t DELTA_SIZE = 12;
-    constexpr static std::size_t C_DELTA_MAX = 5;
+
     // Page bitmap entry.
     struct page_r
     {
       bool valid;
       uint64_t page_no;
       uint64_t page_no_store;
-      //bool bitmap[BITMAP_SIZE];
-      int bitmap[BITMAP_SIZE];
-      //bool bitmap_store[BITMAP_SIZE];
+      bool bitmap[BITMAP_SIZE];
+      bool bitmap_store[BITMAP_SIZE];
       uint16_t lru_bits;
-      bool saturated_bit;
 
       //HL
       int64_t delta[DELTA_SIZE];
       uint64_t c_delta [DELTA_SIZE];
       uint64_t lru_delta[DELTA_SIZE];
-      //bool bitmap_delta[BITMAP_SIZE];
+      bool bitmap_delta[BITMAP_SIZE];
       int64_t last_offset;
+
     };
 
     page_r tb[TABLE_SIZE];
@@ -66,13 +64,24 @@ namespace spp
 
     counter_r ct[COUNTER_SIZE];
 
+    struct delta_r
+    {
+      bool valid;
+      uint64_t page_no;
+      int64_t delta[DELTA_SIZE];
+      uint64_t c_delta [DELTA_SIZE];
+      uint64_t lru_delta[DELTA_SIZE];
+      bool bitmap_delta[BITMAP_SIZE];
+      int64_t last_offset;
+      uint16_t lru_bits;
+    };
+
+    delta_r dr[TABLE_SIZE];
+
     public:
 
     // Context switch prefetch queue.
-    std::deque<std::pair<uint64_t, bool>> cs_pf;
-    //HL
-    std::deque<uint64_t>bop_pf; 
-    int delta_counter; 
+    std::deque<std::pair<uint64_t, bool>> cs_pf; 
 
     void init();
     void update_lru(std::size_t i);
@@ -85,7 +94,8 @@ namespace spp
     void filter_update_lru(std::size_t i);
     bool filter_operate(uint64_t addr);
     void counter_update_lru(std::size_t i);
-    void counter_update(uint64_t addr);
+    void counter_update(uint64_t addr); 
+
   };
 }
 
