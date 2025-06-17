@@ -33,6 +33,7 @@
 #include <string>
 #include <deque>
 #include <unordered_set>
+#include <tuple>
 // WL
 
 // WL 
@@ -142,7 +143,11 @@ public:
 
   static uint64_t cpu0_num_retired;
 
-  static std::vector<uint64_t> lru_states;
+  static std::deque<std::tuple<uint64_t, uint64_t, uint64_t>> lru_states;
+  static std::deque<std::tuple<uint64_t, uint64_t, uint64_t>> lru_states_llc;
+  static bool kill_simulation_l2;
+  static bool kill_simulation_l3;
+
   // WL
 
   double leap_operation = 0;

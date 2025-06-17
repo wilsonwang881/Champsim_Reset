@@ -37,7 +37,9 @@ PageTableWalker::PageTableWalker(Builder b)
   std::sort(std::begin(local_pscl_dims), std::end(local_pscl_dims), std::greater{});
 
   for (auto [level, sets, ways] : local_pscl_dims)
-    pscl.emplace_back(sets, ways, pscl_indexer{b.m_vmem->shamt(level)}, pscl_indexer{b.m_vmem->shamt(level)});
+  {
+    pscl.emplace_back(sets, ways, pscl_indexer{b.m_vmem->shamt(level - 1)}, pscl_indexer{b.m_vmem->shamt(level - 1)});
+  }
 }
 
 PageTableWalker::mshr_type::mshr_type(request_type req, std::size_t level)
@@ -63,9 +65,25 @@ auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* 
                                                                              
   pscl_entry walk_init = {handle_pkt.v_address, CR3_addr, std::size(pscl), handle_pkt.asid[0]}; // WL: added ASID
   std::vector<std::optional<pscl_entry>> pscl_hits;
-  std::transform(std::begin(pscl), std::end(pscl), std::back_inserter(pscl_hits), [walk_init](auto& x) { return x.check_hit_with_asid(walk_init); }); // WL: changed check_hit to check_hit_with_asid
+  std::transform(std::begin(pscl), std::end(pscl), std::back_inserter(pscl_hits), [walk_init](auto& x) { return x.check_hit(walk_init); }); // WL: changed check_hit to check_hit_with_asid
+
   walk_init =
       std::accumulate(std::begin(pscl_hits), std::end(pscl_hits), std::optional<pscl_entry>(walk_init), [](auto x, auto& y) { return y.value_or(*x); }).value();
+
+  // WL
+  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+
+    std::cout << "PTW pscl_hits " << std::endl;
+
+    for(auto var : pscl_hits) {
+      if (var.has_value()){
+        std::cout << std::hex << "vaddr 0x" << var.value().vaddr << " ptw_addr 0x" << var.value().ptw_addr << " level " << var.value().level << " asid " << (unsigned)var.value().asid << std::dec << std::endl; 
+      }
+    }
+
+    std::cout << std::hex << "walk_init vaddr = 0x" << walk_init.vaddr << " ptw_addr 0x" << walk_init.ptw_addr << " level " << walk_init.level << " asid " << walk_init.asid << std::dec << std::endl;
+  }
+  // WL
 
   auto walk_offset = vmem->get_offset(handle_pkt.address, walk_init.level) * PTE_BYTES;
 
@@ -79,8 +97,8 @@ auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* 
     fwd_mshr.to_return = {&ul->returned};
 
   if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
-    fmt::print("[{}] {} address: {:#x} v_address: {:#x} pt_page_offset: {} translation_level: {} packet asid: {} handle_pkt_asid: {} instr_id: {} CR3_addr: {:#x}\n", NAME, __func__, fwd_mshr.address, fwd_mshr.v_address,
-               walk_offset / PTE_BYTES, walk_init.level, fwd_mshr.asid[0], handle_pkt.asid[0], handle_pkt.instr_id, CR3_addr);
+    fmt::print("[{}] {} address: {:#x} v_address: {:#x} pt_page_offset: {} translation_level: {} packet asid: {} handle_pkt_asid: {} instr_id: {} CR3_addr: {:#x} pscl size: {}\n", NAME, __func__, fwd_mshr.address, fwd_mshr.v_address,
+               walk_offset / PTE_BYTES, walk_init.level, fwd_mshr.asid[0], handle_pkt.asid[0], handle_pkt.instr_id, CR3_addr, std::size(pscl_hits));
   }
 
   return step_translation(fwd_mshr);
@@ -95,8 +113,16 @@ auto PageTableWalker::handle_fill(const mshr_type& fill_mshr) -> std::optional<m
   }
 
   const auto pscl_idx = std::size(pscl) - fill_mshr.translation_level;
-  pscl.at(pscl_idx).fill_with_asid({fill_mshr.v_address, fill_mshr.data, fill_mshr.translation_level - 1, fill_mshr.asid[0]}); // WL: changed fill to fill_with_asid
 
+  pscl.at(pscl_idx).fill({fill_mshr.v_address, fill_mshr.data, fill_mshr.translation_level - 0, fill_mshr.asid[0]}); // WL: changed fill to fill_with_asid
+
+  // WL 
+  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
+    std::cout << "pscl updated at index " << pscl_idx << std::endl;
+    //std::cout << "pscl val: " << pscl.at(pscl_idx).vaddr << " " << pscl.at(pscl_idx).ptw_addr << " " << pscl.at(pscl_idx).level << " " << pscl.at(pscl_idx).asid << std::endl;
+  }
+  // WL
+  
   mshr_type fwd_mshr = fill_mshr;
   fwd_mshr.address = fill_mshr.data;
   fwd_mshr.translation_level = fill_mshr.translation_level - 1;
@@ -157,10 +183,18 @@ long PageTableWalker::operate()
   auto [mshr_begin, mshr_end] =
       champsim::get_span_p(std::cbegin(finished), std::cend(finished), fill_bw, [cycle = current_cycle](const auto& pkt) { return pkt.event_cycle <= cycle; });
   std::tie(mshr_begin, mshr_end) = champsim::get_span_p(mshr_begin, mshr_end, [&next_steps, this](const auto& pkt) {
-    auto result = this->handle_fill(pkt);
+    // WL 
+    if (pkt.translation_level >= 1) {
+     auto result = this->handle_fill(pkt);
     if (result.has_value())
       next_steps.push_back(*result);
     return result.has_value();
+     
+    }
+    else {
+      assert(false);
+    }
+    // WL
   });
   progress += std::distance(mshr_begin, mshr_end);
   finished.erase(mshr_begin, mshr_end);
@@ -195,6 +229,14 @@ void PageTableWalker::finish_packet(const response_type& packet)
   auto finish_step = [this](auto& mshr_entry) {
     uint64_t penalty;
     std::tie(mshr_entry.data, penalty) = this->vmem->get_pte_pa(mshr_entry.cpu, mshr_entry.v_address, mshr_entry.translation_level);
+    // WL 
+    /*
+    if (mshr_entry.v_address > 0x1000000000000000) {
+      std::cout << "mshr_entry.v_address too large " << (unsigned long)mshr_entry.v_address << " > " << (unsigned long)0xf000000000000 << " log = " << champsim::lg2(mshr_entry.v_address) << std::endl; 
+      assert(false);
+    }
+    */
+    // WL
     //std::tie(mshr_entry.data, penalty) = this->vmem->get_pte_pa(mshr_entry.asid[0], mshr_entry.v_address, mshr_entry.translation_level);
 
     mshr_entry.event_cycle = this->current_cycle + (this->warmup ? 0 : penalty + HIT_LATENCY);

@@ -29,6 +29,9 @@ VirtualMemory::VirtualMemory(uint64_t page_table_page_size, std::size_t page_tab
 {
   assert(page_table_page_size > 1024);
   assert(page_table_page_size == (1ull << champsim::lg2(page_table_page_size)));
+  if (page_table_levels > 5) {
+    last_ppage = 1ull << 63; 
+  }
   assert(last_ppage > VMEM_RESERVE_CAPACITY);
 
   auto required_bits = champsim::lg2(last_ppage);
@@ -36,6 +39,46 @@ VirtualMemory::VirtualMemory(uint64_t page_table_page_size, std::size_t page_tab
     fmt::print("WARNING: virtual memory configuration would require {} bits of addressing.\n", required_bits); // LCOV_EXCL_LINE
   if (required_bits > champsim::lg2(dram.size()))
     fmt::print("WARNING: physical memory size is smaller than virtual memory size.\n"); // LCOV_EXCL_LINE
+                                                                                        //
+  // WL
+  if (RECORD_OR_READ) 
+  {
+    std::cout << "Recording vmem mapping." << std::endl;
+    page_table_file.open(page_table_file_name, std::ofstream::out | std::ofstream::trunc);
+    page_table_file.close();
+    va_to_pa_file.open(va_to_pa_file_name, std::ofstream::out | std::ofstream::trunc);
+    va_to_pa_file.close();
+  }
+  else {
+    std::cout << "Reading vmem mapping." << std::endl;
+    page_table_file.open(page_table_file_name, std::ifstream::in);
+    fr_page_table.clear();
+
+    uint32_t cpu_num; 
+    uint64_t vaddr_shifted; 
+    uint32_t level;
+    uint64_t nxt_pg;
+
+    while(!page_table_file.eof())
+    {
+      page_table_file>> cpu_num >> vaddr_shifted >> level >> nxt_pg;
+      std::tuple key{cpu_num, vaddr_shifted, level};
+      fr_page_table.insert({key, nxt_pg});
+    }
+
+    page_table_file.close();
+    va_to_pa_file.open(va_to_pa_file_name, std::ifstream::in);
+    fr_vpage_to_ppage_map.clear();
+
+    while(!va_to_pa_file.eof())
+    {
+      va_to_pa_file >> cpu_num >> vaddr_shifted >> nxt_pg;
+      fr_vpage_to_ppage_map.insert({{cpu_num, vaddr_shifted}, nxt_pg});
+    }
+
+    va_to_pa_file.close();
+  }
+  // WL
 }
 
 uint64_t VirtualMemory::shamt(std::size_t level) const { return LOG2_PAGE_SIZE + champsim::lg2(pte_page_size / PTE_BYTES) * (level - 1); }
@@ -58,14 +101,37 @@ std::size_t VirtualMemory::available_ppages() const { return (last_ppage - next_
 std::pair<uint64_t, uint64_t> VirtualMemory::va_to_pa(uint32_t cpu_num, uint64_t vaddr)
 {
   cpu_num = 0; // WL: harded coded cpu_num to be 0
-  auto [ppage, fault] = vpage_to_ppage_map.insert({{cpu_num, vaddr >> LOG2_PAGE_SIZE}, ppage_front()});
+
+  // WL
+  uint64_t translation;
+
+  if(RECORD_IN_USE) {
+    if (auto search = fr_vpage_to_ppage_map.find({cpu_num, vaddr >> LOG2_PAGE_SIZE}); search != fr_vpage_to_ppage_map.end())
+      translation = search->second;
+    else 
+      assert(false);
+  }
+  // WL
+  else
+    translation = ppage_front(); 
+
+  auto [ppage, fault] = vpage_to_ppage_map.insert({{cpu_num, vaddr >> LOG2_PAGE_SIZE}, translation});
 
   // this vpage doesn't yet have a ppage mapping
-  if (fault)
-    ppage_pop();
+  if (fault) {
+    // WL
+    if (RECORD_OR_READ) 
+    {
+      va_to_pa_file.open(va_to_pa_file_name, std::ofstream::app);
+      va_to_pa_file << cpu_num << " " << (vaddr >> LOG2_PAGE_SIZE) << " " << translation << std::endl;
+      va_to_pa_file.close();
+      ppage_pop(); 
+    }
+    // WL
+  }
 
   auto paddr = champsim::splice_bits(ppage->second, vaddr, LOG2_PAGE_SIZE);
-  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { // WL
+  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { 
     fmt::print("[VMEM] {} paddr: {:x} vaddr: {:x} fault: {}\n", __func__, paddr, vaddr, fault);
   }
 
@@ -80,21 +146,46 @@ std::pair<uint64_t, uint64_t> VirtualMemory::get_pte_pa(uint32_t cpu_num, uint64
     ppage_pop();
   }
 
+  // WL
   std::tuple key{cpu_num, vaddr >> shamt(level), level};
+
+  if(RECORD_IN_USE)
+  {
+    if (auto search = fr_page_table.find(key); search != fr_page_table.end()) 
+      next_pte_page = search->second;
+    else {
+      std::cout << "cpu_num = " << cpu_num << " vaddr = " << vaddr << " level = " << level << " vaddr_shifted = " << (vaddr >> (shamt(level))) << std::endl;  
+      assert(false);
+    }
+  }
+  // WL
+
   auto [ppage, fault] = page_table.insert({key, next_pte_page});
 
   // this PTE doesn't yet have a mapping
   if (fault) {
-    next_pte_page += pte_page_size;
-    if (!(next_pte_page % PAGE_SIZE)) {
-      next_pte_page = ppage_front();
-      ppage_pop();
+
+    // WL
+    if (RECORD_OR_READ) 
+    {
+      page_table_file.open(page_table_file_name, std::ofstream::app);
+      page_table_file << cpu_num << " " << (vaddr >> shamt(level)) << " " << level << " " << next_pte_page << std::endl;
+      page_table_file.close();
+
+      next_pte_page += pte_page_size;
+
+      if (!(next_pte_page % PAGE_SIZE)) 
+      {
+        next_pte_page = ppage_front();
+        ppage_pop();
+      }
     }
+    // WL
   }
 
   auto offset = get_offset(vaddr, level);
   auto paddr = champsim::splice_bits(ppage->second, offset * PTE_BYTES, champsim::lg2(pte_page_size));
-  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { // WL
+  if ((champsim::debug_print) && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) { 
     fmt::print("[VMEM] {} paddr: {:x} vaddr: {:x} pt_page_offset: {} translation_level: {} fault: {} asid: {}\n", __func__, paddr, vaddr, offset, level, fault, cpu_num);
   }
 

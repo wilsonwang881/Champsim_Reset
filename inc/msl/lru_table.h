@@ -203,9 +203,9 @@ public:
     auto tag = tag_projection(elem);
     auto [set_begin, set_end] = get_set_span(elem);
     if (set_begin != set_end) {
-      auto [miss, hit] = std::minmax_element(set_begin, set_end, match_and_check_with_asid(tag, elem.asid));
+      auto [miss, hit] = std::minmax_element(set_begin, set_end, match_and_check(tag));
 
-      if (tag_projection(hit->data) == tag && hit->asid == elem.asid)
+      if (tag_projection(hit->data) == tag)
         *hit = {++access_count, elem, elem.asid};
       else
         *miss = {++access_count, elem, elem.asid};
@@ -218,9 +218,9 @@ public:
     auto tag = tag_projection(elem);
     auto [set_begin, set_end] = get_set_span(elem);
     if (set_begin != set_end) {
-      auto [miss, hit] = std::minmax_element(set_begin, set_end, match_and_check_with_asid(tag, asid));
+      auto [miss, hit] = std::minmax_element(set_begin, set_end, match_and_check(tag));
 
-      if (tag_projection(hit->data) == tag && hit->asid == asid)
+      if (tag_projection(hit->data) == tag)
         *hit = {++access_count, elem, asid};
       else
         *miss = {++access_count, elem, asid};

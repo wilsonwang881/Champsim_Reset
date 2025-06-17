@@ -319,8 +319,25 @@ void spp::SPP_PAGE_BITMAP::update_bitmap_store()
         { 
           tb[i].bitmap[j] = tb[i].bitmap[j]>>1; // | tb[i].bitmap_store[j];
         }
+/*
+<<<<<<< HEAD
         tb[i].saturated_bit=false;
       
+=======
+
+        if (!found) 
+        {
+          for (size_t j = 0; j < BITMAP_SIZE; j++) 
+          {
+            tb[i].bitmap_store[j] = tb[i].bitmap[j]; // | tb[i].bitmap_store[j];
+            tb[i].bitmap[j] = false;
+          }
+
+          tb[i].page_no_store = tb[i].page_no;
+        }
+      }
+>>>>>>> master
+*/
     }
   }
 }

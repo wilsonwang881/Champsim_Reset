@@ -89,11 +89,14 @@ class CACHE : public champsim::operable
     uint32_t pf_metadata;
     uint32_t cpu;
 
+    //uint64_t cycle_demanded = 0;
+
     access_type type;
     bool prefetch_from_this;
     bool skip_fill;
     bool is_translated;
     bool translate_issued = false;
+    bool has_been_checked = false;
 
     uint16_t asid[2] = {std::numeric_limits<uint16_t>::max(), std::numeric_limits<uint16_t>::max()};
 
@@ -102,10 +105,10 @@ class CACHE : public champsim::operable
     std::vector<std::reference_wrapper<ooo_model_instr>> instr_depend_on_me{};
     std::vector<std::deque<response_type>*> to_return{};
 
-    explicit tag_lookup_type(request_type req) : tag_lookup_type(req, false, false) {
+    explicit tag_lookup_type(request_type req) : tag_lookup_type(req, false, false, 0) {
       asid[0] = req.asid[0]; // WL: added ASID
     }
-    tag_lookup_type(request_type req, bool local_pref, bool skip);
+    tag_lookup_type(request_type req, bool local_pref, bool skip, uint64_t cycle_demanded_);
   };
 
   struct mshr_type {
@@ -192,6 +195,8 @@ public:
   bool ever_seen_data = false;
   const unsigned pref_activate_mask = (1 << champsim::to_underlying(access_type::LOAD)) | (1 << champsim::to_underlying(access_type::PREFETCH));
 
+  std::deque<uint64_t> do_not_fill_address;
+  std::deque<uint64_t> do_not_fill_write_address;
   using stats_type = cache_stats;
 
   stats_type sim_stats, roi_stats;
@@ -231,6 +236,8 @@ public:
 
   uint64_t invalidate_entry(uint64_t inval_addr);
   int prefetch_line(uint64_t pf_addr, bool fill_this_level, uint32_t prefetch_metadata);
+
+  int prefetch_line(uint64_t pf_addr, bool fill_this_level, uint32_t prefetch_metadata, uint64_t cycle_demanded);
 
   [[deprecated("Use CACHE::prefetch_line(pf_addr, fill_this_level, prefetch_metadata) instead.")]] int
   prefetch_line(uint64_t ip, uint64_t base_addr, uint64_t pf_addr, bool fill_this_level, uint32_t prefetch_metadata);

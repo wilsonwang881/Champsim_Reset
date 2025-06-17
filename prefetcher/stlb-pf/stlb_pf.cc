@@ -101,8 +101,6 @@ void stlb_pf::prefetcher::gather_pf()
 
   int limit = translations.size() - std::round(translations.size() * accuracy) * (translations.size() * 1.0 / DQ_SIZE);
   
-  std::cout << "limit = " << limit << " translations.size() = " << (unsigned)translations.size() << std::endl;
-
   for(int i = translations.size() - 1; i >= limit; i--) 
     cs_q.push_back(translations[i] << 12); 
 

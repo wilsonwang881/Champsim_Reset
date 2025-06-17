@@ -194,6 +194,7 @@ void O3_CPU::initialize_instruction()
     instrs_to_read_this_cycle--;
 
     auto stop_fetch = do_init_instruction(input_queue.front());
+
     if (stop_fetch)
       instrs_to_read_this_cycle = 0;
 

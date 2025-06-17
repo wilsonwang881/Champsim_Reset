@@ -2,7 +2,8 @@
 #include <cassert>
 #include <map>
 #include <vector>
-#include <iterator> // WL
+#include <iterator> // WL 
+#include <limits> // WL
 
 #include "cache.h"
 
@@ -18,6 +19,40 @@ uint32_t CACHE::find_victim(uint32_t triggering_cpu, uint64_t instr_id, uint32_t
   auto begin = std::next(std::begin(::last_used_cycles[this]), set * NUM_WAY);
   auto end = std::next(begin, NUM_WAY);
 
+  // WL
+  if(champsim::operable::lru_states.size() > 0 && L2C_name.compare(this->NAME) == 0)
+  {
+    for(auto var : champsim::operable::lru_states) 
+    {
+      uint64_t target_set = std::get<0>(var);
+      uint64_t target_way = std::get<1>(var);
+      uint64_t setting = (std::get<2>(var) == 0) ? 0 : 0xFFFFFFFFFFFFFFF;
+
+      if (target_way < NUM_WAY)
+        ::last_used_cycles[this].at(target_set * NUM_WAY + target_way) = setting; 
+    }
+
+    champsim::operable::lru_states.clear();
+  }
+
+  if(champsim::operable::lru_states_llc.size() > 0 && LLC_name.compare(this->NAME) == 0)
+  {
+    for(auto var : champsim::operable::lru_states_llc) 
+    {
+      uint64_t target_set = std::get<0>(var);
+      uint64_t target_way = std::get<1>(var);
+      uint64_t setting = (std::get<2>(var) == 0) ? 0 : 0xFFFFFFFFFFFFFFF;
+
+      if (target_way < NUM_WAY)
+        ::last_used_cycles[this].at(target_set * NUM_WAY + target_way) = setting; 
+    }
+
+    champsim::operable::lru_states_llc.clear();
+  }
+
+
+  // WL
+
   // Find the way whose last use cycle is most distant
   auto victim = std::min_element(begin, end);
   assert(begin <= victim);
@@ -29,17 +64,47 @@ void CACHE::update_replacement_state(uint32_t triggering_cpu, uint32_t set, uint
                                      uint8_t hit)
 {
   // Mark the way as being used on the current cycle
-  if (!hit || access_type{type} != access_type::WRITE) // Skip this for writeback hits
+  if (hit || access_type{type} != access_type::WRITE) // Skip this for writeback hits
+  {
     ::last_used_cycles[this].at(set * NUM_WAY + way) = current_cycle;
-
-  // WL 
-  // Update the communication channel to be used by the LLC prefetcher.
-  /*
-  if (!NAME.compare(champsim::operable::LLC_name)) {
-    champsim::operable::lru_states[set * NUM_WAY + way] = current_cycle;
   }
-  */
-  // WL 
+
+  // WL
+  if(champsim::operable::lru_states.size() > 0 && L2C_name.compare(this->NAME) == 0)
+  {
+    for(auto var : champsim::operable::lru_states) 
+    {
+      uint64_t target_set = std::get<0>(var);
+      uint64_t target_way = std::get<1>(var);
+      uint64_t setting = (std::get<2>(var) == 0) ? 0 : 0xFFFFFFFFFFFFFFF;
+
+      if (target_way < NUM_WAY)
+      {
+        ::last_used_cycles[this].at(target_set * NUM_WAY + target_way) = setting; 
+        //std::cout << "LRU: result " << ::last_used_cycles[this].at(var.first * NUM_WAY + var.second) << std::endl;
+      }
+    }
+
+    champsim::operable::lru_states.clear();
+  }
+
+  if(champsim::operable::lru_states_llc.size() > 0 && LLC_name.compare(this->NAME) == 0)
+  {
+    for(auto var : champsim::operable::lru_states_llc) 
+    {
+      uint64_t target_set = std::get<0>(var);
+      uint64_t target_way = std::get<1>(var);
+      uint64_t setting = (std::get<2>(var) == 0) ? 0 : 0xFFFFFFFFFFFFFFF;
+
+      if (target_way < NUM_WAY)
+        ::last_used_cycles[this].at(target_set * NUM_WAY + target_way) = setting; 
+    }
+
+    champsim::operable::lru_states_llc.clear();
+  }
+
+  // WL
+
 }
 
 void CACHE::replacement_final_stats() {}

@@ -2,7 +2,7 @@
     "executable_name": "champsim",
     "block_size": 64,
     "page_size": 4096,
-    "heartbeat_frequency": 10000000,
+    "heartbeat_frequency": 1000000,
     "num_cores": 1,
 
     "ooo_cpu": [
@@ -82,8 +82,8 @@
         "max_fill": 1,
         "prefetch_as_load": false,
         "virtual_prefetch": false,
-        "prefetch_activate": "LOAD,PREFETCH",
-        "prefetcher": "spp-camera"
+        "prefetch_activate": "LOAD,WRITE,TRANSLATION,RFO,PREFETCH",
+        "prefetcher": "spp-camera-l3"
     },
 
     "ITLB": {
@@ -129,7 +129,7 @@
         "prefetch_as_load": true,
         "virtual_prefetch": false,
         "prefetch_activate": "LOAD",
-        "prefetcher": "stlb-pf"
+        "prefetcher": "no"
     },
 
 	"PTW": {
@@ -161,7 +161,7 @@
         "max_fill": 1,
         "prefetch_as_load": false,
         "virtual_prefetch": false,
-        "prefetch_activate": "LOAD,PREFETCH",
+        "prefetch_activate": "LOAD,WRITE,TRANSLATION,RFO,PREFETCH",
         "prefetcher": "no",
         "replacement": "lru"
     },

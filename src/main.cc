@@ -67,9 +67,13 @@ uint64_t champsim::operable::cache_clear_counter = 0;
 uint16_t champsim::operable::currently_active_thread_ID = 0;
 std::vector<uint64_t> champsim::operable::reset_ins_count_global;
 std::vector<std::string> champsim::operable::emptied_cache;
-uint64_t champsim::operable::number_of_instructions_to_skip_before_log = 79566050;
+uint64_t champsim::operable::number_of_instructions_to_skip_before_log = 0;
 uint64_t champsim::operable::cpu0_num_retired = 0;
-std::vector<uint64_t> champsim::operable::lru_states(2048*16);
+std::deque<std::tuple<uint64_t, uint64_t, uint64_t>> champsim::operable::lru_states;
+std::deque<std::tuple<uint64_t, uint64_t, uint64_t>> champsim::operable::lru_states_llc;
+bool champsim::operable::kill_simulation_l2 = false;
+bool champsim::operable::kill_simulation_l3 = false;
+
 // WL
 
 // WL 
