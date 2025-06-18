@@ -7,6 +7,7 @@
 #include <deque>
 #include <algorithm>
 #include <vector>
+#include <set>
 
 namespace spp 
 {
@@ -19,8 +20,7 @@ namespace spp
     constexpr static bool PAGE_BITMAP_DEBUG_PRINT = false;
 
     // Page bitmap entry.
-    struct page_r
-    {
+    struct page_r {
       bool valid;
       uint64_t page_no;
       uint64_t page_no_store;
@@ -33,8 +33,7 @@ namespace spp
 
     // Filter.
     // Make sure each page has 1 access before putting into tb.
-    struct page_filter_r
-    {
+    struct page_filter_r {
       bool valid;
       uint64_t page_no;
       uint8_t block_no;
@@ -44,8 +43,7 @@ namespace spp
     page_filter_r filter[FILTER_SIZE];
 
     // Counter for each block access.
-    struct counter_r
-    {
+    struct counter_r {
       bool valid;
       uint64_t addr;
       uint8_t counter;
@@ -58,6 +56,9 @@ namespace spp
 
     // Context switch prefetch queue.
     std::deque<std::pair<uint64_t, bool>> cs_pf; 
+    std::set<uint64_t> issued_cs_pf;
+    uint64_t issued_cs_pf_hit;
+    uint64_t total_issued_cs_pf;
 
     void init();
     void update_lru(std::size_t i);
@@ -71,6 +72,7 @@ namespace spp
     bool filter_operate(uint64_t addr);
     void counter_update_lru(std::size_t i);
     void counter_update(uint64_t addr);
+    void update_usefulness(uint64_t addr);
   };
 }
 

@@ -6,7 +6,6 @@
 #include "patterntable.h"
 #include "filter.h"
 #include "page_bitmap.h" // WL
-#include "oracle.h" // WL 
 
 #include <cstdlib>
 #include <deque>
@@ -60,9 +59,7 @@ namespace spp {
 
     std::set<std::pair<uint64_t, bool>> available_prefetches;
     std::deque<std::pair<uint64_t, bool>> context_switch_issue_queue; // WL
-                                                                      //
     SPP_PAGE_BITMAP page_bitmap; // WL
-    SPP_ORACLE oracle;           // WL 
 
     bool warmup = true;
     
@@ -83,9 +80,6 @@ namespace spp {
     bool context_switch_queue_empty();
     void record_spp_states();
     float CUTOFF_THRESHOLD = 0.1;
-    std::set<uint64_t> issued_cs_pf;
-    uint64_t issued_cs_pf_hit;
-    uint64_t total_issued_cs_pf;
     uint64_t gathered_pf_this_round;
     uint64_t issued_pf_this_round;
     uint64_t hit_pf_this_round;

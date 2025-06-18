@@ -41,18 +41,13 @@ namespace {
 
 void spp::prefetcher::issue(CACHE* cache)
 {
-  /*
-  if (oracle.ORACLE_ACTIVE && oracle.RECORD_OR_REPLAY)
-    return;
-    */
-    
   // WL: issue context switch prefetches first 
   //if (!reset_misc::dq_prefetch_communicate.empty()) {
   if (!context_switch_queue_empty()) {
 
     auto q_occupancy = cache->get_pq_occupancy();
 
-    if (q_occupancy[2] <= 16) {
+    //if (q_occupancy[2] <= 16) {
 
       auto [addr, priority] = context_switch_issue_queue.front();
       bool prefetched = cache->prefetch_line(addr, priority, 0);
@@ -61,12 +56,12 @@ void spp::prefetcher::issue(CACHE* cache)
 
       if (prefetched) {
         context_switch_issue_queue.pop_front();
-        issued_cs_pf.insert(addr);
-        total_issued_cs_pf++;
+        page_bitmap.issued_cs_pf.insert(addr);
+        page_bitmap.total_issued_cs_pf++;
         issued_pf_this_round++;
         //filter.update_issue(addr, cache->get_set(addr));
       }
-    }
+    //}
 
     return;
   }
@@ -259,22 +254,13 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   return;
   */
   context_switch_issue_queue.clear();
-  tmpp_pf = oracle.file_read();
 
   for(auto var : tmpp_pf)
     context_switch_issue_queue.push_back(var);
     
-  oracle.file_write();
-  oracle.can_write = true;
-  oracle.interval_start_cycle = cache->current_cycle;
-
-
   issue_queue.clear();
   filter.clear();
   std::cout << "SPP issue queue and filter cleared." << std::endl;
-
-  if (oracle.ORACLE_ACTIVE)
-    return; 
 
   tmpp_pf.clear();
   tmpp_pf = page_bitmap.gather_pf();
