@@ -35,7 +35,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
     pref.page_bitmap.update_usefulness(base_addr);
 
   uint64_t page_addr = base_addr >> 12;
-  std::pair<uint64_t, bool> demand_itself = std::make_pair(((base_addr >> 6) << 6), false);
+  std::pair<uint64_t, bool> demand_itself = std::make_pair(((base_addr >> 6) << 6), true);
   pref.available_prefetches.erase(demand_itself);
 
   for(auto var : pref.available_prefetches) {
@@ -52,7 +52,6 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
 uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in) {
   auto &pref = ::SPP[{this, cpu}];
   uint32_t blk_asid_match = (metadata_in >> 2) &0x1; 
-  uint32_t pkt_pfed = metadata_in & 0x1;
 
   if (!prefetch && (addr != 0))
     pref.page_bitmap.update(addr);
@@ -74,7 +73,7 @@ void CACHE::prefetcher_cycle_operate() {
   if (champsim::operable::context_switch_mode && !champsim::operable::L2C_have_issued_context_switch_prefetches) {
     // Gather prefetches via the signature and pattern tables.
     if (!pref.context_switch_prefetch_gathered) {
-      pref.context_switch_gather_prefetches(this);
+      //pref.context_switch_gather_prefetches(this);
       pref.context_switch_prefetch_gathered = true;
     }
    
@@ -91,8 +90,8 @@ void CACHE::prefetcher_cycle_operate() {
       pref.page_bitmap.update_bitmap_store();
       champsim::operable::emptied_cache.clear();
       pref.page_bitmap.issued_cs_pf.clear();
-      //pref.clear_states();
-      std::cout << "SPP states not cleared." << std::endl;
+      pref.clear_states();
+      std::cout << "SPP states cleared." << std::endl;
       reset_misc::can_record_after_access = true;
       std::cout << NAME << " stalled " << current_cycle - context_switch_start_cycle << " cycle(s)" << " done at cycle " << current_cycle << std::endl;
     }

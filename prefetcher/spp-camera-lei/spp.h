@@ -77,7 +77,6 @@ namespace spp {
     void clear_states();
     void context_switch_gather_prefetches(CACHE* cache);
     std::optional<uint64_t> context_switch_aux(uint32_t &sig, int32_t delta, float &confidence, uint64_t page_num, uint32_t &last_offset);
-    bool context_switch_queue_empty();
     void record_spp_states();
     float CUTOFF_THRESHOLD = 0.1;
     uint64_t gathered_pf_this_round;

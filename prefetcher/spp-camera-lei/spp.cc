@@ -43,7 +43,7 @@ void spp::prefetcher::issue(CACHE* cache)
 {
   // WL: issue context switch prefetches first 
   //if (!reset_misc::dq_prefetch_communicate.empty()) {
-  if (!context_switch_queue_empty()) {
+  if (!context_switch_issue_queue.empty()) {
 
     auto q_occupancy = cache->get_pq_occupancy();
 
@@ -245,36 +245,19 @@ void spp::prefetcher::clear_states()
 void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 {
   std::vector<std::pair<uint64_t, bool>> tmpp_pf;
-  /*
-  std::vector<std::pair<uint64_t, bool>> tmpp_pf = oracle.file_read();
 
-  for(auto var : tmpp_pf)
-    context_switch_issue_queue.push_back(var); 
-
-  return;
-  */
-  context_switch_issue_queue.clear();
-
-  for(auto var : tmpp_pf)
-    context_switch_issue_queue.push_back(var);
-    
   issue_queue.clear();
   filter.clear();
   std::cout << "SPP issue queue and filter cleared." << std::endl;
 
-  tmpp_pf.clear();
   tmpp_pf = page_bitmap.gather_pf();
-
+  context_switch_issue_queue.clear();
   available_prefetches.clear();
 
   for (size_t i = 0; i < tmpp_pf.size(); i++) 
-  {
-      //context_switch_issue_queue.push_back(tmpp_pf[i]); 
-      available_prefetches.insert(tmpp_pf[i]);
-  }
+    available_prefetches.insert(tmpp_pf[i]);
 
-  context_switch_issue_queue.clear();
-  //return;
+  return;
 
   std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature(1.0 * filter.pf_useful / filter.pf_issued);
 
@@ -386,12 +369,6 @@ std::optional<uint64_t> spp::prefetcher::context_switch_aux(uint32_t &sig, int32
   }
 
   return std::nullopt;
-}
-
-// WL
-bool spp::prefetcher::context_switch_queue_empty()
-{
-  return context_switch_issue_queue.empty();
 }
 
 // WL 
