@@ -65,7 +65,7 @@ auto PageTableWalker::handle_read(const request_type& handle_pkt, channel_type* 
                                                                              
   pscl_entry walk_init = {handle_pkt.v_address, CR3_addr, std::size(pscl), handle_pkt.asid[0]}; // WL: added ASID
   std::vector<std::optional<pscl_entry>> pscl_hits;
-  std::transform(std::begin(pscl), std::end(pscl), std::back_inserter(pscl_hits), [walk_init](auto& x) { return x.check_hit(walk_init); }); // WL: changed check_hit to check_hit_with_asid
+  std::transform(std::begin(pscl), std::end(pscl), std::back_inserter(pscl_hits), [walk_init](auto& x) { return x.check_hit_with_asid(walk_init); }); // WL: changed check_hit to check_hit_with_asid
 
   walk_init =
       std::accumulate(std::begin(pscl_hits), std::end(pscl_hits), std::optional<pscl_entry>(walk_init), [](auto x, auto& y) { return y.value_or(*x); }).value();
