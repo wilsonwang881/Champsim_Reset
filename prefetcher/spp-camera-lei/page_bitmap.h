@@ -18,41 +18,21 @@ namespace spp
     constexpr static std::size_t FILTER_SIZE = 1024;
     constexpr static std::size_t COUNTER_SIZE = 2048;
     constexpr static bool PAGE_BITMAP_DEBUG_PRINT = false;
+    constexpr static std::size_t FILTER_THRESHOLD = 1;
 
-    // Page bitmap entry.
-    struct page_r {
-      bool valid;
+    struct PAGE_R {
+      bool valid = false;
+      uint16_t lru_bits;
       uint64_t page_no;
       uint64_t page_no_store;
-      bool bitmap[BITMAP_SIZE];
-      bool bitmap_store[BITMAP_SIZE];
-      uint16_t lru_bits;
+      bool bitmap[BITMAP_SIZE] = {false};
+      bool bitmap_store[BITMAP_SIZE] = {false};
     };
-
-    page_r tb[TABLE_SIZE];
-
-    // Filter.
-    // Make sure each page has 1 access before putting into tb.
-    struct page_filter_r {
-      bool valid;
-      uint64_t page_no;
-      uint8_t block_no;
-      uint16_t lru_bits;
-    };
-
-    page_filter_r filter[FILTER_SIZE];
-
-    // Counter for each block access.
-    struct counter_r {
-      bool valid;
-      uint64_t addr;
-      uint8_t counter;
-      uint16_t lru_bits;
-    };
-
-    counter_r ct[COUNTER_SIZE];
 
     public:
+
+    std::vector<PAGE_R> tb = std::vector<PAGE_R>(TABLE_SIZE);
+    std::vector<PAGE_R> filter = std::vector<PAGE_R>(FILTER_SIZE);
 
     // Context switch prefetch queue.
     std::deque<std::pair<uint64_t, bool>> cs_pf; 
@@ -60,18 +40,12 @@ namespace spp
     uint64_t issued_cs_pf_hit;
     uint64_t total_issued_cs_pf;
 
-    void init();
-    void update_lru(std::size_t i);
+    void lru_operate(std::vector<PAGE_R> &l, std::size_t i);
     void update(uint64_t addr);
     void evict(uint64_t addr);
-    void update_bitmap(uint64_t addr);
     void update_bitmap_store();
     std::vector<std::pair<uint64_t, bool>> gather_pf();
-    bool pf_q_empty();
-    void filter_update_lru(std::size_t i);
     bool filter_operate(uint64_t addr);
-    void counter_update_lru(std::size_t i);
-    void counter_update(uint64_t addr);
     void update_usefulness(uint64_t addr);
   };
 }
