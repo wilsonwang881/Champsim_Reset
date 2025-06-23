@@ -10,10 +10,8 @@ void spp::SPP_PAGE_BITMAP::lru_operate(std::vector<PAGE_R> &l, std::size_t i) {
     } 
   }
 
-  for(auto &var : l) {
-    if (var.valid) 
+  for(auto &var : l) 
       var.lru_bits++;
-  }
 
   l[i].lru_bits = 0;
 }
@@ -158,7 +156,8 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf() {
   int page_match = 0;
 
   for (size_t i = 0; i < TABLE_SIZE; i++) {
-    if (tb[i].page_no == tb[i].page_no_store) {
+    if (tb[i].page_no == tb[i].page_no_store &&
+        tb[i].valid) {
       page_match++;
       uint64_t page_addr = tb[i].page_no << 12;
 
@@ -179,7 +178,16 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf() {
 
   std::cout << "Page bitmap page matches: " << page_match << std::endl;
 
-  // Add code to prefetch from filter.
+  for (size_t i = 0; i < FILTER_SIZE; i++) {
+    if (filter[i].valid) {
+      uint64_t page_addr = filter[i].page_no << 12;
+
+      for (size_t j = 0; j < BITMAP_SIZE; j++) {
+        if (filter[i].bitmap[j]) 
+          cs_pf.push_back(std::make_pair(page_addr + (j << 6), true));
+      } 
+    } 
+  }
 
   std::vector<std::pair<uint64_t, bool>> pf;
 

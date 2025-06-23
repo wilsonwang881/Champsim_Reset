@@ -15,10 +15,9 @@ namespace spp
   {
     constexpr static std::size_t TABLE_SIZE = 1024;
     constexpr static std::size_t BITMAP_SIZE = 64;
-    constexpr static std::size_t FILTER_SIZE = 1024;
-    constexpr static std::size_t COUNTER_SIZE = 2048;
+    constexpr static std::size_t FILTER_SIZE = 512;
     constexpr static bool PAGE_BITMAP_DEBUG_PRINT = false;
-    constexpr static std::size_t FILTER_THRESHOLD = 1;
+    constexpr static std::size_t FILTER_THRESHOLD = 20;
 
     struct PAGE_R {
       bool valid = false;
@@ -34,7 +33,6 @@ namespace spp
     std::vector<PAGE_R> tb = std::vector<PAGE_R>(TABLE_SIZE);
     std::vector<PAGE_R> filter = std::vector<PAGE_R>(FILTER_SIZE);
 
-    // Context switch prefetch queue.
     std::deque<std::pair<uint64_t, bool>> cs_pf; 
     std::set<uint64_t> issued_cs_pf;
     uint64_t issued_cs_pf_hit;

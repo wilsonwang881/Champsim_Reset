@@ -55,8 +55,10 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   if (!prefetch && (addr != 0))
     pref.page_bitmap.update(addr);
 
+  /*
   if (blk_asid_match)
     pref.page_bitmap.evict(evicted_addr);
+  */
 
   return metadata_in;
 }
