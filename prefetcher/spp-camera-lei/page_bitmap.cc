@@ -47,9 +47,12 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
       for(size_t i = 0; i < BITMAP_SIZE; i++) {
         if (var.bitmap[i]) 
           filter_blks.push_back(i);
+
+        var.bitmap[i] = false;
       }
 
       var.valid = false;
+      break;
     } 
   }
 
@@ -227,6 +230,10 @@ bool spp::SPP_PAGE_BITMAP::filter_operate(uint64_t addr) {
     if (!filter[i].valid) {
       filter[i].valid = true;
       filter[i].page_no = page;
+
+      for (size_t j = 0; j < BITMAP_SIZE; j++) 
+        filter[i].bitmap[j] = false; 
+
       filter[i].bitmap[block] = true;
       lru_operate(filter, i);
 
