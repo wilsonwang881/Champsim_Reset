@@ -17,7 +17,7 @@ namespace spp
     constexpr static std::size_t BITMAP_SIZE = 64;
     constexpr static std::size_t FILTER_SIZE = 512;
     constexpr static bool PAGE_BITMAP_DEBUG_PRINT = false;
-    constexpr static std::size_t FILTER_THRESHOLD = 20;
+    constexpr static std::size_t FILTER_THRESHOLD = 10;
 
     struct PAGE_R {
       bool valid = false;
