@@ -111,7 +111,7 @@ void spp::SPP_PAGE_BITMAP::evict(uint64_t addr) {
   // Check tb first.
   for (size_t i = 0; i < TABLE_SIZE; i++) {
     if (tb[i].page_no == page &&
-        tb[i].valid )
+        tb[i].valid)
       tb[i].bitmap[block] = false;
   }
 
@@ -198,7 +198,7 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf() {
 
   std::vector<std::pair<uint64_t, bool>> pf;
 
-  for(auto var : cs_pf) 
+  for(auto var : cs_pf)
     pf.push_back(var); 
   
   std::cout << "Page bitmap gathered " << cs_pf.size() << " prefetches from past accesses." << std::endl;

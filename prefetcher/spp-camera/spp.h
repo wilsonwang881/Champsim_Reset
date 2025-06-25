@@ -21,7 +21,6 @@
 #include <fstream>
 #include <set>
 #include <bitset>
-#include <cassert>
 // WL 
 
 class CACHE;
@@ -60,10 +59,7 @@ namespace spp {
 
     std::set<std::pair<uint64_t, bool>> available_prefetches;
     std::deque<std::pair<uint64_t, bool>> context_switch_issue_queue; // WL
-                                                                      //
     SPP_PAGE_BITMAP page_bitmap; // WL
-                                 //
-    std::map<uint64_t, uint64_t> pf_use_time; // WL
 
     bool warmup = true;
     
@@ -81,12 +77,8 @@ namespace spp {
     void clear_states();
     void context_switch_gather_prefetches(CACHE* cache);
     std::optional<uint64_t> context_switch_aux(uint32_t &sig, int32_t delta, float &confidence, uint64_t page_num, uint32_t &last_offset);
-    bool context_switch_queue_empty();
     void record_spp_states();
     float CUTOFF_THRESHOLD = 0.1;
-    std::set<uint64_t> issued_cs_pf;
-    uint64_t issued_cs_pf_hit;
-    uint64_t total_issued_cs_pf;
     uint64_t gathered_pf_this_round;
     uint64_t issued_pf_this_round;
     uint64_t hit_pf_this_round;

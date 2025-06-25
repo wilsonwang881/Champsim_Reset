@@ -37,7 +37,7 @@ namespace spp
     std::vector<PAGE_R> tb = std::vector<PAGE_R>(TABLE_SIZE);
     std::vector<PAGE_R> filter = std::vector<PAGE_R>(FILTER_SIZE);
 
-    std::deque<std::pair<uint64_t, bool>> cs_pf; 
+    std::deque<std::pair<uint64_t, bool>> cs_pf;
     std::set<uint64_t> issued_cs_pf;
     uint64_t issued_cs_pf_hit;
     uint64_t total_issued_cs_pf;

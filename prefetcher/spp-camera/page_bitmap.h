@@ -7,85 +7,68 @@
 #include <deque>
 #include <algorithm>
 #include <vector>
+#include <set>
+#include "champsim_constants.h"
 
 namespace spp 
 {
   class SPP_PAGE_BITMAP 
   {
-    constexpr static std::size_t TABLE_SIZE = 1024;
+    constexpr static uint64_t TABLE_SET = 256;
+    constexpr static uint64_t TABLE_WAY = 4;
+    constexpr static std::size_t TABLE_SIZE = TABLE_SET * TABLE_WAY;
     constexpr static std::size_t BITMAP_SIZE = 64;
-    constexpr static std::size_t FILTER_SIZE = 1024;
+    constexpr static uint64_t FILTER_WAY = 2;
+    constexpr static std::size_t FILTER_SIZE = TABLE_SET * FILTER_WAY;
     constexpr static std::size_t COUNTER_SIZE = 2048;
     constexpr static bool PAGE_BITMAP_DEBUG_PRINT = false;
+    constexpr static std::size_t FILTER_THRESHOLD = 10;
     constexpr static int COUNT_MAX=3;
     //HL
     constexpr static std::size_t DELTA_SIZE = 12;
     constexpr static std::size_t C_DELTA_MAX = 5;
-    // Page bitmap entry.
-    struct page_r
+    
+    struct PAGE_R
     {
-      bool valid;
+      bool valid = false;
+      uint16_t lru_bits;
       uint64_t page_no;
       uint64_t page_no_store;
       //bool bitmap[BITMAP_SIZE];
       int bitmap[BITMAP_SIZE];
-      //bool bitmap_store[BITMAP_SIZE];
-      uint16_t lru_bits;
-      bool saturated_bit;
+      bool filter_bitmap[BITMAP_SIZE] = {false};
+      bool bitmap_store[BITMAP_SIZE] = {false};
+      bool saturated_bit = false;
 
       //HL
-      int64_t delta[DELTA_SIZE];
-      uint64_t c_delta [DELTA_SIZE];
-      uint64_t lru_delta[DELTA_SIZE];
+      int64_t delta[DELTA_SIZE] = {0};
+      uint64_t c_delta [DELTA_SIZE] = {0};
+      uint64_t lru_delta[DELTA_SIZE] = {0};
       //bool bitmap_delta[BITMAP_SIZE];
-      int64_t last_offset;
+      int64_t last_offset = 0;
     };
-
-    page_r tb[TABLE_SIZE];
-
-    // Filter.
-    // Make sure each page has 1 access before putting into tb.
-    struct page_filter_r
-    {
-      bool valid;
-      uint64_t page_no;
-      uint8_t block_no;
-      uint16_t lru_bits;
-    };
-
-    page_filter_r filter[FILTER_SIZE];
-
-    // Counter for each block access.
-    struct counter_r
-    {
-      bool valid;
-      uint64_t addr;
-      uint8_t counter;
-      uint16_t lru_bits;
-    };
-
-    counter_r ct[COUNTER_SIZE];
 
     public:
 
-    // Context switch prefetch queue.
+    std::vector<PAGE_R> tb = std::vector<PAGE_R>(TABLE_SIZE);
+    std::vector<PAGE_R> filter = std::vector<PAGE_R>(FILTER_SIZE);
+
     std::deque<std::pair<uint64_t, bool>> cs_pf;
+    std::set<uint64_t> issued_cs_pf;
+    uint64_t issued_cs_pf_hit;
+    uint64_t total_issued_cs_pf;
     //HL
     std::deque<uint64_t>bop_pf; 
-    int delta_counter; 
+    int delta_counter = 0; 
 
-    void init();
-    void update_lru(std::size_t i);
+    void lru_operate(std::vector<PAGE_R> &l, std::size_t i);
     void update(uint64_t addr);
     void evict(uint64_t addr);
-    void update_bitmap(uint64_t addr);
     void update_bitmap_store();
     std::vector<std::pair<uint64_t, bool>> gather_pf();
-    bool pf_q_empty();
-    void filter_update_lru(std::size_t i);
     bool filter_operate(uint64_t addr);
-    void counter_update_lru(std::size_t i);
-    void counter_update(uint64_t addr);
+    void update_usefulness(uint64_t addr);
+    uint64_t calc_set(uint64_t addr, uint64_t set_num);
   };
 }
 

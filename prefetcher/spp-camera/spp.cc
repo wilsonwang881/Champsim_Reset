@@ -43,14 +43,13 @@ void spp::prefetcher::issue(CACHE* cache)
 {
   // WL: issue context switch prefetches first 
   //if (!reset_misc::dq_prefetch_communicate.empty()) {
-  if (!context_switch_queue_empty()) {
+  if (!context_switch_issue_queue.empty()) {
 
     auto q_occupancy = cache->get_pq_occupancy();
-    auto mshr_occupancy = cache->get_mshr_occupancy();
+    //auto mshr_occupancy = cache->get_mshr_occupancy();
 
     //if (q_occupancy < cache->get_pq_size())  // q_occupancy[2] <= 15 && 
-    if (mshr_occupancy < 32)
-    {
+    //if (mshr_occupancy < 32) {
       auto [addr, priority] = context_switch_issue_queue.front();
       bool prefetched = cache->prefetch_line(addr, priority, 0);
 
@@ -58,14 +57,14 @@ void spp::prefetcher::issue(CACHE* cache)
 
       if (prefetched) {
         context_switch_issue_queue.pop_front();
-        issued_cs_pf.insert((addr >> 6) << 6);
-        total_issued_cs_pf++;
+        page_bitmap.issued_cs_pf.insert(addr);
+        page_bitmap.total_issued_cs_pf++;
         issued_pf_this_round++;
-
-        //std::cout << "Issued " << addr << " for set " << ((addr >> 6) & champsim::bitmask(champsim::lg2(1024))) << " at cycle " << cache->current_cycle << " priority " << priority << " pending queue size " << context_switch_issue_queue.size() << std::endl;
         //filter.update_issue(addr, cache->get_set(addr));
       }
-    }
+    //}
+
+    return;
   }
   // WL 
 
@@ -247,35 +246,19 @@ void spp::prefetcher::clear_states()
 void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
 {
   std::vector<std::pair<uint64_t, bool>> tmpp_pf;
-  /*
-  std::vector<std::pair<uint64_t, bool>> tmpp_pf = oracle.file_read();
-
-  for(auto var : tmpp_pf)
-    context_switch_issue_queue.push_back(var); 
-
-  return;
-  */
-  context_switch_issue_queue.clear();
-  //oracle.file_read();
-  //oracle.file_write();
 
   issue_queue.clear();
   filter.clear();
   std::cout << "SPP issue queue and filter cleared." << std::endl;
 
-  tmpp_pf.clear();
   tmpp_pf = page_bitmap.gather_pf();
-
+  context_switch_issue_queue.clear();
   available_prefetches.clear();
 
   for (size_t i = 0; i < tmpp_pf.size(); i++) 
-  {
-      //context_switch_issue_queue.push_back(tmpp_pf[i]); 
-      available_prefetches.insert(tmpp_pf[i]);
-  }
+    available_prefetches.insert(tmpp_pf[i]);
 
-  context_switch_issue_queue.clear();
-  //return;
+  return;
 
   std::array<std::pair<uint32_t, bool>, spp::SIGNATURE_TABLE::WAY * spp::SIGNATURE_TABLE::SET> return_data = signature_table.get_sorted_signature(1.0 * filter.pf_useful / filter.pf_issued);
 
@@ -301,7 +284,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
       if (found_in_return_data) {
         uint64_t current_prefetch_address = (el_last_accessed_page_num << LOG2_PAGE_SIZE) + (el_last_offset << LOG2_BLOCK_SIZE);
 
-        //context_switch_issue_queue.push_back({current_prefetch_address, true}); 
+        context_switch_issue_queue.push_back({current_prefetch_address, true}); 
 
         // Use the signature and offset to index into the pattern table.
         unsigned int c_delta, c_sig;
@@ -317,7 +300,7 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
           if ((prefetch_address >= (el_last_accessed_page_num << LOG2_PAGE_SIZE)) && 
               (prefetch_address <= (el_last_accessed_page_num + 1) << LOG2_PAGE_SIZE)) {
 
-            //context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE), true});
+            context_switch_issue_queue.push_back({(el_last_accessed_page_num << LOG2_PAGE_SIZE) + ((el_last_offset + pt_query_res.value()) << LOG2_BLOCK_SIZE), true});
 
             // Second level lookahead prefetching.
             // If the confidence is larger than 50%.
@@ -340,15 +323,15 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   std::set<std::pair<uint64_t, bool>> tmpp_set;
   std::vector<std::pair<uint64_t, bool>> tmpp_issue_queue;
 
-  // for(auto var : context_switch_issue_queue) {
+  for(auto var : context_switch_issue_queue) {
 
-  //   unsigned int size = tmpp_set.size();
-  //   tmpp_set.insert(var);
+    unsigned int size = tmpp_set.size();
+    tmpp_set.insert(var);
 
-  //   if (tmpp_set.size() != size) {
-  //     tmpp_issue_queue.push_back(var);
-  //   }
-  // }
+    if (tmpp_set.size() != size) {
+      tmpp_issue_queue.push_back(var);
+    }
+  }
 
   context_switch_issue_queue.clear();
 
@@ -377,7 +360,7 @@ std::optional<uint64_t> spp::prefetcher::context_switch_aux(uint32_t &sig, int32
         (prefetch_address <= (page_num + 1) << LOG2_PAGE_SIZE) &&
         confidence >= CUTOFF_THRESHOLD) {
 
-      // context_switch_issue_queue.push_back({prefetch_address, true});
+      context_switch_issue_queue.push_back({prefetch_address, true});
       last_offset += tmpp_pt_query_res.value();
       return tmpp_pt_query_res.value();
     }
@@ -387,12 +370,6 @@ std::optional<uint64_t> spp::prefetcher::context_switch_aux(uint32_t &sig, int32
   }
 
   return std::nullopt;
-}
-
-// WL
-bool spp::prefetcher::context_switch_queue_empty()
-{
-  return context_switch_issue_queue.empty();
 }
 
 // WL 
