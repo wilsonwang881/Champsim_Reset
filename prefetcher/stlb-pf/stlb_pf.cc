@@ -7,20 +7,17 @@ namespace {
   std::map<unique_key, stlb_pf::prefetcher> STLB_PF; 
 }
 
-void stlb_pf::prefetcher::update(uint64_t addr)
-{
+void stlb_pf::prefetcher::update(uint64_t addr) {
   // Update addr.
   uint64_t page_num = addr >> 12;
 
   auto el = std::find(translations.begin(), translations.end(), page_num);
 
-  if (el == translations.end())
-  {
+  if (el == translations.end()) {
     translations.push_back(page_num);
     pushed_el++;
   }
-  else
-  {
+  else {
     translations.erase(el);
     translations.push_back(page_num);
     pushed_el++;
@@ -68,8 +65,7 @@ void stlb_pf::prefetcher::update(uint64_t addr)
   */
 }
 
-void stlb_pf::prefetcher::pop_pf(uint64_t addr)
-{
+void stlb_pf::prefetcher::pop_pf(uint64_t addr) {
   addr = (addr >> 12) << 12;
 
   auto el = std::find(cs_q.begin(), cs_q.end(), addr);
@@ -78,8 +74,7 @@ void stlb_pf::prefetcher::pop_pf(uint64_t addr)
     cs_q.erase(el);
 }
 
-void stlb_pf::prefetcher::evict(uint64_t addr)
-{
+void stlb_pf::prefetcher::evict(uint64_t addr) {
   uint64_t page_num = addr >> 12;
 
   auto evict_pos = std::find(translations.begin(), translations.end(), page_num);
@@ -95,8 +90,7 @@ void stlb_pf::prefetcher::evict(uint64_t addr)
     */
 }
 
-void stlb_pf::prefetcher::gather_pf()
-{
+void stlb_pf::prefetcher::gather_pf() {
   cs_q.clear();
 
   int limit = translations.size() - std::round(translations.size() * accuracy) * (translations.size() * 1.0 / DQ_SIZE);
@@ -108,14 +102,11 @@ void stlb_pf::prefetcher::gather_pf()
   //translations_ip.clear();
 }
 
-void stlb_pf::prefetcher::issue(CACHE* cache)
-{
-  if (cache->current_cycle >= (last_issued_pf_moment + wait_interval) && (cache->get_mshr_occupancy() < 10)) 
-  {
+void stlb_pf::prefetcher::issue(CACHE* cache) {
+  if (cache->current_cycle >= (last_issued_pf_moment + wait_interval) && (cache->get_mshr_occupancy() < 10)) {
     bool pf_res = cache->prefetch_line(cs_q.front(), true, 0); 
     
-    if (pf_res) 
-    {
+    if (pf_res) {
       pf_issued++;
       cs_q.pop_front(); 
       last_issued_pf_moment = cache->current_cycle;
@@ -123,8 +114,7 @@ void stlb_pf::prefetcher::issue(CACHE* cache)
   }
 }
 
-void stlb_pf::prefetcher::update_pf_stats()
-{
+void stlb_pf::prefetcher::update_pf_stats() {
   printf("%s hits / accesses = %ld / %ld  = %f\n", "STLB", hits, accesses, 1.0 * hits / accesses);
 
   if ((pf_hit == 0 && pf_issued == 0) || (pf_issued == pf_issued_last_round))

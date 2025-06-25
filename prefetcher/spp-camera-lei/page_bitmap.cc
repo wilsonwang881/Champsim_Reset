@@ -2,9 +2,13 @@
 
 void spp::SPP_PAGE_BITMAP::lru_operate(std::vector<PAGE_R> &l, std::size_t i) {
   for(auto &var : l) {
-    if (var.lru_bits >= (std::numeric_limits<uint16_t>::max() & 0xFFFF)) {
-      for(auto &v : l)
-        v.lru_bits = v.lru_bits >> 1; 
+    if (var.lru_bits >= (std::numeric_limits<uint16_t>::max() & 0x3FF)) {
+      for(auto &v : l) {
+        if (v.lru_bits > 2) 
+          v.lru_bits = v.lru_bits - 2; 
+        else
+          v.lru_bits = 0;
+      }
 
       break;
     } 

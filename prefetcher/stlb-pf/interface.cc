@@ -7,32 +7,26 @@ namespace {
   std::map<unique_key, stlb_pf::prefetcher> STLB_PF;
 }
 
-void CACHE::prefetcher_initialize() 
-{
+void CACHE::prefetcher_initialize() {
   std::cout << "Initialized STLB Prefetcher in " << NAME << std::endl;
 }
 
-uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in)
-{
+uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in){
   auto &pref = ::STLB_PF[{this, cpu}];
 
-  if (cache_hit) // && (metadata_in == 1)) 
-  {
+  if (cache_hit) { // && (metadata_in == 1)) 
     pref.update(addr);
     pref.update(ip);
     pref.hit_this_round = true;
     pref.hits++;
   }
   else
-  {
     pref.hit_this_round = false;
-  }
 
   pref.pop_pf(addr);
   pref.pop_pf(ip);
 
-  if (useful_prefetch)
-  {
+  if (useful_prefetch) {
     pref.pf_hit++;
     pref.last_issued_pf_moment -= pref.wait_interval;
   }
@@ -42,8 +36,7 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t addr, uint64_t ip, uint8_t cac
   return metadata_in;
 }
 
-uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
-{
+uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in) {
   auto &pref = ::STLB_PF[{this, cpu}];
 
   uint32_t blk_asid_match = metadata_in >> 2; 
@@ -72,8 +65,7 @@ void CACHE::prefetcher_cycle_operate()
 {
   auto &pref = ::STLB_PF[{this, cpu}];
 
-  if (reset_misc::can_record_after_access) 
-  {
+  if (reset_misc::can_record_after_access) {
     pref.update_pf_stats();
     pref.gather_pf();
     reset_misc::can_record_after_access = false;
@@ -89,8 +81,7 @@ void CACHE::prefetcher_cycle_operate()
     pref.issue(this);
 }
 
-void CACHE::prefetcher_final_stats() 
-{
+void CACHE::prefetcher_final_stats() {
   auto &pref = ::STLB_PF[{this, cpu}];
 
   std::cout << "STLB prefetcher stats: " << pref.pf_hit << " / " << pref.pf_issued << std::endl;
