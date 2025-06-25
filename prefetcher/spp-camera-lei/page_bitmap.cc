@@ -271,3 +271,6 @@ void spp::SPP_PAGE_BITMAP::update_usefulness(uint64_t addr) {
   }
 }
 
+uint64_t spp::SPP_PAGE_BITMAP::calc_set(uint64_t addr, uint64_t set_num) {
+  return (addr >> 6) & champsim::bitmask(champsim::lg2(set_num));
+}

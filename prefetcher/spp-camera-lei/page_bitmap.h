@@ -8,14 +8,18 @@
 #include <algorithm>
 #include <vector>
 #include <set>
+#include "champsim_constants.h"
 
 namespace spp 
 {
   class SPP_PAGE_BITMAP 
   {
-    constexpr static std::size_t TABLE_SIZE = 1024;
+    constexpr static uint64_t TABLE_SET = 256;
+    constexpr static uint64_t TABLE_WAY = 4;
+    constexpr static std::size_t TABLE_SIZE = TABLE_SET * TABLE_WAY;
     constexpr static std::size_t BITMAP_SIZE = 64;
-    constexpr static std::size_t FILTER_SIZE = 512;
+    constexpr static uint64_t FILTER_WAY = 2;
+    constexpr static std::size_t FILTER_SIZE = TABLE_SET * FILTER_WAY;
     constexpr static bool PAGE_BITMAP_DEBUG_PRINT = false;
     constexpr static std::size_t FILTER_THRESHOLD = 10;
 
@@ -45,6 +49,7 @@ namespace spp
     std::vector<std::pair<uint64_t, bool>> gather_pf();
     bool filter_operate(uint64_t addr);
     void update_usefulness(uint64_t addr);
+    uint64_t calc_set(uint64_t addr, uint64_t set_num);
   };
 }
 
