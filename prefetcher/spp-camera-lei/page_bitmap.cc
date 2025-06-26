@@ -1,36 +1,39 @@
 #include "page_bitmap.h"
 
-void spp::SPP_PAGE_BITMAP::lru_operate(std::vector<PAGE_R> &l, std::size_t i) {
-  for(auto &var : l) {
-    if (var.lru_bits >= (std::numeric_limits<uint16_t>::max() & 0x3FF)) {
-      for(auto &v : l) {
-        if (v.lru_bits > 2) 
-          v.lru_bits = v.lru_bits - 2; 
+void spp::SPP_PAGE_BITMAP::lru_operate(std::vector<PAGE_R> &l, std::size_t i, uint64_t way) {
+  uint64_t set_begin = i - (i % way);
+
+  for (size_t j = set_begin; j < set_begin + way; j++) {
+    if (l[j].lru_bits >=  0x3FF) {
+      for (size_t k = set_begin; k < set_begin + way; k++) {
+        if (l[k].lru_bits > 2) 
+          l[k].lru_bits = l[k].lru_bits - 2; 
         else
-          v.lru_bits = 0;
+          l[k].lru_bits = 0;
       }
 
       break;
     } 
   }
 
-  for(auto &var : l) 
-      var.lru_bits++;
+  for (size_t j = set_begin; j < set_begin + way; j++) 
+    l[j].lru_bits++;
 
   l[i].lru_bits = 0;
 }
 
 void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
+  uint64_t set = calc_set(addr);
   uint64_t page = addr >> 12;
   uint64_t block = (addr & 0xFFF) >> 6;
 
   // Page already exists.
   // Update the bitmap of that page.
   // Update the LRU bits.
-  for (size_t i = 0; i < TABLE_SIZE; i++) {
+  for (size_t i = set * TABLE_WAY; i < (set + 1) * TABLE_WAY; i++) {
     if (tb[i].valid && tb[i].page_no == page) {
       tb[i].bitmap[block] = true;
-      lru_operate(tb, i);
+      lru_operate(tb, i, TABLE_WAY);
 
       return;
     }
@@ -46,22 +49,22 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
   // Allocate new entry for the new page with 2 blocks.
   std::vector<uint64_t> filter_blks = {block};
 
-  for(auto &var : filter) {
-    if (var.valid && var.page_no == page) {
-      for(size_t i = 0; i < BITMAP_SIZE; i++) {
-        if (var.bitmap[i]) 
-          filter_blks.push_back(i);
+  for (size_t i = set * FILTER_WAY; i < (set + 1) * FILTER_WAY; i++) {
+    if (filter[i].valid && filter[i].page_no == page) {
+      for(size_t j = 0; j < BITMAP_SIZE; j++) {
+        if (filter[i].bitmap[j]) 
+          filter_blks.push_back(j);
 
-        var.bitmap[i] = false;
+        filter[i].bitmap[j] = false;
       }
 
-      var.valid = false;
+      filter[i].valid = false;
       break;
     } 
   }
 
   // Find an invalid entry for the page.
-  for (size_t i = 0; i < TABLE_SIZE; i++) {
+  for (size_t i = set * TABLE_WAY; i < (set + 1) * TABLE_WAY; i++) {
     if (!tb[i].valid) {
       tb[i].valid = true;
       tb[i].page_no = page;
@@ -72,7 +75,7 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
       for(auto var : filter_blks) 
         tb[i].bitmap[var] = true; 
 
-      lru_operate(tb, i);
+      lru_operate(tb, i, TABLE_WAY);
 
       return;
     }
@@ -80,28 +83,21 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
 
   // All pages valid.
   // Find LRU page.
-  std::size_t index = 0;
-  uint16_t lru = 0;
+  auto lru_el = std::max_element(tb.begin() + set * TABLE_WAY, tb.begin() + (set + 1) * TABLE_WAY,
+                [](const auto& l, const auto& r) { return l.lru_bits < r.lru_bits; }); 
 
-  for(size_t i = 0; i < TABLE_SIZE; i++) {
-    if (tb[i].valid && tb[i].lru_bits > lru) {
-      index = i;
-      lru = tb[i].lru_bits;
-    } 
-  }
+  lru_el->page_no = page;
 
-  tb[index].page_no = page;
-
-  for(auto &var : tb[index].bitmap)
+  for(auto &var : lru_el->bitmap)
     var = false;
 
-  for(auto &var : tb[index].bitmap_store)
+  for(auto &var : lru_el->bitmap_store)
     var = false;
 
   for(auto var : filter_blks) 
-    tb[index].bitmap[var] = true; 
+    lru_el->bitmap[var] = true; 
 
-  lru_operate(tb, index);
+  lru_operate(tb, lru_el - tb.begin(), TABLE_WAY);
 }
 
 void spp::SPP_PAGE_BITMAP::evict(uint64_t addr) {
@@ -207,19 +203,16 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf() {
 }
 
 bool spp::SPP_PAGE_BITMAP::filter_operate(uint64_t addr) {
+  uint64_t set = calc_set(addr);
   uint64_t page = addr >> 12;
   uint64_t block = (addr & 0xFFF) >> 6;
 
-  for (size_t i = 0; i < FILTER_SIZE; i++) {
+  for (size_t i = set * FILTER_WAY; i < (set + 1) * FILTER_WAY; i++) {
     if (filter[i].valid &&
         filter[i].page_no == page) {
       filter[i].bitmap[block] = true;
-      uint64_t accu = 0;
-
-      for (size_t j = 0; j < BITMAP_SIZE; j++) 
-        accu = accu + filter[i].bitmap[j]; 
-
-      lru_operate(filter, i);
+      lru_operate(filter, i, FILTER_WAY);
+      uint64_t accu = std::accumulate(filter[i].bitmap, filter[i].bitmap + BITMAP_SIZE, 0);
 
       if (accu > FILTER_THRESHOLD) 
         return true; 
@@ -230,7 +223,7 @@ bool spp::SPP_PAGE_BITMAP::filter_operate(uint64_t addr) {
 
   // Allocate new entry in the filter.
   // If any invalid entry exists.
-  for(size_t i = 0; i < FILTER_SIZE; i++) {
+  for (size_t i = set * FILTER_WAY; i < (set + 1) * FILTER_WAY; i++) {
     if (!filter[i].valid) {
       filter[i].valid = true;
       filter[i].page_no = page;
@@ -239,31 +232,24 @@ bool spp::SPP_PAGE_BITMAP::filter_operate(uint64_t addr) {
         filter[i].bitmap[j] = false; 
 
       filter[i].bitmap[block] = true;
-      lru_operate(filter, i);
+      lru_operate(filter, i, FILTER_WAY);
 
       return false;
     } 
   }
 
   // If filter full, use LRU to replace.
-  size_t index = 0;
-  uint8_t lru = 0;
+  auto lru_el = std::max_element(filter.begin() + set * FILTER_WAY, filter.begin() + (set + 1) * FILTER_WAY,
+                [](const auto& l, const auto& r) { return l.lru_bits < r.lru_bits; }); 
 
-  for (size_t i = 0; i < FILTER_SIZE; i++) {
-    if (filter[i].lru_bits > lru) {
-      index = i;
-      lru = filter[i].lru_bits;
-    } 
-  }
+  lru_el->page_no = page;
+  lru_el->valid = true;
 
-  filter[index].page_no = page;
-  filter[index].valid = true;
+  for(auto &var : lru_el->bitmap)
+    var = false;
 
-  for (size_t i = 0; i < BITMAP_SIZE; i++) 
-    filter[index].bitmap[i] = false; 
-
-  filter[index].bitmap[block] = true;
-  lru_operate(filter, index);
+  lru_el->bitmap[block] = true;
+  lru_operate(filter, lru_el - filter.begin(), FILTER_WAY);
 
   return false;
 }
@@ -275,6 +261,6 @@ void spp::SPP_PAGE_BITMAP::update_usefulness(uint64_t addr) {
   }
 }
 
-uint64_t spp::SPP_PAGE_BITMAP::calc_set(uint64_t addr, uint64_t set_num) {
-  return (addr >> 6) & champsim::bitmask(champsim::lg2(set_num));
+uint64_t spp::SPP_PAGE_BITMAP::calc_set(uint64_t addr) {
+  return (addr >> 6) & champsim::bitmask(champsim::lg2(TABLE_SET));
 }
