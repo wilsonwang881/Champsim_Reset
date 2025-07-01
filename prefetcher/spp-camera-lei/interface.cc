@@ -19,6 +19,7 @@ void CACHE::prefetcher_initialize() {
 
   auto &pref = ::SPP[{this, cpu}];
   pref.prefetcher_state_file.open("prefetcher_states.txt", std::ios::out);
+  pref.page_bitmap.pb_file_read();
 }
 
 uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in) {
@@ -27,23 +28,42 @@ uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_
   pref.update_demand(base_addr,this->get_set_index(base_addr));
   pref.initiate_lookahead(base_addr);
 
-  if (cache_hit && access_type{type}!=access_type::PREFETCH) 
+  if (access_type{type} != access_type::PREFETCH) {
     pref.page_bitmap.update(base_addr);
+
+    /*
+    if (cache_hit) 
+       pref.page_bitmap.update(base_addr);
+    else {
+      auto search_mshr = std::find_if(std::begin(this->MSHR), std::end(this->MSHR),
+                         [match = base_addr >> this->OFFSET_BITS, shamt = this->OFFSET_BITS]
+                         (const auto& entry) {
+                           return (entry.address >> shamt) == match; 
+                         });
+
+      if (search_mshr != this->MSHR.end() && 
+          this->get_mshr_occupancy() != this->get_mshr_size())
+        pref.page_bitmap.update(base_addr);
+    } 
+    */
+  }
 
   if (useful_prefetch) 
     pref.page_bitmap.update_usefulness(base_addr);
 
-  uint64_t page_addr = base_addr >> 12;
-  std::pair<uint64_t, bool> demand_itself = std::make_pair(((base_addr >> 6) << 6), true);
-  pref.available_prefetches.erase(demand_itself);
+  if (access_type{type} == access_type::LOAD) {
+    uint64_t page_addr = base_addr >> 12;
+    std::pair<uint64_t, bool> demand_itself = std::make_pair(((base_addr >> 6) << 6), true);
+    pref.available_prefetches.erase(demand_itself);
 
-  for(auto var : pref.available_prefetches) {
-    if ((var.first >> 12) == page_addr)
-      pref.context_switch_issue_queue.push_back(var); 
+    for(auto var : pref.available_prefetches) {
+      if ((var.first >> 12) == page_addr)
+        pref.context_switch_issue_queue.push_back(var); 
+    }
+
+    for(auto var : pref.context_switch_issue_queue) 
+      pref.available_prefetches.erase(var); 
   }
-
-  for(auto var : pref.context_switch_issue_queue) 
-    pref.available_prefetches.erase(var); 
 
   return metadata_in;
 }
@@ -52,8 +72,8 @@ uint32_t CACHE::prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way,
   auto &pref = ::SPP[{this, cpu}];
   //uint32_t blk_asid_match = (metadata_in >> 2) & 0x1;
 
-  if ((addr != 0)) //!prefetch && 
-    pref.page_bitmap.update(addr);
+  //if ((addr != 0)) //!prefetch && 
+    //pref.page_bitmap.update(addr);
 
   /*
   if (blk_asid_match)

@@ -71,9 +71,6 @@ uint64_t champsim::operable::number_of_instructions_to_skip_before_log = 0;
 uint64_t champsim::operable::cpu0_num_retired = 0;
 std::deque<std::tuple<uint64_t, uint64_t, uint64_t>> champsim::operable::lru_states;
 std::deque<std::tuple<uint64_t, uint64_t, uint64_t>> champsim::operable::lru_states_llc;
-bool champsim::operable::kill_simulation_l2 = false;
-bool champsim::operable::kill_simulation_l3 = false;
-
 // WL
 
 // WL 

@@ -250,7 +250,8 @@ void spp::prefetcher::context_switch_gather_prefetches(CACHE* cache)
   filter.clear();
   std::cout << "SPP issue queue and filter cleared." << std::endl;
 
-  tmpp_pf = page_bitmap.gather_pf();
+  page_bitmap.pb_file_write(champsim::operable::currently_active_thread_ID);
+  tmpp_pf = page_bitmap.gather_pf(champsim::operable::currently_active_thread_ID);
   context_switch_issue_queue.clear();
   available_prefetches.clear();
 
