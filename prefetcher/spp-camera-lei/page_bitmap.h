@@ -23,6 +23,11 @@ namespace spp
     constexpr static bool PAGE_BITMAP_DEBUG_PRINT = false;
     constexpr static std::size_t FILTER_THRESHOLD = 10;
 
+    //HL
+    constexpr static std::size_t DELTA_SIZE = 8;
+    constexpr static std::size_t C_DELTA_MAX = 3;
+    constexpr static int COUNT_MAX=3;
+
     struct PAGE_R {
       bool valid = false;
       uint16_t lru_bits;
@@ -30,6 +35,16 @@ namespace spp
       uint64_t page_no_store;
       bool bitmap[BITMAP_SIZE] = {false};
       bool bitmap_store[BITMAP_SIZE] = {false};
+
+      //HL
+      bool valid_delta[DELTA_SIZE] = {false};
+      int64_t delta[DELTA_SIZE] = {0};
+      uint64_t c_delta [DELTA_SIZE] = {0};
+      int64_t lru_delta[DELTA_SIZE]={0,1,2,3,4,5,6,7};
+      //bool bitmap_delta[BITMAP_SIZE];
+      int64_t last_offset = 0;
+      bool saturated_bit = false;
+
     };
 
     public:
@@ -41,6 +56,10 @@ namespace spp
     std::set<uint64_t> issued_cs_pf;
     uint64_t issued_cs_pf_hit;
     uint64_t total_issued_cs_pf;
+
+    //HL
+    std::deque<uint64_t>bop_pf; 
+    int delta_counter = 0; 
 
     void lru_operate(std::vector<PAGE_R> &l, std::size_t i);
     void update(uint64_t addr);

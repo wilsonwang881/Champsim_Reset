@@ -23,10 +23,11 @@ namespace spp
     constexpr static std::size_t COUNTER_SIZE = 2048;
     constexpr static bool PAGE_BITMAP_DEBUG_PRINT = false;
     constexpr static std::size_t FILTER_THRESHOLD = 10;
-    constexpr static int COUNT_MAX=3;
+
     //HL
-    constexpr static std::size_t DELTA_SIZE = 12;
-    constexpr static std::size_t C_DELTA_MAX = 5;
+    constexpr static std::size_t DELTA_SIZE = 8;
+    constexpr static std::size_t C_DELTA_MAX = 3;
+    constexpr static int COUNT_MAX=3;
     
     struct PAGE_R
     {
@@ -38,14 +39,15 @@ namespace spp
       int bitmap[BITMAP_SIZE];
       bool filter_bitmap[BITMAP_SIZE] = {false};
       bool bitmap_store[BITMAP_SIZE] = {false};
-      bool saturated_bit = false;
 
       //HL
+      bool valid_delta[DELTA_SIZE] = {false};
       int64_t delta[DELTA_SIZE] = {0};
       uint64_t c_delta [DELTA_SIZE] = {0};
-      uint64_t lru_delta[DELTA_SIZE] = {0};
+      int64_t lru_delta[DELTA_SIZE]={0,1,2,3,4,5,6,7};
       //bool bitmap_delta[BITMAP_SIZE];
       int64_t last_offset = 0;
+      bool saturated_bit = false;
     };
 
     public:

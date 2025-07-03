@@ -23,6 +23,7 @@ void spp::SPP_PAGE_BITMAP::lru_operate(std::vector<PAGE_R> &l, std::size_t i) {
 void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
   uint64_t page = addr >> 12;
   uint64_t block = (addr & 0xFFF) >> 6;
+  //HL
   size_t match_delta= DELTA_SIZE;
 
   // Page already exists.
@@ -30,18 +31,18 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
   // Update the LRU bits.
   for (size_t i = 0; i < TABLE_SIZE; i++)
   {
+    //HL
+    int64_t delta;
+    delta=block-tb[i].last_offset;
+    tb[i].last_offset=block;
+
     if (tb[i].valid && tb[i].page_no == page) 
     {
-      //tb[i].bitmap[block] = true;
-      //HL
-      int64_t delta;
-      delta=block-tb[i].last_offset;
-      tb[i].last_offset=block;
-
       //find the delta
+      //std::cout<<"The delta is "<<delta<<std::endl;
       for(match_delta = 0;match_delta < DELTA_SIZE; match_delta++) {
         //delta is found
-        if(tb[i].delta[match_delta]==delta) {
+        if(tb[i].delta[match_delta]==delta && tb[i].valid_delta[match_delta]) {
           tb[i].c_delta[match_delta]++;
 
           if(tb[i].c_delta[match_delta]==C_DELTA_MAX) {
@@ -53,12 +54,17 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
             //tb[i].bitmap_delta[block_offset]=true;
             //tb[i].bitmap_delta[block_offset_2]=true;
 
+            //std::cout<<"The optimal delta is"<<tb[i].delta[match_delta]<<std::endl;
             //update the delta block
-            if(tb[i].bitmap[block_offset]<COUNT_MAX)
+            if(tb[i].bitmap[block_offset]<COUNT_MAX && block_offset>=0 && block_offset<=63)
                 tb[i].bitmap[block_offset]=tb[i].bitmap[block_offset]+1;
 
             if(tb[i].bitmap[block_offset]==COUNT_MAX)
                 tb[i].saturated_bit=true;
+
+            //update the delta block_2
+            if(tb[i].bitmap[block_offset_2]<COUNT_MAX && block_offset_2>=0 && block_offset_2<=63)
+                tb[i].bitmap[block_offset_2]=tb[i].bitmap[block_offset_2]+1;
 
             tb[i].c_delta[match_delta]=tb[i].c_delta[match_delta]>>1;
             //uint64_t page_addr;
@@ -71,11 +77,25 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
         }
       }
 
+      //invalid case
+      if(match_delta==DELTA_SIZE) {
+        for(match_delta = 0;match_delta < DELTA_SIZE; match_delta++) {
+          if(tb[i].valid_delta[match_delta]==false) {
+            //std::cout<<"The delta"<<tb[i].delta[match_delta]<<"is new coming"<<std::endl;
+            tb[i].valid_delta[match_delta]=true;
+            tb[i].delta[match_delta]=delta;
+            tb[i].c_delta[match_delta]=0;
+
+            break;
+          }
+        }
+      }
+
       //delta is not found,replace the least LRU
       if(match_delta==DELTA_SIZE) {
         for(match_delta = 0;match_delta < DELTA_SIZE; match_delta++) {
           if(tb[i].lru_delta[match_delta]==(DELTA_SIZE-1)) {
-            tb[i].delta[match_delta]=0;
+            tb[i].delta[match_delta]=delta;
             tb[i].c_delta[match_delta]=0;
 
             break;
@@ -143,11 +163,12 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
       for (size_t k = 0; k <DELTA_SIZE; k++) {
         tb[i].delta[k] = 0;
         tb[i].c_delta[k] = 0;
-        tb[i].lru_delta[k] = 0;
+        tb[i].lru_delta[k] = k;
+        tb[i].valid_delta[k]=false;
       }
 
       //HL
-      tb[i].last_offset = last_offset; 
+      tb[i].last_offset = 0; 
 
       for(auto var : filter_blks) 
         tb[i].bitmap[var] = 1;
@@ -186,7 +207,8 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
   for (size_t k = 0; k <DELTA_SIZE; k++) {
     tb[index].delta[k] = 0;
     tb[index].c_delta[k] = 0;
-    tb[index].lru_delta[k] = 0;
+    tb[index].lru_delta[k] = k;
+    tb[index].valid_delta[k]=false;
   }
 
   tb[index].last_offset = 0;

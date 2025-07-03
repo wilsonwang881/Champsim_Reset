@@ -24,11 +24,96 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
   uint64_t page = addr >> 12;
   uint64_t block = (addr & 0xFFF) >> 6;
 
+  //HL
+  size_t match_delta= DELTA_SIZE;
+  
   // Page already exists.
+
   // Update the bitmap of that page.
   // Update the LRU bits.
   for (size_t i = 0; i < TABLE_SIZE; i++) {
+    
+    //HL
+    int64_t delta;
+    delta=block-tb[i].last_offset;
+    tb[i].last_offset=block;
+
     if (tb[i].valid && tb[i].page_no == page) {
+      
+      //std::cout<<"The delta is "<<delta<<std::endl;
+      
+      //find the delta
+      for(match_delta = 0;match_delta < DELTA_SIZE; match_delta++) {
+        //delta is found
+        if(tb[i].delta[match_delta]==delta && tb[i].valid_delta[match_delta]) {
+          tb[i].c_delta[match_delta]++;
+
+          if(tb[i].c_delta[match_delta]==C_DELTA_MAX) {
+            //delta_counter++;
+            int64_t block_offset;
+            int64_t block_offset_2;
+            block_offset=block+delta;
+            block_offset_2=block+delta+delta;
+            //std::cout<<"The optimal delta is"<<tb[i].delta[match_delta]<<std::endl;
+            //std::cout<<"The optimal delta at count is"<<tb[i].c_delta[match_delta]<<std::endl;
+            //update the delta block
+            
+            if(block_offset>=0 && block_offset<=63)
+              tb[i].bitmap[block_offset]=true;
+
+            if(tb[i].bitmap[block_offset]==COUNT_MAX)
+              tb[i].saturated_bit=true;
+
+            if(block_offset_2>=0 && block_offset_2<=63)
+              tb[i].bitmap[block_offset_2]=true;            
+
+            tb[i].c_delta[match_delta]=tb[i].c_delta[match_delta]>>1;
+            //uint64_t page_addr;
+            //page_addr=tb[i].page_no << 12;
+            //bop_pf.push_back(page_addr + (block_offset << 6));
+            //std::cout<<"we have prefetch at page "<<tb[i].page_no<<" with block "<<block_offset<<" with total delta value "<<delta_counter<<std::endl; 
+          }
+          //std::cout<<"The match delta is at "<<match_delta<<std::endl;
+          break;
+        }
+      }
+
+      //invalid case
+      if(match_delta==DELTA_SIZE) {
+        for(match_delta = 0;match_delta < DELTA_SIZE; match_delta++) {
+          if(tb[i].valid_delta[match_delta]==false) {
+            //std::cout<<"The delta"<<tb[i].delta[match_delta]<<"is new coming"<<std::endl;
+            tb[i].valid_delta[match_delta]=true;
+            tb[i].delta[match_delta]=delta;
+            tb[i].c_delta[match_delta]=0;
+
+            break;
+          }
+        }
+      }
+
+      //delta is not found,replace the least LRU
+      if(match_delta==DELTA_SIZE) {
+        for(match_delta = 0;match_delta < DELTA_SIZE; match_delta++) {
+          if(tb[i].lru_delta[match_delta]==(DELTA_SIZE-1)) {
+            //std::cout<<"The delta"<<delta<<"is not found, least LRU"<<match_delta<<"is replaced"<<std::endl;
+            tb[i].delta[match_delta]=delta;
+            tb[i].c_delta[match_delta]=0;
+
+            break;
+          }
+        }
+      }
+
+      //update delta_LRU
+      for (size_t j=0;j<DELTA_SIZE;j++) {
+        if(tb[i].lru_delta[j]<tb[i].lru_delta[match_delta])
+          tb[i].lru_delta[j]++; 
+      }
+
+      tb[i].lru_delta[match_delta]=0;
+      //HL end
+
       tb[i].bitmap[block] = true;
       lru_operate(tb, i);
 
@@ -70,7 +155,18 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
         tb[i].bitmap[j] = false; 
 
       for(auto var : filter_blks) 
-        tb[i].bitmap[var] = true; 
+        tb[i].bitmap[var] = true;
+
+      //HL
+      for (size_t k = 0; k <DELTA_SIZE; k++) {
+        tb[i].delta[k] = 0;
+        tb[i].c_delta[k] = 0;
+        tb[i].lru_delta[k] = k;
+        tb[i].valid_delta[k]=false;
+      }
+
+      //HL
+      tb[i].last_offset = 0;  
 
       lru_operate(tb, i);
 
@@ -99,7 +195,17 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
     var = false;
 
   for(auto var : filter_blks) 
-    tb[index].bitmap[var] = true; 
+    tb[index].bitmap[var] = true;
+
+  //HL
+  for (size_t k = 0; k <DELTA_SIZE; k++) {
+    tb[index].delta[k] = 0;
+    tb[index].c_delta[k] = 0;
+    tb[index].lru_delta[k] = k;
+    tb[index].valid_delta[k]=false;
+  }
+
+  tb[index].last_offset = 0; 
 
   lru_operate(tb, index);
 }
@@ -171,7 +277,18 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf() {
       for (size_t j = 0; j < BITMAP_SIZE; j++) {
         if (tb[i].bitmap[j] && tb[i].bitmap_store[j]) 
           cs_pf.push_back(std::make_pair(page_addr + (j << 6), true)); 
-      } 
+      }
+      
+      /*
+      //HL
+      for (size_t j = 0; j < BITMAP_SIZE; j++) {
+        bool x=tb[i].bitmap[j];
+        bool y=tb[i].bitmap_store[j];
+        if (x||y) 
+          cs_pf.push_back(std::make_pair(page_addr + (j << 6), true)); 
+      }
+      */
+
     }
     else {
       uint64_t page_addr = tb[i].page_no << 12;
