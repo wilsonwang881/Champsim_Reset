@@ -71,9 +71,9 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
   uint64_t page = addr >> 12;
   uint64_t block = (addr & 0xFFF) >> 6;
 
-  this_round_pg_acc[page][block] = true;
-  this_round_pg_cnt[page]++;
-  this_round_pg_rsn[page][block / 8] = (this_round_pg_rsn[page][block / 8] >= 255) ? 255 : (this_round_pg_rsn[page][block / 8] + 1); 
+  //this_round_pg_acc[page][block] = true;
+  //this_round_pg_cnt[page]++;
+  //this_round_pg_rsn[page][block / 8] = (this_round_pg_rsn[page][block / 8] >= 255) ? 255 : (this_round_pg_rsn[page][block / 8] + 1); 
 
   // Page already exists.
   // Update the bitmap of that page.

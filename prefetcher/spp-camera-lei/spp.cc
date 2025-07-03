@@ -59,7 +59,7 @@ void spp::prefetcher::issue(CACHE* cache)
         page_bitmap.issued_cs_pf.insert(addr);
         page_bitmap.total_issued_cs_pf++;
         issued_pf_this_round++;
-        //filter.update_issue(addr, cache->get_set(addr));
+        filter.update_issue(addr, cache->get_set(addr));
       }
     //}
 
