@@ -4,6 +4,7 @@
 #include <numeric>
 #include <limits>
 #include <iostream>
+#include <iomanip>
 #include <deque>
 #include <algorithm>
 #include <vector>
@@ -20,7 +21,8 @@ namespace spp {
     constexpr static uint64_t FILTER_WAY = 512;
     constexpr static std::size_t FILTER_SIZE = TABLE_SET * FILTER_WAY;
     constexpr static bool PAGE_BITMAP_DEBUG_PRINT = false;
-    constexpr static bool UPPER_BOUND_MODE = false;
+    constexpr static bool RECORD_PAGE_ACCESS = true;
+    constexpr static bool READ_PAGE_ACCESS = false;
     std::size_t FILTER_THRESHOLD = 10;
     std::string PAGE_BITMAP_ACCESS = "pb_acc.txt";
     std::fstream pb_file;
@@ -36,14 +38,19 @@ namespace spp {
       uint64_t acc_counter = 0;
     };
 
+    struct PAGE_ACCESS {
+      uint64_t total_access;
+      uint64_t row_access[BITMAP_SIZE / 8];
+      std::array<bool, BITMAP_SIZE> block;
+    };
+
     public:
 
-    std::map<uint64_t, std::array<bool, BITMAP_SIZE>> last_round_pg_acc;
-    std::map<uint64_t, uint64_t> last_round_pg_cnt;
-    std::map<uint64_t, std::array<uint64_t, 8>> last_round_pg_rsn;
-    std::map<uint64_t, std::array<bool, BITMAP_SIZE>> this_round_pg_acc;
-    std::map<uint64_t, uint64_t> this_round_pg_cnt;
-    std::map<uint64_t, std::array<uint64_t, 8>> this_round_pg_rsn;
+    uint64_t pf_metadata = 0;
+    uint64_t pf_metadata_limit = 35 * 1024;
+
+    std::map<uint64_t, PAGE_ACCESS> last_round_pg_acc;
+    std::map<uint64_t, PAGE_ACCESS> this_round_pg_acc;
 
     std::map<uint64_t, std::map<uint64_t, std::array<bool, BITMAP_SIZE>>> pb_acc;
 
@@ -65,6 +72,7 @@ namespace spp {
     bool filter_operate(uint64_t addr);
     void update_usefulness(uint64_t addr);
     uint64_t calc_set(uint64_t addr);
+    void print_page_access();
   };
 }
 

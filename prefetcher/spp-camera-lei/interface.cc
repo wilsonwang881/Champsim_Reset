@@ -19,7 +19,7 @@ void CACHE::prefetcher_initialize() {
 
   auto &pref = ::SPP[{this, cpu}];
   pref.prefetcher_state_file.open("prefetcher_states.txt", std::ios::out);
-  //pref.page_bitmap.pb_file_read();
+  pref.page_bitmap.pb_file_read();
 }
 
 uint32_t CACHE::prefetcher_cache_operate(uint64_t base_addr, uint64_t ip, uint8_t cache_hit, bool useful_prefetch, uint8_t type, uint32_t metadata_in) {
@@ -97,13 +97,26 @@ void CACHE::prefetcher_cycle_operate() {
       pref.context_switch_gather_prefetches(this);
       pref.context_switch_prefetch_gathered = true;
     }
+
+    if (pref.page_bitmap.pf_metadata < pref.page_bitmap.pf_metadata_limit) {
+      uint64_t pf_addr = 0xffffff5500 + pref.page_bitmap.pf_metadata;
+      bool prefetched = this->prefetch_line(pf_addr, true, 0); 
+
+      if (prefetched) 
+        pref.page_bitmap.pf_metadata += 64; 
+
+      if (pref.page_bitmap.pf_metadata == pref.page_bitmap.pf_metadata_limit) 
+        std::cout << "Page bitmap has requested " << pref.page_bitmap.pf_metadata_limit << " bytes of metadata to L2." << std::endl; 
+    }
    
     if (!champsim::operable::have_cleared_BTB
         && !champsim::operable::have_cleared_BP
         && !champsim::operable::have_cleared_prefetcher
         && champsim::operable::cpu_side_reset_ready
-        && champsim::operable::cache_clear_counter == 7) {
+        && champsim::operable::cache_clear_counter == 7
+        && pref.page_bitmap.pf_metadata == pref.page_bitmap.pf_metadata_limit) {
       champsim::operable::context_switch_mode = false;
+      pref.page_bitmap.pf_metadata = 0;
       champsim::operable::cpu_side_reset_ready = false;
       champsim::operable::L2C_have_issued_context_switch_prefetches = true;
       champsim::operable::cache_clear_counter = 0;

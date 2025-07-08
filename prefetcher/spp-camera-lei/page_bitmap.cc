@@ -1,6 +1,9 @@
 #include "page_bitmap.h"
 
 void spp::SPP_PAGE_BITMAP::pb_file_read() {
+  if (!READ_PAGE_ACCESS) 
+    return; 
+
   std::ifstream file(PAGE_BITMAP_ACCESS);
 
   if (!file.good()) 
@@ -26,16 +29,19 @@ void spp::SPP_PAGE_BITMAP::pb_file_read() {
 }
 
 void spp::SPP_PAGE_BITMAP::pb_file_write(uint64_t asid) {
+  if (!READ_PAGE_ACCESS) 
+    return; 
+
   pb_file.open(PAGE_BITMAP_ACCESS, std::ofstream::app);
 
   for(auto pair : this_round_pg_acc) {
-    uint64_t accu = std::accumulate(pair.second.begin(), pair.second.end(), 0);
+    uint64_t accu = std::accumulate(pair.second.block.begin(), pair.second.block.end(), 0);
 
     if (accu > FILTER_THRESHOLD) {
       pb_file << asid << " " << pair.first;
 
       for (size_t i = 0; i < BITMAP_SIZE; i++) 
-        pb_file << " " << pair.second[i]; 
+        pb_file << (pair.second.block[i] ? "\u25FC" : "\u25FB"); 
 
       pb_file << std::endl;
     }
@@ -71,9 +77,11 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
   uint64_t page = addr >> 12;
   uint64_t block = (addr & 0xFFF) >> 6;
 
-  //this_round_pg_acc[page][block] = true;
-  //this_round_pg_cnt[page]++;
-  //this_round_pg_rsn[page][block / 8] = (this_round_pg_rsn[page][block / 8] >= 255) ? 255 : (this_round_pg_rsn[page][block / 8] + 1); 
+  if (RECORD_PAGE_ACCESS) {
+    this_round_pg_acc[page].block[block] = true;
+    this_round_pg_acc[page].total_access++;
+    this_round_pg_acc[page].row_access[block / 8]++; 
+  }
 
   // Page already exists.
   // Update the bitmap of that page.
@@ -210,7 +218,7 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf(uint64_t 
   cs_pf.clear();
   std::vector<std::pair<uint64_t, bool>> pf;
 
-  if (UPPER_BOUND_MODE) {
+  if (READ_PAGE_ACCESS) {
     for(auto pair : pb_acc) {
       if (pair.first == asid) {
         for(auto sub_pair : pair.second) {
@@ -286,50 +294,8 @@ std::vector<std::pair<uint64_t, bool>> spp::SPP_PAGE_BITMAP::gather_pf(uint64_t 
     }
     */
 
-    //FILTER_THRESHOLD = 2 * filter_sum / FILTER_SIZE; 
-    std::cout << "Page bitmap filter threshold adjusted to " << FILTER_THRESHOLD << std::endl;
-    
-    uint64_t same_pg_cnt = 0;
-
-    for(auto pair : this_round_pg_acc) {
-
-      uint64_t accu = std::accumulate(pair.second.begin(), pair.second.end(), 0);
-
-      if (auto search = last_round_pg_acc.find(pair.first); search != last_round_pg_acc.end()) {
-
-        if (accu > FILTER_THRESHOLD) {
-          same_pg_cnt++;
-          std::cout << "Page " << pair.first << " match " << this_round_pg_cnt[pair.first] << "/" << last_round_pg_cnt[pair.first] << std::endl;
-
-          for (std::size_t i = 0; i < BITMAP_SIZE / 8; i++) {
-            for (size_t j = 0; j < BITMAP_SIZE / 8; j++) 
-              std::cout << pair.second[i * 8 + j] << " "; 
-            
-            std::cout << this_round_pg_rsn[pair.first][i];
-            std::cout << std::endl;
-          }
-
-          std::cout << std::endl;
-
-          for (std::size_t i = 0; i < BITMAP_SIZE / 8; i++) {
-            for (size_t j = 0; j < BITMAP_SIZE / 8; j++) 
-              std::cout << search->second[i * 8 + j] << " "; 
-
-            std::cout << last_round_pg_rsn[pair.first][i];
-            std::cout << std::endl;
-          }
-        }
-      } 
-    }
-
-    last_round_pg_acc = this_round_pg_acc;
-    last_round_pg_cnt = this_round_pg_cnt;
-    last_round_pg_rsn = this_round_pg_rsn;
-    this_round_pg_acc.clear();
-    this_round_pg_cnt.clear();
-    this_round_pg_rsn.clear();
-
-    std::cout << "Page bitmap same page: " << same_pg_cnt << std::endl;
+    if (RECORD_PAGE_ACCESS) 
+      print_page_access(); 
   }
 
   std::cout << "Page bitmap gathered " << cs_pf.size() << " prefetches from past accesses." << std::endl;
@@ -401,4 +367,44 @@ void spp::SPP_PAGE_BITMAP::update_usefulness(uint64_t addr) {
 
 uint64_t spp::SPP_PAGE_BITMAP::calc_set(uint64_t addr) {
   return (addr >> 6) & champsim::bitmask(champsim::lg2(TABLE_SET));
+}
+
+void spp::SPP_PAGE_BITMAP::print_page_access() {
+  uint64_t same_pg_cnt = 0;
+
+  for(auto pair : this_round_pg_acc) {
+
+    uint64_t accu = std::accumulate(pair.second.block.begin(), pair.second.block.end(), 0);
+
+    if (auto search = last_round_pg_acc.find(pair.first); search != last_round_pg_acc.end()) {
+
+      if (accu > FILTER_THRESHOLD) {
+        same_pg_cnt++;
+        std::cout << "Page " << pair.first << " match, accesses: " << last_round_pg_acc[pair.first].total_access << "/" << this_round_pg_acc[pair.first].total_access << " last/this" << std::endl;
+
+        for (std::size_t i = 0; i < BITMAP_SIZE / 8; i++) {
+          for (size_t j = 0; j < BITMAP_SIZE / 8; j++) 
+            std::cout << (last_round_pg_acc[pair.first].block[i * 8 + j] ? "\u25FC" : "\u25FB");
+
+          std::cout << std::setw(5) << last_round_pg_acc[pair.first].row_access[i] << " "; 
+        }
+
+        std::cout << "last round" << std::endl;
+
+        for (std::size_t i = 0; i < BITMAP_SIZE / 8; i++) {
+          for (size_t j = 0; j < BITMAP_SIZE / 8; j++) 
+            std::cout << (pair.second.block[i * 8 + j] ? "\u25FC" : "\u25FB");
+          
+          std::cout << std::setw(5) << this_round_pg_acc[pair.first].row_access[i] << " ";
+        }
+
+        std::cout << "this round " << std::endl;
+      }
+    } 
+  }
+
+  last_round_pg_acc = this_round_pg_acc;
+  this_round_pg_acc.clear();
+
+  std::cout << "Page bitmap same page: " << same_pg_cnt << std::endl;
 }
