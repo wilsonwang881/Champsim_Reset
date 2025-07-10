@@ -298,7 +298,8 @@ bool CACHE::try_hit(const tag_lookup_type& handle_pkt)
   }
   */
 
-  const auto hit = (way != set_end);
+  const auto hit = !L2C_name.compare(NAME) ? true : (way != set_end); // WL
+  //const auto hit = (way != set_end); // WL
   const auto useful_prefetch = (hit && way->prefetch && !handle_pkt.prefetch_from_this);
 
   if (champsim::debug_print && champsim::operable::cpu0_num_retired >= champsim::operable::number_of_instructions_to_skip_before_log) {
@@ -328,12 +329,15 @@ bool CACHE::try_hit(const tag_lookup_type& handle_pkt)
 
     // update replacement policy
     const auto way_idx = static_cast<std::size_t>(std::distance(set_begin, way)); // cast protected by earlier assertion
-    impl_update_replacement_state(handle_pkt.cpu, get_set_index(handle_pkt.address), way_idx, way->address, handle_pkt.ip, 0,
-                                  champsim::to_underlying(handle_pkt.type), true);
+
+    if (L2C_name.compare(NAME)) { // WL
+      impl_update_replacement_state(handle_pkt.cpu, get_set_index(handle_pkt.address), way_idx, way->address, handle_pkt.ip, 0,
+                                    champsim::to_underlying(handle_pkt.type), true);
+    } // WL
 
     response_type response{handle_pkt.address, handle_pkt.v_address, way->data,
                            metadata_thru,      handle_pkt.asid[0],   handle_pkt.instr_depend_on_me}; // WL: added handle_pkt.asid[0]
-    assert(handle_pkt.asid[0] == way->asid);                                                         // WL
+    //assert(handle_pkt.asid[0] == way->asid);                                                         // WL
 
     for (auto ret : handle_pkt.to_return)
       ret->push_back(response);
@@ -593,11 +597,13 @@ long CACHE::operate()
   // WL
   reset_components();
 
+  /*
   record_hit_miss_select_cache();
 
   if ((L1I_name.compare(NAME) == 0 || L1D_name.compare(NAME) == 0 || L2C_name.compare(NAME) == 0 || LLC_name.compare(NAME) == 0) && tag_bw_consumed > 0) {
     record_hit_miss_update(tag_bw_consumed);
   }
+  */
   // WL
 
   return progress;

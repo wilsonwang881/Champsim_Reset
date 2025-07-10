@@ -8,19 +8,19 @@
     "ooo_cpu": [
         {
             "frequency": 4000,
-            "ifetch_buffer_size":150,
-            "decode_buffer_size":75,
-            "dispatch_buffer_size":144,
+            "ifetch_buffer_size":64,
+            "decode_buffer_size":32,
+            "dispatch_buffer_size":32,
             "rob_size": 512,
             "lq_size": 192,
             "sq_size": 114,
-            "fetch_width": 10,
+            "fetch_width": 6,
             "decode_width": 6,
             "dispatch_width": 6,
-            "execute_width": 5,
+            "execute_width": 12,
             "lq_width": 3,
-            "sq_width": 4,
-            "retire_width": 8,
+            "sq_width": 2,
+            "retire_width": 5,
             "mispredict_penalty": 1,
             "scheduler_size": 205,
             "decode_latency": 1,
@@ -83,7 +83,7 @@
         "prefetch_as_load": false,
         "virtual_prefetch": false,
         "prefetch_activate": "LOAD,PREFETCH",
-        "prefetcher": "spp-camera-lei"
+        "prefetcher": "no"
     },
 
     "ITLB": {
