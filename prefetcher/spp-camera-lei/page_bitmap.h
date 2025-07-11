@@ -41,6 +41,7 @@ namespace spp {
     struct PAGE_ACCESS {
       uint64_t total_access;
       uint64_t row_access[BITMAP_SIZE / 8];
+      uint64_t col_access[BITMAP_SIZE / 8];
       std::array<bool, BITMAP_SIZE> block;
     };
 

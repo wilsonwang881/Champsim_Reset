@@ -81,6 +81,7 @@ void spp::SPP_PAGE_BITMAP::update(uint64_t addr) {
     this_round_pg_acc[page].block[block] = true;
     this_round_pg_acc[page].total_access++;
     this_round_pg_acc[page].row_access[block / 8]++; 
+    this_round_pg_acc[page].col_access[block % 8]++;
   }
 
   // Page already exists.
@@ -382,23 +383,32 @@ void spp::SPP_PAGE_BITMAP::print_page_access() {
         same_pg_cnt++;
         std::cout << "Page " << pair.first << " match, accesses: " << last_round_pg_acc[pair.first].total_access << "/" << this_round_pg_acc[pair.first].total_access << " last/this" << std::endl;
 
-        for (std::size_t i = 0; i < BITMAP_SIZE / 8; i++) {
-          for (size_t j = 0; j < BITMAP_SIZE / 8; j++) 
-            std::cout << (last_round_pg_acc[pair.first].block[i * 8 + j] ? "\u25FC" : "\u25FB");
+        for (size_t i = 0; i < BITMAP_SIZE / 8; i++) 
+          std::cout << std::setw(4) << last_round_pg_acc[pair.first].col_access[i] << "/" << std::setw(4) << this_round_pg_acc[pair.first].col_access[i] << " "; 
 
-          std::cout << std::setw(5) << last_round_pg_acc[pair.first].row_access[i] << " "; 
+        std::cout << std::endl;
+
+        for (std::size_t i = 0; i < BITMAP_SIZE / 8; i++) {
+          for (size_t j = 0; j < BITMAP_SIZE / 8; j++)  {
+            std::cout << std::setw(4) << (last_round_pg_acc[pair.first].block[i * 8 + j] ? "\u25FC" : "\u25FB") << "/";
+            std::cout << std::setw(4) << (pair.second.block[i * 8 + j] ? "\u25FC" : "\u25FB") << "      ";
+          }
+
+          std::cout << std::setw(5) << last_round_pg_acc[pair.first].row_access[i] << "/ " << this_round_pg_acc[pair.first].row_access[i] << std::endl; 
         }
 
+        /*
         std::cout << "last round" << std::endl;
 
         for (std::size_t i = 0; i < BITMAP_SIZE / 8; i++) {
           for (size_t j = 0; j < BITMAP_SIZE / 8; j++) 
             std::cout << (pair.second.block[i * 8 + j] ? "\u25FC" : "\u25FB");
           
-          std::cout << std::setw(5) << this_round_pg_acc[pair.first].row_access[i] << " ";
+          std::cout << std::setw(5) << this_round_pg_acc[pair.first].row_access[i] << " " << std::endl;
         }
 
         std::cout << "this round " << std::endl;
+        */
       }
     } 
   }
